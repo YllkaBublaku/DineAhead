@@ -1,8 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Header } from '../header/header';
 import { Footer } from '../footer/footer';
 
 export interface Timeslot {
@@ -19,7 +18,7 @@ export interface RestaurantItem {
   cuisine: string;
   priceLevel: string; // '€€', '€€€', '€€€€'
   rating: number;
-  theForkScore: number;
+  score: number;
   reviewCount: number;
   neighborhood: string;
   address: string;
@@ -36,7 +35,7 @@ export interface RestaurantItem {
 
 @Component({
   selector: 'app-restaurants',
-  imports: [RouterLink, CommonModule, FormsModule, Header, Footer],
+  imports: [RouterLink, CommonModule, FormsModule, Footer],
   templateUrl: './restaurants.html',
   styleUrl: './restaurants.css',
 })
@@ -44,6 +43,9 @@ export class Restaurants implements OnInit {
   searchCity = 'Paris';
   searchQuery = '';
   selectedDate = 'Today, Aug 18';
+  @Input() showSearch = false;
+  @Output() search = new EventEmitter<{ city: string; query: string }>();
+
 
   onHeaderSearch(event: { city: string; query: string }): void {
     this.searchCity = event.city;
@@ -52,14 +54,12 @@ export class Restaurants implements OnInit {
   selectedTime = '19:00';
   selectedGuests = 2;
 
-  // Filter states
   activeQuickFilters = new Set<string>();
   selectedCuisine = 'All';
   selectedPrice = 'All';
   selectedNeighborhood = 'All';
   sortBy = 'featured';
 
-  // UI States
   mobileMenuOpen = false;
   mobileMapOpen = false;
   allFiltersModalOpen = false;
@@ -82,7 +82,7 @@ export class Restaurants implements OnInit {
       cuisine: 'French Contemporary',
       priceLevel: '€€€€',
       rating: 4.9,
-      theForkScore: 9.8,
+      score: 9.8,
       reviewCount: 3420,
       neighborhood: '7th Arr. (Invalides)',
       address: '84 Rue de Varenne, 75007 Paris',
@@ -113,7 +113,7 @@ export class Restaurants implements OnInit {
       cuisine: 'Italian Steakhouse',
       priceLevel: '€€€',
       rating: 4.7,
-      theForkScore: 9.4,
+      score: 9.4,
       reviewCount: 6401,
       neighborhood: '1st Arr. (Louvre / Châtelet)',
       address: '24 Rue de Rivoli, 75001 Paris',
@@ -140,7 +140,7 @@ export class Restaurants implements OnInit {
       cuisine: 'French Gourmet',
       priceLevel: '€€€',
       rating: 4.8,
-      theForkScore: 9.4,
+      score: 9.4,
       reviewCount: 3640,
       neighborhood: '9th Arr. (Opéra / Pigalle)',
       address: '19 Rue des Martyrs, 75009 Paris',
@@ -168,7 +168,7 @@ export class Restaurants implements OnInit {
       cuisine: 'Italian Roman',
       priceLevel: '€€',
       rating: 4.7,
-      theForkScore: 9.2,
+      score: 9.2,
       reviewCount: 9255,
       neighborhood: '4th Arr. (Le Marais)',
       address: '12 Rue Saint-Antoine, 75004 Paris',
@@ -195,7 +195,7 @@ export class Restaurants implements OnInit {
       cuisine: 'Italian & Steaks',
       priceLevel: '€€€',
       rating: 4.6,
-      theForkScore: 9.1,
+      score: 9.1,
       reviewCount: 3447,
       neighborhood: '8th Arr. (Madeleine)',
       address: '15 Boulevard de la Madeleine, 75008 Paris',
@@ -221,7 +221,7 @@ export class Restaurants implements OnInit {
       cuisine: 'French Bistro',
       priceLevel: '€€',
       rating: 4.5,
-      theForkScore: 9.0,
+      score: 9.0,
       reviewCount: 12708,
       neighborhood: '15th Arr. (Vaugirard)',
       address: '45 Rue de Vaugirard, 75015 Paris',
@@ -248,7 +248,7 @@ export class Restaurants implements OnInit {
       cuisine: 'French Fine Dining',
       priceLevel: '€€€€',
       rating: 5.0,
-      theForkScore: 10.0,
+      score: 10.0,
       reviewCount: 890,
       neighborhood: '1st Arr. (Palais-Royal)',
       address: '5 Rue Coq Héron, 75001 Paris',
@@ -273,7 +273,7 @@ export class Restaurants implements OnInit {
       cuisine: 'Indian & Mughlai',
       priceLevel: '€€',
       rating: 4.8,
-      theForkScore: 9.5,
+      score: 9.5,
       reviewCount: 2908,
       neighborhood: '10th Arr. (Canal Saint-Martin)',
       address: '77 Rue du Faubourg Saint-Denis, 75010 Paris',
@@ -306,7 +306,7 @@ export class Restaurants implements OnInit {
 
   get filteredRestaurants(): RestaurantItem[] {
     return this.restaurants.filter((item) => {
-      // Query search
+
       if (this.searchQuery.trim()) {
         const q = this.searchQuery.toLowerCase();
         const matchName = item.name.toLowerCase().includes(q);
@@ -314,15 +314,12 @@ export class Restaurants implements OnInit {
         const matchNeigh = item.neighborhood.toLowerCase().includes(q);
         if (!matchName && !matchCuisine && !matchNeigh) return false;
       }
-      // Cuisine filter
       if (this.selectedCuisine !== 'All' && !item.cuisine.toLowerCase().includes(this.selectedCuisine.toLowerCase())) {
         return false;
       }
-      // Price filter
       if (this.selectedPrice !== 'All' && item.priceLevel !== this.selectedPrice) {
         return false;
       }
-      // Quick filters
       if (this.activeQuickFilters.has('Special offers') && !item.specialOffer) {
         return false;
       }
@@ -411,4 +408,17 @@ export class Restaurants implements OnInit {
   toggleMobileMap(): void {
     this.mobileMapOpen = !this.mobileMapOpen;
   }
+
+  onSearch(): void {
+    this.search.emit({ city: this.searchCity, query: this.searchQuery });
+    if (!this.showSearch) {
+      this.router.navigate(['/restaurants'], {
+        queryParams: {
+          city: this.searchCity || 'Paris',
+          q: this.searchQuery || undefined,
+        },
+      });
+    }
+  }
+
 }
