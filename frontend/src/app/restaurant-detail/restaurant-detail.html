@@ -118,7 +118,7 @@
           <a id="tab-reviews" (click)="scrollToSection('reviews')" class="tab-btn pb-3 text-sm font-bold transition border-b-2 -mb-[1px] border-transparent text-gray-500 hover:text-gray-900 cursor-pointer">Reviews</a>
         </div>
 
-        <div id="about" class="scroll-mt-24 space-y-12 pt-2">
+        <div id="about" class="space-y-12 pt-2">
           <div>
             <h3 class="text-2xl font-extrabold text-gray-900 mb-4">For You</h3>
             <div class="border border-gray-200 rounded-xl p-5 flex items-center justify-between hover:shadow-sm transition cursor-pointer bg-white">
@@ -151,7 +151,7 @@
           </div>
         </div>
 
-        <div id="menu" class="scroll-mt-24 space-y-6 pt-2">
+        <div id="menu" class="space-y-6 pt-2">
           <div>
             <h3 class="text-2xl font-extrabold text-gray-900 mb-6">Restaurant menu</h3>
             <p class="text-gray-500 mb-8">Explore the culinary offerings of this restaurant and let yourself be inspired.</p>
@@ -172,7 +172,7 @@
           </div>
         </div>
 
-        <div id="reviews" class="scroll-mt-24 space-y-8 pt-2 pb-12">
+        <div id="reviews" class="space-y-8 pt-2 pb-12">
           <h3 class="text-2xl font-extrabold text-gray-900 mb-4">Reviews</h3>
 
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -267,9 +267,10 @@
             </div>
           </div>
 
+
           <p class="mt-8 text-[10px] text-gray-400 leading-tight">Offers are based on time, date, and number of guests and may vary as you continue the booking process.</p>
 
-          <div class="mt-4 border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer">
+          <div [routerLink]="['/similar-restaurants']" class="mt-4 border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer">
             <div class="flex items-center gap-3">
               <div class="bg-red-50 text-red-500 p-2 rounded-lg">📅</div>
               <div>
@@ -391,4 +392,68 @@
   </div>
 }
 
+@if (bookingModalOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative animate-in fade-in zoom-in duration-200">
+
+      <button (click)="closeBookingModal()"
+              aria-label="Close modal"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+
+      @if (!bookingSuccess) {
+        <div class="text-center">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-[#005943] dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-2xl">
+            🍽️
+          </div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">
+            Confirm Reservation
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Instant free booking with DineAhead
+          </p>
+
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 my-6 text-left space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
+            <div class="flex justify-between font-bold text-sm text-gray-900 dark:text-white">
+              <span>Restaurant:</span>
+              <span>{{ restaurant?.name || 'Loading...'}}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Time:</span>
+              <span class="font-bold text-[#005943] dark:text-emerald-400">{{ selectedTimeslot || '19:00' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Date:</span>
+              <span>Today, Aug 18</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Party Size:</span>
+              <span>2 Guests</span>
+            </div>
+          </div>
+
+          <button (click)="confirmBooking()"
+                  class="w-full py-3.5 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
+            Confirm Booking
+          </button>
+        </div>
+      } @else {
+        <div class="text-center py-6">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-3xl">
+            ✓
+          </div>
+          <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+            Table Reserved!
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
+            Your reservation at <span class="font-bold text-gray-900 dark:text-white">{{ restaurant?.name || 'Loading...' }}</span> for <span class="font-bold">{{ selectedTimeslot }}</span> is confirmed. Free cancellation anytime.
+          </p>
+        </div>
+      }
+
+    </div>
+  </div>
+}
 <app-footer></app-footer>
+

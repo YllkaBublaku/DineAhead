@@ -42,6 +42,8 @@ export interface RestaurantItem {
 export class Restaurants implements OnInit {
   searchCity = 'Paris';
   searchQuery = '';
+  currentPage = 1;
+  itemsPerPage = 6;
   selectedDate = 'Today, Aug 18';
   @Input() showSearch = false;
   @Output() search = new EventEmitter<{ city: string; query: string }>();
@@ -419,6 +421,31 @@ export class Restaurants implements OnInit {
         },
       });
     }
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredRestaurants.length / this.itemsPerPage);
+  }
+
+  get paginatedRestaurants(): RestaurantItem[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    return this.filteredRestaurants.slice(startIndex, endIndex);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  nextPage(): void {
+    this.goToPage(this.currentPage + 1);
+  }
+
+  prevPage(): void {
+    this.goToPage(this.currentPage - 1);
   }
 
 }

@@ -265,9 +265,7 @@
 
       <div class="space-y-6">
 
-        @for (rest of filteredRestaurants; track rest.id) {
-
-          <!-- Fixed: Added routerLink here so clicking the card opens the Detail page! -->
+        @for (rest of paginatedRestaurants; track rest.id) {
           <a [routerLink]="['/restaurant', rest.id]" class="block cursor-pointer">
             <article (mouseenter)="selectRestaurantForMap(rest)"
                      class="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row group"
@@ -387,6 +385,83 @@
         }
 
       </div>
+      @if (totalPages > 1) {
+        <div class="flex flex-col items-center gap-4 pt-8 pb-4">
+
+          <div class="flex items-center gap-2">
+
+            <button (click)="goToPage(1)"
+                    class="w-9 h-9 rounded-lg text-sm font-bold transition flex items-center justify-center border border-gray-200"
+                    [class.bg-[#005943]]="currentPage === 1"
+                    [class.text-white]="currentPage === 1"
+                    [class.text-gray-700]="currentPage !== 1"
+                    [class.border-[#005943]]="currentPage === 1"
+                    [class.hover:bg-gray-50]="currentPage !== 1">
+              1
+            </button>
+
+            @if (currentPage > 3) {
+              <span class="text-gray-400 px-1">...</span>
+            }
+
+            @if (currentPage > 2) {
+              <button (click)="goToPage(currentPage - 1)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold text-gray-700 border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center">
+                {{ currentPage - 1 }}
+              </button>
+            }
+
+            @if (currentPage !== 1 && currentPage !== totalPages) {
+              <button class="w-9 h-9 rounded-lg text-sm font-bold bg-[#005943] text-white border border-[#005943] flex items-center justify-center">
+                {{ currentPage }}
+              </button>
+            }
+
+            @if (currentPage < totalPages - 1) {
+              <button (click)="goToPage(currentPage + 1)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold text-gray-700 border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center">
+                {{ currentPage + 1 }}
+              </button>
+            }
+
+            @if (currentPage < totalPages - 2) {
+              <span class="text-gray-400 px-1">...</span>
+            }
+
+            @if (totalPages > 1) {
+              <button (click)="goToPage(totalPages)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold transition flex items-center justify-center border border-gray-200"
+                      [class.bg-[#005943]]="currentPage === totalPages"
+                      [class.text-white]="currentPage === totalPages"
+                      [class.text-gray-700]="currentPage !== totalPages"
+                      [class.border-[#005943]]="currentPage === totalPages"
+                      [class.hover:bg-gray-50]="currentPage !== totalPages">
+                {{ totalPages }}
+              </button>
+            }
+
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button (click)="prevPage()"
+                    [disabled]="currentPage === 1"
+                    class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center transition text-gray-600 hover:bg-gray-50"
+                    [class.opacity-50]="currentPage === 1"
+                    [class.hover:bg-gray-50]="currentPage !== 1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+
+            <button (click)="nextPage()"
+                    [disabled]="currentPage === totalPages"
+                    class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center transition text-gray-600 hover:bg-gray-50"
+                    [class.opacity-50]="currentPage === totalPages"
+                    [class.hover:bg-gray-50]="currentPage !== totalPages">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+
+        </div>
+      }
     </div>
 
     <div class="lg:col-span-5 xl:col-span-6 sticky top-24" [class.block]="mobileMapOpen" [class.hidden]="!mobileMapOpen && true" [class.lg:block]="true">
