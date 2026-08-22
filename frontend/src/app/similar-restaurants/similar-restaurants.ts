@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {Footer} from '../footer/footer';
 
 @Component({
   selector: 'app-similar-restaurants',
   standalone: true,
-  imports: [RouterLink, CommonModule, FormsModule],
+  imports: [RouterLink, CommonModule, FormsModule, Footer],
   templateUrl: './similar-restaurants.html',
   styleUrl: './similar-restaurants.css'
 })

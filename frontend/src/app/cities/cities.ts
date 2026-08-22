@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import {Header} from '../header/header';
+import {Footer} from '../footer/footer';
 
 @Component({
   selector: 'app-cities',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, Header, Footer],
   templateUrl: './cities.html',
   styleUrl: './cities.css'
 })

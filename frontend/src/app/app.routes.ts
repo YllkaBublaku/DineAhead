@@ -7,6 +7,8 @@ export const routes: Routes = [
   { path: 'restaurant/:id', loadComponent: () => import('./restaurant-detail/restaurant-detail').then(m => m.RestaurantDetail)},
   { path: 'similar-restaurants', loadComponent: () => import('./similar-restaurants/similar-restaurants').then(m => m.SimilarRestaurants)},
   { path: 'cities', loadComponent: () => import('./cities/cities').then(m => m.Cities)},
+  { path: 'how-it-works', loadComponent: () => import('./how-it-works/how-it-works').then(m => m.HowItWorks)},
+  { path: 'help', loadComponent: () => import('./help-page/help-page').then(m => m.HelpPage)},
   { path: 'search', redirectTo: 'restaurants', pathMatch: 'full' },
 ];
 
