@@ -1,0 +1,99 @@
+<app-header></app-header>
+
+<div class="min-h-screen bg-white dark:bg-gray-950 pb-12">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <div class="text-center mb-12">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-4">
+        How can we help you?
+      </h1>
+      <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-xl mx-auto mb-8">
+        Find answers to common questions about booking, managing reservations, and earning rewards.
+      </p>
+
+      <div class="max-w-md mx-auto">
+        <div class="relative">
+          <svg class="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text"
+                 placeholder="Search for help..."
+                 class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-full py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#005943] focus:border-transparent" />
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
+
+      <a routerLink="/restaurants" class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center">
+        <div class="text-3xl mb-3">🍽️</div>
+        <h3 class="font-bold text-gray-900 dark:text-white mb-1">Book a table</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Step-by-step booking guide</p>
+      </a>
+
+      <a href="#" class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center">
+        <div class="text-3xl mb-3">💳</div>
+        <h3 class="font-bold text-gray-900 dark:text-white mb-1">Payments & discounts</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Deals, vouchers & billing</p>
+      </a>
+
+      <a href="#" class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center">
+        <div class="text-3xl mb-3">🔄</div>
+        <h3 class="font-bold text-gray-900 dark:text-white mb-1">Cancellations</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Reschedule or cancel easily</p>
+      </a>
+
+      <a href="#" class="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center">
+        <div class="text-3xl mb-3">⭐</div>
+        <h3 class="font-bold text-gray-900 dark:text-white mb-1">Yums rewards</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Earn and redeem points</p>
+      </a>
+
+    </div>
+
+    <div class="mb-14">
+      <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white text-center mb-8">
+        Frequently Asked Questions
+      </h2>
+
+      <div class="space-y-4">
+        @for (faq of faqs; track faq.id) {
+          <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+
+            <button (click)="toggleFaq(faq.id)"
+                    class="w-full flex items-center justify-between p-5 text-left focus:outline-none">
+              <span class="font-bold text-gray-900 dark:text-white text-sm sm:text-base">{{ faq.question }}</span>
+
+              <svg class="w-5 h-5 text-gray-400 transition-transform duration-200"
+                   [class.rotate-180]="openFaq === faq.id"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+
+            @if (openFaq === faq.id) {
+              <div class="px-5 pb-5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
+                {{ faq.answer }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="text-center">
+      <h2 class="text-xl font-extrabold text-gray-900 dark:text-white mb-3">
+        Still need help?
+      </h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        Our support team is available 24/7 to assist you with anything.
+      </p>
+      <a routerLink="/contact"
+         class="inline-flex items-center gap-2 px-6 py-3 bg-[#005943] hover:bg-[#004735] text-white font-bold text-sm rounded-full transition shadow-lg active:scale-95">
+        Contact Support
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<app-footer></app-footer>

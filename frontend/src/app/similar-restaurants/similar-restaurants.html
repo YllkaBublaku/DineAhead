@@ -1,0 +1,104 @@
+<div class="min-h-screen bg-white dark:bg-gray-950 pb-16">
+
+  <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a routerLink="/" class="text-2xl font-black tracking-tight text-[#005943] dark:text-emerald-400 select-none">
+        DineAhead
+      </a>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white text-center mb-6">
+      Find a similar restaurant
+    </h1>
+
+    <div class="flex justify-center mb-8">
+      <div class="inline-flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2 shadow-sm">
+
+        <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <span>📅</span>
+          <input type="text" [(ngModel)]="searchDate" placeholder="Date" class="w-24 bg-transparent focus:outline-none placeholder-gray-400 text-center">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600"></div>
+
+        <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <span>🕒</span>
+          <input type="text" [(ngModel)]="searchTime" placeholder="Time" class="w-20 bg-transparent focus:outline-none placeholder-gray-400 text-center">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+        <div class="w-px h-5 bg-gray-300 dark:bg-gray-600"></div>
+
+        <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <span>👤</span>
+          <input type="text" [(ngModel)]="searchPersons" placeholder="Pers." class="w-16 bg-transparent focus:outline-none placeholder-gray-400 text-center">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="bg-[#e8f4f8] dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-5 flex items-start gap-4 mb-8">
+      <svg class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <div>
+        <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+          Here are some great options similar to <strong>La Reine du Kashmir</strong>. Just enter your preferred date, your preferred time, the number of people so we can give you the best match.
+        </p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      @for (rest of restaurants; track rest.name) {
+        <div class="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 hover:shadow-lg transition cursor-pointer group">
+
+          <div class="relative h-48 bg-gray-100">
+            <img [src]="rest.image" [alt]="rest.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+            <button class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 shadow-sm flex items-center justify-center hover:bg-white transition text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </button>
+
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-white/50"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-white/50"></span>
+            </div>
+          </div>
+
+          <div class="p-4">
+            <div class="flex items-start justify-between mb-1">
+              <h3 class="font-bold text-gray-900 dark:text-white text-base truncate pr-2">{{ rest.name }}</h3>
+              <span class="font-bold text-emerald-600 text-sm shrink-0">{{ rest.rating }}</span>
+            </div>
+
+            <div class="flex justify-between items-start">
+              <div class="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                <p>{{ rest.address }}</p>
+                <p>{{ rest.cuisine }} · Average price {{ rest.avgPrice }}</p>
+              </div>
+              <span class="text-[10px] text-gray-400 font-medium shrink-0 mt-0.5">({{ rest.reviews }})</span>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              @if (rest.offer) {
+                <span class="inline-block bg-green-50 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-100">{{ rest.offer }}</span>
+              }
+              @if (rest.yums) {
+                <span class="inline-block bg-orange-50 text-orange-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-orange-100">Yums x2</span>
+              }
+            </div>
+          </div>
+
+        </div>
+      }
+
+    </div>
+  </div>
+</div>
+
+<app-footer></app-footer>

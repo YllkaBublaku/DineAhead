@@ -1,0 +1,163 @@
+<div class="min-h-screen bg-white dark:bg-gray-950 flex">
+
+  <div class="hidden lg:flex w-1/2 bg-[#005943] relative overflow-hidden">
+    <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80"
+         alt="Restaurant dining"
+         class="absolute inset-0 w-full h-full object-cover opacity-60">
+    <div class="absolute inset-0 bg-gradient-to-t from-[#005943] via-[#005943]/60 to-[#005943]/20"></div>
+
+    <div class="relative z-10 flex flex-col p-12 w-full h-full">
+      <a routerLink="/" class="text-5xl font-black text-white tracking-tight">DineAhead</a>
+      <div class="flex-1 flex flex-col justify-center mb-90">
+        <h1 class="text-4xl font-extrabold text-white leading-tight">Join thousands of happy diners and partners.</h1>
+        <p class="text-emerald-100 text-lg mt-3">Create an account and unlock exclusive discounts.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
+    <div class="w-full max-w-md">
+      <a routerLink="/" class="lg:hidden block text-center text-3xl font-black text-[#005943] dark:text-emerald-400 mb-10">DineAhead</a>
+
+      <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">Create your account</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-8">Join DineAhead in less than a minute.</p>
+
+      <div class="mb-6">
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">I am signing up as:</label>
+        <div class="grid grid-cols-2 gap-4">
+
+          <button type="button"
+                  (click)="setAccountType('user')"
+                  class="relative py-4 px-2 rounded-xl border-2 text-center transition-all duration-200"
+                  [class.border-[#005943]]="accountType() === 'user'"
+                  [class.bg-emerald-50]="accountType() === 'user'"
+                  [class.border-gray-200]="accountType() !== 'user'"
+                  [class.dark:border-gray-700]="accountType() !== 'user'">
+
+            <svg class="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300 transition-colors"
+                 [class.text-[#005943]]="accountType() === 'user'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+
+            <span class="text-sm font-bold text-gray-900 dark:text-white">Diner</span>
+          </button>
+
+          <button type="button"
+                  (click)="setAccountType('restaurant')"
+                  class="relative py-4 px-2 rounded-xl border-2 text-center transition-all duration-200"
+                  [class.border-[#005943]]="accountType() === 'restaurant'"
+                  [class.bg-emerald-50]="accountType() === 'restaurant'"
+                  [class.border-gray-200]="accountType() !== 'restaurant'"
+                  [class.dark:border-gray-700]="accountType() !== 'restaurant'">
+
+            <svg class="w-6 h-6 mx-auto mb-2 text-gray-700 dark:text-gray-300 transition-colors"
+                 [class.text-[#005943]]="accountType() === 'restaurant'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/>
+            </svg>
+
+            <span class="text-sm font-bold text-gray-900 dark:text-white">Restaurant</span>
+          </button>
+
+        </div>
+      </div>
+
+      <form (ngSubmit)="signUp()" class="space-y-4">
+
+        @if (accountType() === 'restaurant') {
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Restaurant name *</label>
+            <input type="text" [(ngModel)]="restaurantName" name="restaurantName" required
+                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#005943]"
+                   placeholder="Le Comptoir Foch" />
+          </div>
+        }
+
+        @if (accountType() === 'restaurant') {
+          <p class="text-xs text-gray-500 mt-2 mb-1 font-semibold uppercase tracking-wider">
+            Owner's personal details
+          </p>
+        }
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">First name</label>
+            <input type="text" [(ngModel)]="firstName" name="firstName" required
+                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#005943]"
+                   placeholder="John" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Last name</label>
+            <input type="text" [(ngModel)]="lastName" name="lastName" required
+                   class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#005943]"
+                   placeholder="Doe" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email address</label>
+          <input type="email" [(ngModel)]="email" name="email" required
+                 class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#005943]"
+                 placeholder="you@example.com" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Password</label>
+          <div class="relative">
+            <svg class="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <input type="password"
+                   [(ngModel)]="password"
+                   name="password"
+                   required
+                   placeholder="At least 8 characters"
+                   class="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#005943] focus:border-transparent" />
+
+            <button type="button"
+                    (click)="toggleShowPassword()"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+            </button>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">
+            Must be at least 8 chars, include 1 uppercase, 1 lowercase, and 1 special char.
+          </p>
+        </div>
+
+        @if (errorMessage()) {
+          <div class="bg-red-50 border border-red-200 text-red-700 text-xs font-bold px-4 py-3 rounded-xl">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <button type="submit"
+                [disabled]="isLoading()"
+                class="w-full py-3.5 bg-[#005943] hover:bg-[#004735] disabled:opacity-70 text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
+          @if (isLoading()) {
+            <span class="flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Creating account...</span>
+          } @else {
+            Sign Up
+          }
+        </button>
+      </form>
+
+      <div class="flex items-center gap-4 my-6">
+        <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+        <span class="text-xs text-gray-400 font-bold">OR</span>
+        <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+      </div>
+
+      <button (click)="signUpWithGoogle()"
+              [disabled]="isLoading()"
+              class="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+        <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
+        Sign up with Google
+      </button>
+
+      <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+        Already have an account?
+        <a routerLink="/login" class="font-bold text-[#005943] dark:text-emerald-400 hover:underline">Log In</a>
+      </p>
+    </div>
+  </div>
+</div>

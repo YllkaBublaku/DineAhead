@@ -1,0 +1,643 @@
+<header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-200">
+  <div class="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+
+    <a routerLink="/" class="text-2xl sm:text-[26px] font-black tracking-tight text-[#005943] dark:text-emerald-400 select-none whitespace-nowrap hover:opacity-90 transition-opacity shrink-0">
+      DineAhead
+    </a>
+
+    <div class="hidden md:flex items-center flex-1 max-w-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1.5 shadow-xs">
+
+      <div class="flex items-center gap-2 px-3 py-1 flex-1 min-w-0">
+        <svg class="w-4 h-4 text-gray-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+        </svg>
+        <input type="text"
+               [(ngModel)]="searchCity"
+               placeholder="City or neighborhood"
+               class="w-full text-xs sm:text-sm font-semibold text-gray-900 dark:text-white bg-transparent focus:outline-none placeholder-gray-400">
+      </div>
+
+      <div class="h-5 w-px bg-gray-300 dark:bg-gray-600 shrink-0"></div>
+
+      <div class="flex items-center gap-2 px-3 py-1 flex-[1.4] min-w-0">
+        <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input type="text"
+               [(ngModel)]="searchQuery"
+               placeholder="Cuisine, restaurant name..."
+               class="w-full text-xs sm:text-sm italic text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none placeholder-gray-400">
+      </div>
+
+      <button (click)="onSearch()" class="bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold uppercase tracking-wider px-5 py-2 rounded-full transition shadow-xs shrink-0">
+        Search
+      </button>
+    </div>
+
+
+    <div class="flex items-center gap-4 shrink-0">
+      <button (click)="toggleDarkMode()"
+              aria-label="Toggle dark mode"
+              class="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+        <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+        <svg class="w-5 h-5 hidden dark:inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+      </button>
+
+      <a routerLink="/login"
+         class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#005943] hover:bg-[#004735] text-white rounded-lg transition shadow-xs active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        <span>Log In</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
+
+      <div class="inline-flex items-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 shadow-xs shrink-0 select-none">
+        <div class="flex items-center gap-1.5 pr-2.5 cursor-pointer hover:text-[#005943] dark:hover:text-emerald-400">
+          <span>📅 Date</span>
+          <span class="text-[10px] text-gray-500">⌵</span>
+        </div>
+        <div class="h-3.5 w-px bg-gray-300 dark:bg-gray-600"></div>
+        <div class="flex items-center gap-1.5 px-2.5 cursor-pointer hover:text-[#005943] dark:hover:text-emerald-400">
+          <span>🕒 Time</span>
+          <span class="text-[10px] text-gray-500">⌵</span>
+        </div>
+        <div class="h-3.5 w-px bg-gray-300 dark:bg-gray-600"></div>
+        <div class="flex items-center gap-1.5 pl-2.5 cursor-pointer hover:text-[#005943] dark:hover:text-emerald-400">
+          <span>👤 Pers.</span>
+          <span class="text-[10px] text-gray-500">⌵</span>
+        </div>
+      </div>
+
+      <button (click)="allFiltersModalOpen = !allFiltersModalOpen"
+              class="inline-flex items-center gap-1.5 bg-[#004e64] hover:bg-[#003c4d] text-white rounded-full px-4 py-2 text-xs font-bold shadow-xs shrink-0 transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+        </svg>
+        <span>All filters</span>
+      </button>
+
+
+      <button (click)="scrollFilters(-200)"
+              aria-label="Scroll filters left"
+              class="w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-xs flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 shrink-0">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+      </button>
+
+
+      <div id="filters-carousel"
+           class="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+
+        <button (click)="toggleQuickFilter('Special offers')"
+                [class.bg-[#005943]]="isQuickFilterActive('Special offers')"
+                [class.text-white]="isQuickFilterActive('Special offers')"
+                [class.border-[#005943]]="isQuickFilterActive('Special offers')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span>🏷️</span>
+          <span>Special offers</span>
+        </button>
+
+        <button (click)="toggleQuickFilter('Available now')"
+                [class.bg-[#005943]]="isQuickFilterActive('Available now')"
+                [class.text-white]="isQuickFilterActive('Available now')"
+                [class.border-[#005943]]="isQuickFilterActive('Available now')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span>⚡</span>
+          <span>Available now</span>
+        </button>
+
+        <button (click)="toggleQuickFilter('Best rated')"
+                [class.bg-[#005943]]="isQuickFilterActive('Best rated')"
+                [class.text-white]="isQuickFilterActive('Best rated')"
+                [class.border-[#005943]]="isQuickFilterActive('Best rated')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span>⭐</span>
+          <span>Best rated</span>
+        </button>
+
+        <div class="relative shrink-0">
+          <select [(ngModel)]="selectedCuisine"
+                  class="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full pl-3.5 pr-7 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none cursor-pointer">
+            <option value="All">🍽️ Cuisine ⌵</option>
+            <option value="French">French</option>
+            <option value="Italian">Italian</option>
+            <option value="Indian">Indian</option>
+            <option value="Contemporary">Contemporary</option>
+          </select>
+        </div>
+
+        <div class="relative shrink-0">
+          <select [(ngModel)]="selectedNeighborhood"
+                  class="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full pl-3.5 pr-7 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none cursor-pointer">
+            <option value="All">📍 Neighborhood ⌵</option>
+            <option value="Le Marais">Le Marais</option>
+            <option value="Louvre">Louvre</option>
+            <option value="Montmartre">Montmartre</option>
+            <option value="Invalides">Invalides</option>
+          </select>
+        </div>
+
+        <button (click)="toggleQuickFilter('Yums')"
+                [class.bg-[#005943]]="isQuickFilterActive('Yums')"
+                [class.text-white]="isQuickFilterActive('Yums')"
+                [class.border-[#005943]]="isQuickFilterActive('Yums')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span class="w-4 h-4 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-extrabold">Y</span>
+          <span>Accepting my yums</span>
+        </button>
+
+        <div class="relative shrink-0">
+          <select [(ngModel)]="selectedPrice"
+                  class="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full pl-3.5 pr-7 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none cursor-pointer">
+            <option value="All">💳 Price ⌵</option>
+            <option value="€€">€€</option>
+            <option value="€€€">€€€</option>
+            <option value="€€€€">€€€€</option>
+          </select>
+        </div>
+
+        <button (click)="toggleQuickFilter('INSIDER')"
+                [class.bg-[#541246]]="isQuickFilterActive('INSIDER')"
+                [class.text-white]="isQuickFilterActive('INSIDER')"
+                [class.border-[#541246]]="isQuickFilterActive('INSIDER')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span>🟣</span>
+          <span>INSIDER</span>
+        </button>
+
+        <button (click)="toggleQuickFilter('Michelin')"
+                [class.bg-[#e21b23]]="isQuickFilterActive('Michelin')"
+                [class.text-white]="isQuickFilterActive('Michelin')"
+                [class.border-[#e21b23]]="isQuickFilterActive('Michelin')"
+                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+          <span class="text-red-500">🌸</span>
+          <span>MICHELIN</span>
+        </button>
+
+        <div class="relative shrink-0">
+          <button class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
+            <span>🍸</span>
+            <span>Setting & Moments ⌵</span>
+          </button>
+        </div>
+
+      </div>
+
+      <button (click)="scrollFilters(200)"
+              aria-label="Scroll filters right"
+              class="w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-xs flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 shrink-0">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+      </button>
+
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+
+  <div class="mb-6">
+    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+      <a routerLink="/" class="hover:text-emerald-700">🏠</a>
+      <span>›</span>
+      <span class="font-medium text-gray-800 dark:text-gray-200">The 10 Best Restaurants in Paris</span>
+    </div>
+
+    <div class="flex flex-wrap items-baseline gap-3">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+        The 10 Best Restaurants in Paris
+      </h1>
+      <span class="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
+        3,385 restaurants
+      </span>
+    </div>
+
+    <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-4xl leading-relaxed">
+      Paris remains the world's great dining capital, where centuries-old bistros and three-Michelin-starred temples sit side by side. Stroll arrondissement by arrondissement to discover cozy wine bars, innovative neo-bistros, and unforgettable culinary heritage with easy instant online booking.
+    </p>
+  </div>
+
+  <div class="lg:hidden flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl mb-4 text-xs font-bold">
+    <button (click)="mobileMapOpen = false"
+            [class.bg-white]="!mobileMapOpen"
+            [class.dark:bg-gray-900]="!mobileMapOpen"
+            [class.shadow-xs]="!mobileMapOpen"
+            class="flex-1 py-2 rounded-lg text-center transition">
+      📋 List ({{ filteredRestaurants.length }})
+    </button>
+    <button (click)="mobileMapOpen = true"
+            [class.bg-white]="mobileMapOpen"
+            [class.dark:bg-gray-900]="mobileMapOpen"
+            [class.shadow-xs]="mobileMapOpen"
+            class="flex-1 py-2 rounded-lg text-center transition">
+      🗺️ Map View
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
+
+
+    <div class="lg:col-span-7 xl:col-span-6 space-y-6" [class.hidden]="mobileMapOpen" [class.lg:block]="true">
+
+      <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400">
+        <span class="font-bold text-gray-900 dark:text-white">
+          Showing {{ filteredRestaurants.length }} restaurants
+        </span>
+        <div class="flex items-center gap-2">
+          <label for="sortSelect" class="font-medium">Sort by:</label>
+          <select id="sortSelect"
+                  [(ngModel)]="sortBy"
+                  class="bg-transparent border border-gray-300 dark:border-gray-700 rounded-md px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
+            <option value="featured">Featured</option>
+            <option value="rating">Highest Rated</option>
+            <option value="offers">Best Offers</option>
+            <option value="popular">Most Booked</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+
+        @for (rest of paginatedRestaurants; track rest.id) {
+          <a [routerLink]="['/restaurant', rest.id]" class="block cursor-pointer">
+            <article (mouseenter)="selectRestaurantForMap(rest)"
+                     class="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row group"
+                     [class.ring-2]="hoveredRestaurantId === rest.id"
+                     [class.ring-[#005943]]="hoveredRestaurantId === rest.id">
+
+              <div class="relative sm:w-60 md:w-64 h-40 sm:h-auto overflow-hidden shrink-0">
+                <img [src]="rest.image"
+                     [alt]="rest.name"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+
+
+                <div class="absolute top-3 left-3 flex flex-col gap-1.5">
+                  @if (rest.isMichelin) {
+                    <span class="bg-white/95 text-[#e21b23] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                      <span>🌸</span> 3-Star Michelin
+                    </span>
+                  }
+                  @if (rest.isInsider) {
+                    <span class="bg-[#541246] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                      <span>🟣</span> Insider
+                    </span>
+                  }
+                </div>
+
+                <button (click)="toggleFavorite(rest.id, $event)"
+                        aria-label="Add to favorites"
+                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
+                  <svg class="w-4 h-4 transition-colors"
+                       [class.text-red-500]="isFavorite(rest.id)"
+                       [class.fill-red-500]="isFavorite(rest.id)"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </button>
+
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                  📸 {{ rest.gallery.length }} photos
+                </div>
+              </div>
+
+              <div class="p-4 flex-1 flex flex-col justify-between">
+                <div>
+
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors leading-tight">
+                        {{ rest.name }}
+                      </h2>
+
+                      <div class="flex items-center gap-2 mt-1.5 text-xs">
+                        <div class="flex items-center text-amber-500">
+                          <span>★★★★★</span>
+                        </div>
+                        <span class="font-bold text-gray-900 dark:text-white">{{ rest.rating }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">({{ rest.reviewCount }} reviews)</span>
+                      </div>
+                    </div>
+
+                    <div class="text-right shrink-0">
+                      <span class="inline-block bg-emerald-50 dark:bg-emerald-950 text-[#00875a] dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-sm font-extrabold px-2.5 py-1 rounded-lg">
+                        {{ rest.score }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                    <span>{{ rest.cuisine }}</span>
+                    <span>•</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ rest.priceLevel }}</span>
+                    <span>•</span>
+                    <span>{{ rest.neighborhood }}</span>
+                  </div>
+
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
+                    {{ rest.description }}
+                  </p>
+
+                  @if (rest.specialOffer) {
+                    <div class="mt-3 inline-flex items-center gap-1.5 bg-[#dcfce7] dark:bg-emerald-950/80 text-[#15803d] dark:text-emerald-300 text-xs font-bold px-3 py-1 rounded-full">
+                      <span>🎉</span>
+                      <span>{{ rest.specialOffer }}</span>
+                    </div>
+                  }
+                </div>
+
+                <div class="mt-2.5 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Select a time:
+                    </span>
+                    @if (rest.bookedCountToday > 50) {
+                      <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                        <span>🔥</span> Booked {{ rest.bookedCountToday }} times today
+                      </span>
+                    }
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    @for (slot of rest.timeslots; track slot.time) {
+                      <button (click)="openBookingModal(rest, slot, $event)"
+                              class="w-[84px] h-[38px] flex flex-col items-center justify-center rounded-lg bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold transition-all duration-150 active:scale-95 shadow-xs shrink-0 select-none">
+                        <span>{{ slot.time }}</span>
+                        @if (slot.discount) {
+                          <span class="text-[9px] font-extrabold text-emerald-200 uppercase -mt-0.5 leading-none">{{ slot.discount }}</span>
+                        } @else {
+                          <span class="text-[9px] opacity-0 -mt-0.5 leading-none">.</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+
+              </div>
+            </article>
+          </a>
+        }
+
+      </div>
+      @if (totalPages > 1) {
+        <div class="flex flex-col items-center gap-4 pt-8 pb-4">
+
+          <div class="flex items-center gap-2">
+
+            <button (click)="goToPage(1)"
+                    class="w-9 h-9 rounded-lg text-sm font-bold transition flex items-center justify-center border border-gray-200"
+                    [class.bg-[#005943]]="currentPage === 1"
+                    [class.text-white]="currentPage === 1"
+                    [class.text-gray-700]="currentPage !== 1"
+                    [class.border-[#005943]]="currentPage === 1"
+                    [class.hover:bg-gray-50]="currentPage !== 1">
+              1
+            </button>
+
+            @if (currentPage > 3) {
+              <span class="text-gray-400 px-1">...</span>
+            }
+
+            @if (currentPage > 2) {
+              <button (click)="goToPage(currentPage - 1)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold text-gray-700 border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center">
+                {{ currentPage - 1 }}
+              </button>
+            }
+
+            @if (currentPage !== 1 && currentPage !== totalPages) {
+              <button class="w-9 h-9 rounded-lg text-sm font-bold bg-[#005943] text-white border border-[#005943] flex items-center justify-center">
+                {{ currentPage }}
+              </button>
+            }
+
+            @if (currentPage < totalPages - 1) {
+              <button (click)="goToPage(currentPage + 1)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold text-gray-700 border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center">
+                {{ currentPage + 1 }}
+              </button>
+            }
+
+            @if (currentPage < totalPages - 2) {
+              <span class="text-gray-400 px-1">...</span>
+            }
+
+            @if (totalPages > 1) {
+              <button (click)="goToPage(totalPages)"
+                      class="w-9 h-9 rounded-lg text-sm font-bold transition flex items-center justify-center border border-gray-200"
+                      [class.bg-[#005943]]="currentPage === totalPages"
+                      [class.text-white]="currentPage === totalPages"
+                      [class.text-gray-700]="currentPage !== totalPages"
+                      [class.border-[#005943]]="currentPage === totalPages"
+                      [class.hover:bg-gray-50]="currentPage !== totalPages">
+                {{ totalPages }}
+              </button>
+            }
+
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button (click)="prevPage()"
+                    [disabled]="currentPage === 1"
+                    class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center transition text-gray-600 hover:bg-gray-50"
+                    [class.opacity-50]="currentPage === 1"
+                    [class.hover:bg-gray-50]="currentPage !== 1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+
+            <button (click)="nextPage()"
+                    [disabled]="currentPage === totalPages"
+                    class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center transition text-gray-600 hover:bg-gray-50"
+                    [class.opacity-50]="currentPage === totalPages"
+                    [class.hover:bg-gray-50]="currentPage !== totalPages">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+
+    <div class="lg:col-span-5 xl:col-span-6 sticky top-24" [class.block]="mobileMapOpen" [class.hidden]="!mobileMapOpen && true" [class.lg:block]="true">
+      <div class="bg-[#e5e9ec] dark:bg-[#1a2332] rounded-3xl overflow-hidden border border-gray-300 dark:border-gray-700 shadow-xl relative h-[calc(100vh-140px)] min-h-[640px]">
+
+        <div class="absolute inset-0 overflow-hidden select-none">
+          <svg class="absolute inset-0 w-full h-full text-blue-200 dark:text-blue-900/60" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M 0 58 Q 30 48, 50 54 T 80 40 T 100 48" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+            <path d="M 0 58 Q 30 48, 50 54 T 80 40 T 100 48" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.5"/>
+          </svg>
+
+          <div class="absolute top-[26%] left-[64%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
+            Le Marais
+          </div>
+          <div class="absolute top-[34%] left-[46%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
+            1st Arr. Louvre
+          </div>
+          <div class="absolute top-[58%] left-[34%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
+            Saint-Germain
+          </div>
+          <div class="absolute top-[14%] left-[42%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
+            Montmartre
+          </div>
+
+          <div class="absolute top-[44%] left-[22%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
+            <span>🗼</span> Eiffel Tower
+          </div>
+          <div class="absolute top-[38%] left-[50%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
+            <span>🏛️</span> Louvre Museum
+          </div>
+          <div class="absolute top-[16%] left-[44%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
+            <span>⛪</span> Sacré-Cœur
+          </div>
+          <div class="absolute top-[54%] left-[60%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
+            <span>⛪</span> Notre-Dame
+          </div>
+
+
+          @for (rest of filteredRestaurants; track rest.id) {
+            <div [style.top.%]="rest.coords.y"
+                 [style.left.%]="rest.coords.x"
+                 (click)="selectRestaurantForMap(rest)"
+                 class="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group/pin">
+
+              <div [class.bg-[#005943]]="hoveredRestaurantId === rest.id"
+                   [class.text-white]="hoveredRestaurantId === rest.id"
+                   [class.scale-125]="hoveredRestaurantId === rest.id"
+                   [class.ring-4]="hoveredRestaurantId === rest.id"
+                   [class.ring-emerald-300]="hoveredRestaurantId === rest.id"
+                   [class.bg-white]="hoveredRestaurantId !== rest.id"
+                   [class.text-gray-900]="hoveredRestaurantId !== rest.id"
+                   class="px-3 py-1.5 rounded-full text-xs font-black shadow-xl border border-gray-300 dark:border-gray-600 transition-all duration-200 flex items-center gap-1.5 hover:scale-125">
+                <span>{{ rest.priceLevel }}</span>
+                <span class="text-[11px] font-bold text-[#00875a]" [class.text-white]="hoveredRestaurantId === rest.id">★ {{ rest.rating }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
+          <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl px-3 py-2 shadow-md border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200 pointer-events-auto">
+            <input type="checkbox" id="searchMove" checked class="rounded text-[#005943] focus:ring-[#005943] cursor-pointer">
+            <label for="searchMove" class="cursor-pointer">Search as I move the map</label>
+          </div>
+
+          <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col pointer-events-auto overflow-hidden">
+            <button class="w-8 h-8 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-sm">+</button>
+            <button class="w-8 h-8 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">-</button>
+          </div>
+        </div>
+
+
+        @if (selectedRestaurant) {
+          <div class="absolute bottom-6 left-6 right-6 z-30 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-4 animate-in fade-in duration-200">
+            <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#005943] shrink-0 shadow-md">
+              <img [src]="selectedRestaurant.image"
+                   [alt]="selectedRestaurant.name"
+                   class="w-full h-full object-cover">
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base truncate">
+                {{ selectedRestaurant.name }}
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                {{ selectedRestaurant.cuisine }} • {{ selectedRestaurant.priceLevel }} • {{ selectedRestaurant.neighborhood }}
+              </p>
+              <div class="flex items-center gap-2 mt-1.5 text-xs">
+                <span class="font-extrabold text-[#00875a]">★ {{ selectedRestaurant.rating }}</span>
+                <span class="text-gray-400">({{ selectedRestaurant.reviewCount }})</span>
+                @if (selectedRestaurant.specialOffer) {
+                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full truncate">{{ selectedRestaurant.specialOffer }}</span>
+                }
+              </div>
+            </div>
+            <button (click)="openBookingModal(selectedRestaurant, selectedRestaurant.timeslots[0])"
+                    class="bg-[#005943] hover:bg-[#004735] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 shadow-md transition active:scale-95">
+              Book Table
+            </button>
+          </div>
+        }
+
+      </div>
+    </div>
+
+  </div>
+</main>
+
+@if (bookingModalOpen && selectedRestaurant && selectedTimeslot) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative animate-in fade-in zoom-in duration-200">
+
+      <button (click)="closeBookingModal()"
+              aria-label="Close modal"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+
+      @if (!bookingSuccess) {
+        <div class="text-center">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-[#005943] dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-2xl">
+            🍽️
+          </div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">
+            Confirm Reservation
+          </h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Instant free booking with DineAhead
+          </p>
+
+
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 my-6 text-left space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
+            <div class="flex justify-between font-bold text-sm text-gray-900 dark:text-white">
+              <span>Restaurant:</span>
+              <span>{{ selectedRestaurant.name }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Time:</span>
+              <span class="font-bold text-[#005943] dark:text-emerald-400">{{ selectedTimeslot.time }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Date:</span>
+              <span>Today, Aug 18</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Party Size:</span>
+              <span>2 Guests</span>
+            </div>
+            @if (selectedTimeslot.discount) {
+              <div class="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold border-t border-gray-200 dark:border-gray-700 pt-2">
+                <span>Applied Discount:</span>
+                <span>{{ selectedTimeslot.discount }} Special Offer</span>
+              </div>
+            }
+          </div>
+
+          <button (click)="confirmBooking()"
+                  class="w-full py-3.5 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
+            Confirm Booking
+          </button>
+        </div>
+      } @else {
+        <div class="text-center py-6">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-3xl">
+            ✓
+          </div>
+          <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+            Table Reserved!
+          </h2>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
+            Your reservation at <span class="font-bold text-gray-900 dark:text-white">{{ selectedRestaurant.name }}</span> for <span class="font-bold">{{ selectedTimeslot.time }}</span> is confirmed. Free cancellation anytime.
+          </p>
+        </div>
+      }
+
+    </div>
+  </div>
+}
+
+<app-footer></app-footer>

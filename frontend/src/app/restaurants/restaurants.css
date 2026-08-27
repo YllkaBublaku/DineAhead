@@ -1,0 +1,17 @@
+/* Restaurants Page Styling */
+.map-container {
+  height: calc(100vh - 170px);
+}
+
+@keyframes pulse-pin {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.pin-active {
+  animation: pulse-pin 1.5s infinite ease-in-out;
+}
