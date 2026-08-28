@@ -2,7 +2,11 @@ package com.dineahead.infrastructure;
 
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +17,14 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Optional<Restaurant> findBySlug(String slug);
     List<Restaurant> findByCity(String city);
     List<Restaurant> findByOwnerId(Long ownerId);
-
     Long owner(User owner);
+
+    Page<Restaurant> findByCity(String city, Pageable pageable);
+
+    @Query("SELECT r FROM Restaurant r WHERE " +
+            "(:city IS NULL OR r.city = :city) AND " +
+            "(:query IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(r.cuisineType) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Restaurant> searchRestaurants(@Param("city") String city,
+                                       @Param("query") String query,
+                                       Pageable pageable);
 }

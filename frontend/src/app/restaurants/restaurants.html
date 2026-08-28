@@ -124,7 +124,7 @@
         </button>
 
         <div class="relative shrink-0">
-          <select [(ngModel)]="selectedCuisine"
+          <select [(ngModel)]="selectedCuisine" (change)="onCuisineChange()"
                   class="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full pl-3.5 pr-7 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none cursor-pointer">
             <option value="All">🍽️ Cuisine ⌵</option>
             <option value="French">French</option>
@@ -155,7 +155,7 @@
         </button>
 
         <div class="relative shrink-0">
-          <select [(ngModel)]="selectedPrice"
+          <select [(ngModel)]="selectedPrice" (change)="onPriceChange()"
                   class="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full pl-3.5 pr-7 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none cursor-pointer">
             <option value="All">💳 Price ⌵</option>
             <option value="€€">€€</option>
@@ -163,24 +163,6 @@
             <option value="€€€€">€€€€</option>
           </select>
         </div>
-
-        <button (click)="toggleQuickFilter('INSIDER')"
-                [class.bg-[#541246]]="isQuickFilterActive('INSIDER')"
-                [class.text-white]="isQuickFilterActive('INSIDER')"
-                [class.border-[#541246]]="isQuickFilterActive('INSIDER')"
-                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
-          <span>🟣</span>
-          <span>INSIDER</span>
-        </button>
-
-        <button (click)="toggleQuickFilter('Michelin')"
-                [class.bg-[#e21b23]]="isQuickFilterActive('Michelin')"
-                [class.text-white]="isQuickFilterActive('Michelin')"
-                [class.border-[#e21b23]]="isQuickFilterActive('Michelin')"
-                class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
-          <span class="text-red-500">🌸</span>
-          <span>MICHELIN</span>
-        </button>
 
         <div class="relative shrink-0">
           <button class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-600 shrink-0 transition">
@@ -215,7 +197,7 @@
         The 10 Best Restaurants in Paris
       </h1>
       <span class="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
-        3,385 restaurants
+        {{ totalElements }} restaurants
       </span>
     </div>
 
@@ -230,7 +212,7 @@
             [class.dark:bg-gray-900]="!mobileMapOpen"
             [class.shadow-xs]="!mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-      📋 List ({{ filteredRestaurants.length }})
+      📋 List ({{ paginatedRestaurants.length }})
     </button>
     <button (click)="mobileMapOpen = true"
             [class.bg-white]="mobileMapOpen"
@@ -248,17 +230,17 @@
 
       <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400">
         <span class="font-bold text-gray-900 dark:text-white">
-          Showing {{ filteredRestaurants.length }} restaurants
+          Showing {{ paginatedRestaurants.length }} restaurants
         </span>
         <div class="flex items-center gap-2">
           <label for="sortSelect" class="font-medium">Sort by:</label>
           <select id="sortSelect"
                   [(ngModel)]="sortBy"
+                  (change)="onSearch()"
                   class="bg-transparent border border-gray-300 dark:border-gray-700 rounded-md px-2 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
-            <option value="featured">Featured</option>
-            <option value="rating">Highest Rated</option>
-            <option value="offers">Best Offers</option>
-            <option value="popular">Most Booked</option>
+            <option value="averageRating">Highest Rated</option>
+            <option value="name">Name</option>
+            <option value="reviewCount">Most Booked</option>
           </select>
         </div>
       </div>
@@ -273,23 +255,9 @@
                      [class.ring-[#005943]]="hoveredRestaurantId === rest.id">
 
               <div class="relative sm:w-60 md:w-64 h-40 sm:h-auto overflow-hidden shrink-0">
-                <img [src]="rest.image"
+                <img [src]="rest.coverPhotoUrl || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&h=600&q=80'"
                      [alt]="rest.name"
                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-
-
-                <div class="absolute top-3 left-3 flex flex-col gap-1.5">
-                  @if (rest.isMichelin) {
-                    <span class="bg-white/95 text-[#e21b23] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
-                      <span>🌸</span> 3-Star Michelin
-                    </span>
-                  }
-                  @if (rest.isInsider) {
-                    <span class="bg-[#541246] text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
-                      <span>🟣</span> Insider
-                    </span>
-                  }
-                </div>
 
                 <button (click)="toggleFavorite(rest.id, $event)"
                         aria-label="Add to favorites"
@@ -303,7 +271,7 @@
                 </button>
 
                 <div class="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
-                  📸 {{ rest.gallery.length }} photos
+                  📸 {{ rest.gallery?.length || 0 }} photos
                 </div>
               </div>
 
@@ -320,24 +288,24 @@
                         <div class="flex items-center text-amber-500">
                           <span>★★★★★</span>
                         </div>
-                        <span class="font-bold text-gray-900 dark:text-white">{{ rest.rating }}</span>
-                        <span class="text-gray-500 dark:text-gray-400">({{ rest.reviewCount }} reviews)</span>
+                        <span class="font-bold text-gray-900 dark:text-white">{{ rest.averageRating?.toFixed(1) || 'New' }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">({{ rest.reviewCount || 0 }} reviews)</span>
                       </div>
                     </div>
 
                     <div class="text-right shrink-0">
                       <span class="inline-block bg-emerald-50 dark:bg-emerald-950 text-[#00875a] dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-sm font-extrabold px-2.5 py-1 rounded-lg">
-                        {{ rest.score }}
+                        {{ rest.averageRating?.toFixed(1) || 'N/A' }}
                       </span>
                     </div>
                   </div>
 
                   <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                    <span>{{ rest.cuisine }}</span>
+                    <span>{{ rest.cuisineType }}</span>
                     <span>•</span>
-                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ rest.priceLevel }}</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-200">{{ rest.priceRange }}</span>
                     <span>•</span>
-                    <span>{{ rest.neighborhood }}</span>
+                    <span>{{ rest.address }}</span>
                   </div>
 
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
@@ -357,26 +325,12 @@
                     <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Select a time:
                     </span>
-                    @if (rest.bookedCountToday > 50) {
-                      <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                        <span>🔥</span> Booked {{ rest.bookedCountToday }} times today
-                      </span>
-                    }
                   </div>
 
-                  <div class="flex flex-wrap items-center gap-2">
-                    @for (slot of rest.timeslots; track slot.time) {
-                      <button (click)="openBookingModal(rest, slot, $event)"
-                              class="w-[84px] h-[38px] flex flex-col items-center justify-center rounded-lg bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold transition-all duration-150 active:scale-95 shadow-xs shrink-0 select-none">
-                        <span>{{ slot.time }}</span>
-                        @if (slot.discount) {
-                          <span class="text-[9px] font-extrabold text-emerald-200 uppercase -mt-0.5 leading-none">{{ slot.discount }}</span>
-                        } @else {
-                          <span class="text-[9px] opacity-0 -mt-0.5 leading-none">.</span>
-                        }
-                      </button>
-                    }
-                  </div>
+                  <!-- Backend doesn't have time slots yet, so hide this for now, or add a "Book" button -->
+                  <a [routerLink]="['/restaurant', rest.id]" class="inline-block px-4 py-2 bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold rounded-lg transition active:scale-95">
+                    Book Now
+                  </a>
                 </div>
 
               </div>
@@ -500,22 +454,19 @@
           </div>
 
 
-          @for (rest of filteredRestaurants; track rest.id) {
-            <div [style.top.%]="rest.coords.y"
-                 [style.left.%]="rest.coords.x"
+          @for (rest of paginatedRestaurants; track rest.id) {
+            <div [style.top.%]="rest.coords?.y || '50%'"
+                 [style.left.%]="rest.coords?.x || '50%'"
                  (click)="selectRestaurantForMap(rest)"
                  class="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group/pin">
 
               <div [class.bg-[#005943]]="hoveredRestaurantId === rest.id"
                    [class.text-white]="hoveredRestaurantId === rest.id"
-                   [class.scale-125]="hoveredRestaurantId === rest.id"
-                   [class.ring-4]="hoveredRestaurantId === rest.id"
-                   [class.ring-emerald-300]="hoveredRestaurantId === rest.id"
                    [class.bg-white]="hoveredRestaurantId !== rest.id"
                    [class.text-gray-900]="hoveredRestaurantId !== rest.id"
                    class="px-3 py-1.5 rounded-full text-xs font-black shadow-xl border border-gray-300 dark:border-gray-600 transition-all duration-200 flex items-center gap-1.5 hover:scale-125">
-                <span>{{ rest.priceLevel }}</span>
-                <span class="text-[11px] font-bold text-[#00875a]" [class.text-white]="hoveredRestaurantId === rest.id">★ {{ rest.rating }}</span>
+                <span>{{ rest.priceRange || '€€' }}</span>
+                <span class="text-[11px] font-bold text-[#00875a]" [class.text-white]="hoveredRestaurantId === rest.id">★ {{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
               </div>
             </div>
           }
@@ -537,7 +488,7 @@
         @if (selectedRestaurant) {
           <div class="absolute bottom-6 left-6 right-6 z-30 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-4 animate-in fade-in duration-200">
             <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#005943] shrink-0 shadow-md">
-              <img [src]="selectedRestaurant.image"
+              <img [src]="selectedRestaurant.coverPhotoUrl || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&h=600&q=80'"
                    [alt]="selectedRestaurant.name"
                    class="w-full h-full object-cover">
             </div>
@@ -546,20 +497,20 @@
                 {{ selectedRestaurant.name }}
               </h3>
               <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                {{ selectedRestaurant.cuisine }} • {{ selectedRestaurant.priceLevel }} • {{ selectedRestaurant.neighborhood }}
+                {{ selectedRestaurant.cuisineType }} • {{ selectedRestaurant.priceRange }} • {{ selectedRestaurant.address }}
               </p>
               <div class="flex items-center gap-2 mt-1.5 text-xs">
-                <span class="font-extrabold text-[#00875a]">★ {{ selectedRestaurant.rating }}</span>
-                <span class="text-gray-400">({{ selectedRestaurant.reviewCount }})</span>
+                <span class="font-extrabold text-[#00875a]">★ {{ selectedRestaurant.averageRating?.toFixed(1) || 'N/A' }}</span>
+                <span class="text-gray-400">({{ selectedRestaurant.reviewCount || 0 }})</span>
                 @if (selectedRestaurant.specialOffer) {
                   <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full truncate">{{ selectedRestaurant.specialOffer }}</span>
                 }
               </div>
             </div>
-            <button (click)="openBookingModal(selectedRestaurant, selectedRestaurant.timeslots[0])"
-                    class="bg-[#005943] hover:bg-[#004735] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 shadow-md transition active:scale-95">
+            <a [routerLink]="['/restaurant', selectedRestaurant.id]"
+               class="bg-[#005943] hover:bg-[#004735] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 shadow-md transition active:scale-95">
               Book Table
-            </button>
+            </a>
           </div>
         }
 
@@ -568,76 +519,5 @@
 
   </div>
 </main>
-
-@if (bookingModalOpen && selectedRestaurant && selectedTimeslot) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-    <div class="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative animate-in fade-in zoom-in duration-200">
-
-      <button (click)="closeBookingModal()"
-              aria-label="Close modal"
-              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
-
-      @if (!bookingSuccess) {
-        <div class="text-center">
-          <div class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-[#005943] dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 text-2xl">
-            🍽️
-          </div>
-          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">
-            Confirm Reservation
-          </h2>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Instant free booking with DineAhead
-          </p>
-
-
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 my-6 text-left space-y-2.5 text-xs text-gray-700 dark:text-gray-300">
-            <div class="flex justify-between font-bold text-sm text-gray-900 dark:text-white">
-              <span>Restaurant:</span>
-              <span>{{ selectedRestaurant.name }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Time:</span>
-              <span class="font-bold text-[#005943] dark:text-emerald-400">{{ selectedTimeslot.time }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Date:</span>
-              <span>Today, Aug 18</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Party Size:</span>
-              <span>2 Guests</span>
-            </div>
-            @if (selectedTimeslot.discount) {
-              <div class="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold border-t border-gray-200 dark:border-gray-700 pt-2">
-                <span>Applied Discount:</span>
-                <span>{{ selectedTimeslot.discount }} Special Offer</span>
-              </div>
-            }
-          </div>
-
-          <button (click)="confirmBooking()"
-                  class="w-full py-3.5 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
-            Confirm Booking
-          </button>
-        </div>
-      } @else {
-        <div class="text-center py-6">
-          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-3xl">
-            ✓
-          </div>
-          <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white">
-            Table Reserved!
-          </h2>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Your reservation at <span class="font-bold text-gray-900 dark:text-white">{{ selectedRestaurant.name }}</span> for <span class="font-bold">{{ selectedTimeslot.time }}</span> is confirmed. Free cancellation anytime.
-          </p>
-        </div>
-      }
-
-    </div>
-  </div>
-}
 
 <app-footer></app-footer>

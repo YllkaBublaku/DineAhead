@@ -51,7 +51,7 @@ public class Restaurant {
     private String cuisineType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "price_range")
+    @Column(name = "price_range", length = 50)
     private PriceRange priceRange;
 
     private String phone;
@@ -61,6 +61,20 @@ public class Restaurant {
 
     @Column(name = "cover_photo_url")
     private String coverPhotoUrl;
+
+    @Column(name = "special_offer")
+    private String specialOffer;
+
+    @Column(name = "latitude", precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 7)
+    private BigDecimal longitude;
+
+    @ElementCollection
+    @CollectionTable(name = "restaurant_gallery", joinColumns = @JoinColumn(name = "restaurant_id"))
+    @Column(name = "image_url")
+    private List<String> gallery = new ArrayList<>();
 
     @Column(name = "average_rating")
     private BigDecimal averageRating;

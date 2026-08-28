@@ -2,6 +2,8 @@ package com.dineahead.application;
 
 import com.dineahead.domain.Restaurant;
 import com.dineahead.infrastructure.RestaurantRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,6 +20,13 @@ public class RestaurantService {
     public Restaurant createRestaurant(Restaurant restaurant) {
         restaurant.setCreatedAt(LocalDateTime.now());
         return restaurantRepository.save(restaurant);
+    }
+
+    public Page<Restaurant> getFilteredRestaurants(String city, String query, Pageable pageable) {
+        if (query == null || query.trim().isEmpty()) {
+            return restaurantRepository.findByCity(city, pageable);
+        }
+        return restaurantRepository.searchRestaurants(city, query, pageable);
     }
 
     public List<Restaurant> getRestaurantsByCity(String city) {
