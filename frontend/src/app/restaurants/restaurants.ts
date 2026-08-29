@@ -64,36 +64,62 @@ export class Restaurants implements OnInit {
   favorites = new Set<number>([1, 3]);
   bookingSuccess = false;
 
+  isLoggedIn = false;
+  userRole: string | null = null;
+  user: any = null;
+
   constructor(private route: ActivatedRoute, private router: Router, private api: ApiService) {}
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      if (params['city']) this.searchCity = params['city'];
-      if (params['q']) this.searchQuery = params['q'];
-      this.loadRestaurants();
-    });
+    this.checkLoginStatus();
+    this.loadRestaurants();
+  }
+
+  checkLoginStatus(): void {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      this.user = JSON.parse(storedUser);
+      this.isLoggedIn = true;
+      this.userRole = this.user.role;
+
+      const first = this.user.firstName?.charAt(0) || '';
+      const last = this.user.lastName?.charAt(0) || '';
+      this.user.initials = (first + last).toUpperCase() || 'U';
+    } else {
+      this.isLoggedIn = false;
+      this.user = null;
+      this.userRole = null;
+    }
+  }
+
+  logout(): void {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    this.checkLoginStatus();
+    this.router.navigate(['/']);
   }
 
   loadRestaurants(): void {
     this.loading = true;
 
-    this.api.getRestaurants().subscribe({
-      next: (data: any[]) => {
-        this.restaurants = data || [];
-        this.totalElements = this.restaurants.length;
-        this.totalPages = 1;
-        this.loading = false;
+    this.api.getRestaurants().then((data) => {
+      this.restaurants = data || [];
+      this.totalElements = this.restaurants.length;
+      this.totalPages = 1;
+      this.loading = false;
 
-        this.mapPins = this.restaurants.map((rest, index) => ({
-          ...rest,
-          coords: { x: 20 + (index * 15), y: 20 + (index * 10), lat: 0, lng: 0 }
-        }));
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error(err);
-      }
+      this.mapPins = this.restaurants.map((rest, index) => ({
+        ...rest,
+        coords: { x: 20 + (index * 15), y: 20 + (index * 10), lat: 0, lng: 0 }
+      }));
+    }).catch((error) => {
+      console.error("Failed to fetch:", error);
+      this.loading = false;
     });
+  }
+
+  onSortChange(): void {
+    this.loadRestaurants();
   }
 
   goToPage(page: number): void {
@@ -130,12 +156,10 @@ export class Restaurants implements OnInit {
   }
 
   onCuisineChange(): void {
-    this.currentPage = 1;
     this.loadRestaurants();
   }
 
   onPriceChange(): void {
-    this.currentPage = 1;
     this.loadRestaurants();
   }
 

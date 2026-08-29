@@ -1,5 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
@@ -25,7 +25,7 @@ export class Login implements OnInit {
   forgotSuccessMessage = signal('');
   forgotErrorMessage = signal('');
 
-  constructor(private router: Router, private api: ApiService) {}
+  constructor(private router: Router, private api: ApiService, private route: ActivatedRoute) {}
 
   ngOnInit() {
     const savedEmail = localStorage.getItem('rememberedEmail');
@@ -76,7 +76,16 @@ export class Login implements OnInit {
           localStorage.removeItem('rememberedEmail');
         }
 
-        this.router.navigate(['/']);
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+        if (returnUrl === '/') {
+          if (response.role === 'ADMIN') {
+            this.router.navigate(['/restaurant-dashboard']);
+          } else {
+            this.router.navigate(['/dashboard']);
+          }
+        } else {
+          this.router.navigate([returnUrl]);
+        }
       },
       error: (error) => {
         this.isLoading.set(false);

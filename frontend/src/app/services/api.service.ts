@@ -66,7 +66,11 @@ export class ApiService {
     });
   }
 
-  getRestaurants(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/restaurants`);
+  getRestaurants(): Promise<any[]> {
+    return fetch('http://localhost:8080/api/restaurants')
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch restaurants');
+        return response.json();
+      });
   }
 }

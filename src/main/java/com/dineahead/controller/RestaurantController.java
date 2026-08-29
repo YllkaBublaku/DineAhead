@@ -35,7 +35,7 @@ public class RestaurantController {
                 restaurant.getPriceRange(),
                 restaurant.getCoverPhotoUrl(),
                 restaurant.getSpecialOffer(),
-                new java.util.ArrayList<>(), // Force empty gallery
+                new java.util.ArrayList<>(),
                 restaurant.getAverageRating(),
                 restaurant.getReviewCount(),
                 restaurant.getLatitude(),
