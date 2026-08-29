@@ -76,24 +76,12 @@ export class Restaurants implements OnInit {
 
   loadRestaurants(): void {
     this.loading = true;
-    this.errorMessage = '';
 
-    const safePage = this.currentPage && this.currentPage > 0 ? this.currentPage - 1 : 0;
-
-    this.api.getRestaurants(
-      this.searchCity,
-      this.searchQuery,
-      this.selectedCuisine !== 'All' ? this.selectedCuisine : '',
-      this.selectedPrice !== 'All' ? this.selectedPrice : '',
-      this.activeQuickFilters.has('Special offers'),
-      safePage,
-      this.itemsPerPage,
-      this.sortBy
-    ).subscribe({
-      next: (data: any) => {
-        this.restaurants = data.content || [];
-        this.totalPages = data.totalPages || 0;
-        this.totalElements = data.totalElements || 0;
+    this.api.getRestaurants().subscribe({
+      next: (data: any[]) => {
+        this.restaurants = data || [];
+        this.totalElements = this.restaurants.length;
+        this.totalPages = 1;
         this.loading = false;
 
         this.mapPins = this.restaurants.map((rest, index) => ({
@@ -103,7 +91,6 @@ export class Restaurants implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.errorMessage = 'Could not fetch restaurants.';
         console.error(err);
       }
     });

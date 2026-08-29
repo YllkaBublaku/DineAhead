@@ -66,27 +66,7 @@ export class ApiService {
     });
   }
 
-  getRestaurants(
-    city: string,
-    query: string,
-    cuisine: string,
-    price: string,
-    specialOffers: boolean,
-    page: number,
-    size: number,
-    sortBy: string
-  ): Observable<any> {
-    return this.http.get(`${this.apiUrl}/restaurants`, {
-      params: {
-        city: city || 'Paris',
-        query: query || '',
-        cuisine: cuisine || '',
-        price: price || '',
-        specialOffers: specialOffers ? 'true' : 'false',
-        page: page.toString(),
-        size: size.toString(),
-        sortBy: sortBy || 'averageRating'
-      }
-    });
+  getRestaurants(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/restaurants`);
   }
 }

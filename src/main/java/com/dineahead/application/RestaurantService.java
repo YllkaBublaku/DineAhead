@@ -20,13 +20,11 @@ public class RestaurantService {
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
-        restaurant.setCreatedAt(LocalDateTime.now());
         return restaurantRepository.save(restaurant);
     }
 
-    @Transactional(readOnly = true)
-    public Page<Restaurant> getFilteredRestaurants(String city, String query, String cuisine, PriceRange price, boolean specialOffers, Pageable pageable) {
-        return restaurantRepository.findAll(pageable);
+    public List<Restaurant> getAllRestaurants() {
+        return restaurantRepository.findAll();
     }
 
     public List<Restaurant> getRestaurantsByCity(String city) {

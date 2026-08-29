@@ -44,29 +44,12 @@ public class RestaurantController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getRestaurants(
-            @RequestParam(defaultValue = "Paris") String city,
-            @RequestParam(defaultValue = "") String query,
-            @RequestParam(defaultValue = "") String cuisine,
-            @RequestParam(required = false) PriceRange price,
-            @RequestParam(defaultValue = "false") boolean specialOffers,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size,
-            @RequestParam(defaultValue = "averageRating") String sortBy) {
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
-        Page<Restaurant> restaurantPage = restaurantService.getFilteredRestaurants(city, query, cuisine, price, specialOffers, pageable);
-
-        List<RestaurantResponseDTO> content = restaurantPage.getContent().stream()
+    public ResponseEntity<List<RestaurantResponseDTO>> getAllRestaurants() {
+        List<RestaurantResponseDTO> dtos = restaurantService.getAllRestaurants()
+                .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
-
-        return ResponseEntity.ok(Map.of(
-                "content", content,
-                "totalElements", restaurantPage.getTotalElements(),
-                "totalPages", restaurantPage.getTotalPages(),
-                "currentPage", restaurantPage.getNumber()
-        ));
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/city/{city}")
