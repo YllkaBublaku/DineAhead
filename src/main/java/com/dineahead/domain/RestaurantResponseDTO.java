@@ -1,6 +1,5 @@
 package com.dineahead.domain;
 
-import com.dineahead.domain.enums.PriceRange;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,7 +18,7 @@ public class RestaurantResponseDTO {
     private String address;
     private String city;
     private String cuisineType;
-    private PriceRange priceRange;
+    private String priceRange;
     private String coverPhotoUrl;
     private String specialOffer;
     private List<String> gallery = new ArrayList<>();
@@ -27,5 +26,4 @@ public class RestaurantResponseDTO {
     private Integer reviewCount;
     private BigDecimal latitude;
     private BigDecimal longitude;
-
 }

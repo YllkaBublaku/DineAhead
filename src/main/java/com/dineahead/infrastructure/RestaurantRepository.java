@@ -2,6 +2,7 @@ package com.dineahead.infrastructure;
 
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.User;
+import com.dineahead.domain.enums.PriceRange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,8 +24,15 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     @Query("SELECT r FROM Restaurant r WHERE " +
             "(:city IS NULL OR r.city = :city) AND " +
-            "(:query IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(r.cuisineType) LIKE LOWER(CONCAT('%', :query, '%')))")
+            "(:query IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(r.cuisineType) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+            "(:cuisine IS NULL OR r.cuisineType = :cuisine) AND " +
+            "(:price IS NULL OR r.priceRange = :price) AND " +
+            "(:specialOffers IS NULL OR :specialOffers = false OR r.specialOffer IS NOT NULL)")
     Page<Restaurant> searchRestaurants(@Param("city") String city,
                                        @Param("query") String query,
+                                       @Param("cuisine") String cuisine,
+                                       @Param("price") PriceRange price,
+                                       @Param("specialOffers") boolean specialOffers,
                                        Pageable pageable);
+
 }

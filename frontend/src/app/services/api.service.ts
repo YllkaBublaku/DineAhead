@@ -76,16 +76,16 @@ export class ApiService {
     size: number,
     sortBy: string
   ): Observable<any> {
-    return this.http.get(`${this.apiUrl}/restaurants/`, {
+    return this.http.get(`${this.apiUrl}/restaurants`, {
       params: {
         city: city || 'Paris',
         query: query || '',
         cuisine: cuisine || '',
         price: price || '',
-        specialOffers: specialOffers.toString(),
+        specialOffers: specialOffers ? 'true' : 'false',
         page: page.toString(),
         size: size.toString(),
-        sortBy: sortBy
+        sortBy: sortBy || 'averageRating'
       }
     });
   }

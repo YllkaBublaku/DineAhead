@@ -35,7 +35,7 @@ public class RestaurantController {
                 restaurant.getPriceRange(),
                 restaurant.getCoverPhotoUrl(),
                 restaurant.getSpecialOffer(),
-                restaurant.getGallery(),
+                new java.util.ArrayList<>(), // Force empty gallery
                 restaurant.getAverageRating(),
                 restaurant.getReviewCount(),
                 restaurant.getLatitude(),
@@ -55,7 +55,7 @@ public class RestaurantController {
             @RequestParam(defaultValue = "averageRating") String sortBy) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
-        Page<Restaurant> restaurantPage = restaurantService.getFilteredRestaurants(city, query, pageable);
+        Page<Restaurant> restaurantPage = restaurantService.getFilteredRestaurants(city, query, cuisine, price, specialOffers, pageable);
 
         List<RestaurantResponseDTO> content = restaurantPage.getContent().stream()
                 .map(this::mapToDTO)
@@ -88,4 +88,3 @@ public class RestaurantController {
                 .collect(Collectors.toList()));
     }
 }
-

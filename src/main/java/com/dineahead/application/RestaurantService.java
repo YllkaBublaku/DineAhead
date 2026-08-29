@@ -1,10 +1,12 @@
 package com.dineahead.application;
 
 import com.dineahead.domain.Restaurant;
+import com.dineahead.domain.enums.PriceRange;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,11 +24,9 @@ public class RestaurantService {
         return restaurantRepository.save(restaurant);
     }
 
-    public Page<Restaurant> getFilteredRestaurants(String city, String query, Pageable pageable) {
-        if (query == null || query.trim().isEmpty()) {
-            return restaurantRepository.findByCity(city, pageable);
-        }
-        return restaurantRepository.searchRestaurants(city, query, pageable);
+    @Transactional(readOnly = true)
+    public Page<Restaurant> getFilteredRestaurants(String city, String query, String cuisine, PriceRange price, boolean specialOffers, Pageable pageable) {
+        return restaurantRepository.findAll(pageable);
     }
 
     public List<Restaurant> getRestaurantsByCity(String city) {
