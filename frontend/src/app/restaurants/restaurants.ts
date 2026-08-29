@@ -1,9 +1,10 @@
-import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output, ViewChild, ElementRef} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import {ApiService} from '../services/api.service';
+import * as L from 'leaflet';
 
 export interface RestaurantItem {
   id: number;
@@ -68,11 +69,29 @@ export class Restaurants implements OnInit {
   userRole: string | null = null;
   user: any = null;
 
+  @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+  private map: any;
+  private markersLayer: any = L.layerGroup();
+
   constructor(private route: ActivatedRoute, private router: Router, private api: ApiService) {}
 
   ngOnInit(): void {
     this.checkLoginStatus();
     this.loadRestaurants();
+  }
+
+  ngAfterViewInit(): void {
+    this.map = L.map(this.mapContainer.nativeElement, {
+      center: [48.8566, 2.3522],
+      zoom: 12,
+      zoomControl: false
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(this.map);
+
+    this.markersLayer.addTo(this.map);
   }
 
   checkLoginStatus(): void {
@@ -108,14 +127,106 @@ export class Restaurants implements OnInit {
       this.totalPages = 1;
       this.loading = false;
 
-      this.mapPins = this.restaurants.map((rest, index) => ({
-        ...rest,
-        coords: { x: 20 + (index * 15), y: 20 + (index * 10), lat: 0, lng: 0 }
-      }));
+      this.renderMapMarkers();
     }).catch((error) => {
       console.error("Failed to fetch:", error);
       this.loading = false;
     });
+  }
+
+  renderMapMarkers(): void {
+    if (!this.map) return;
+
+    this.markersLayer.clearLayers();
+
+    const bounds: any[] = [];
+
+    this.restaurants.forEach((restaurant: any) => {
+      if (restaurant.latitude && restaurant.longitude) {
+        const isActive = this.hoveredRestaurantId === restaurant.id;
+
+        const html = `
+        <div class="thin-marker ${isActive ? 'active' : 'default'}">
+          <span class="marker-price">${restaurant.priceRange || '€€'}</span>
+          <span class="marker-rating">★ ${restaurant.averageRating?.toFixed(1) || 'N/A'}</span>
+        </div>
+      `;
+
+        const myIcon = L.divIcon({
+          className: 'thin-marker-icon',
+          html: html,
+          iconSize: [80, 28],
+          iconAnchor: [40, 14],
+          popupAnchor: [0, -14]
+        });
+
+        const marker = L.marker([restaurant.latitude, restaurant.longitude], { icon: myIcon })
+          .bindPopup(`<strong>${restaurant.name}</strong><br>${restaurant.cuisineType} • ${restaurant.priceRange}`);
+
+        marker.on('click', () => {
+          this.selectedRestaurant = restaurant;
+          this.hoveredRestaurantId = restaurant.id;
+          this.refreshMapMarkers();
+        });
+
+        marker.addTo(this.markersLayer);
+        bounds.push([restaurant.latitude, restaurant.longitude]);
+      }
+    });
+
+    if (bounds.length > 0) {
+      this.map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  refreshMapMarkers(): void {
+    if (!this.map) return;
+
+    this.markersLayer.clearLayers();
+
+    this.restaurants.forEach((restaurant: any) => {
+      if (restaurant.latitude && restaurant.longitude) {
+        const isActive = this.hoveredRestaurantId === restaurant.id;
+
+        const html = `
+        <div class="thin-marker ${isActive ? 'active' : 'default'}">
+          <span class="marker-price">${restaurant.priceRange || '€€'}</span>
+          <span class="marker-rating">★ ${restaurant.averageRating?.toFixed(1) || 'N/A'}</span>
+        </div>
+      `;
+
+        const myIcon = L.divIcon({
+          className: 'thin-marker-icon',
+          html: html,
+          iconSize: [80, 28],
+          iconAnchor: [40, 14],
+          popupAnchor: [0, -14]
+        });
+
+        const marker = L.marker([restaurant.latitude, restaurant.longitude], { icon: myIcon })
+          .bindPopup(`<strong>${restaurant.name}</strong><br>${restaurant.cuisineType} • ${restaurant.priceRange}`);
+
+        marker.on('click', () => {
+          this.selectedRestaurant = restaurant;
+          this.hoveredRestaurantId = restaurant.id;
+          this.refreshMapMarkers();
+        });
+
+        marker.addTo(this.markersLayer);
+      }
+    });
+  }
+
+  zoomIn(): void {
+    if (this.map) {
+      this.map.zoomIn();
+    }
+  }
+
+  zoomOut(): void {
+    if (this.map) {
+      this.map.zoomOut();
+    }
   }
 
   onSortChange(): void {
@@ -174,6 +285,7 @@ export class Restaurants implements OnInit {
   selectRestaurantForMap(rest: RestaurantItem): void {
     this.selectedRestaurant = rest;
     this.hoveredRestaurantId = rest.id;
+    this.refreshMapMarkers();
   }
 
   toggleFavorite(id: number, event?: Event): void {

@@ -453,71 +453,20 @@
     </div>
 
     <div class="lg:col-span-5 xl:col-span-6 sticky top-24" [class.block]="mobileMapOpen" [class.hidden]="!mobileMapOpen && true" [class.lg:block]="true">
-      <div class="bg-[#e5e9ec] dark:bg-[#1a2332] rounded-3xl overflow-hidden border border-gray-300 dark:border-gray-700 shadow-xl relative h-[calc(100vh-140px)] min-h-[640px]">
+      <div class="relative h-[calc(100vh-140px)] min-h-[640px] rounded-3xl overflow-hidden border border-gray-300 dark:border-gray-700 shadow-xl bg-[#e5e9ec] dark:bg-[#1a2332]">
 
-        <div class="absolute inset-0 overflow-hidden select-none">
-          <svg class="absolute inset-0 w-full h-full text-blue-200 dark:text-blue-900/60" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <path d="M 0 58 Q 30 48, 50 54 T 80 40 T 100 48" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
-            <path d="M 0 58 Q 30 48, 50 54 T 80 40 T 100 48" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.5"/>
-          </svg>
+        <div #mapContainer class="absolute inset-0 w-full h-full z-0"></div>
 
-          <div class="absolute top-[26%] left-[64%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
-            Le Marais
-          </div>
-          <div class="absolute top-[34%] left-[46%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
-            1st Arr. Louvre
-          </div>
-          <div class="absolute top-[58%] left-[34%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
-            Saint-Germain
-          </div>
-          <div class="absolute top-[14%] left-[42%] text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest pointer-events-none">
-            Montmartre
-          </div>
-
-          <div class="absolute top-[44%] left-[22%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
-            <span>🗼</span> Eiffel Tower
-          </div>
-          <div class="absolute top-[38%] left-[50%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
-            <span>🏛️</span> Louvre Museum
-          </div>
-          <div class="absolute top-[16%] left-[44%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
-            <span>⛪</span> Sacré-Cœur
-          </div>
-          <div class="absolute top-[54%] left-[60%] text-xs font-bold text-gray-600 dark:text-gray-300 opacity-70 flex items-center gap-1 bg-white/70 dark:bg-gray-900/70 px-2 py-0.5 rounded-md shadow-xs">
-            <span>⛪</span> Notre-Dame
-          </div>
-
-
-          @for (rest of paginatedRestaurants; track rest.id) {
-            <div [style.top.%]="rest.coords?.y || '50%'"
-                 [style.left.%]="rest.coords?.x || '50%'"
-                 (click)="selectRestaurantForMap(rest)"
-                 class="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group/pin">
-
-              <div [class.bg-[#005943]]="hoveredRestaurantId === rest.id"
-                   [class.text-white]="hoveredRestaurantId === rest.id"
-                   [class.bg-white]="hoveredRestaurantId !== rest.id"
-                   [class.text-gray-900]="hoveredRestaurantId !== rest.id"
-                   class="px-3 py-1.5 rounded-full text-xs font-black shadow-xl border border-gray-300 dark:border-gray-600 transition-all duration-200 flex items-center gap-1.5 hover:scale-125">
-                <span>{{ rest.priceRange || '€€' }}</span>
-                <span class="text-[11px] font-bold text-[#00875a]" [class.text-white]="hoveredRestaurantId === rest.id">★ {{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
-              </div>
-            </div>
-          }
+        <div class="absolute top-4 right-4 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col pointer-events-auto overflow-hidden">
+          <button (click)="zoomIn()"
+                  class="w-10 h-10 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-lg transition">
+            +
+          </button>
+          <button (click)="zoomOut()"
+                  class="w-10 h-10 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 text-lg transition">
+            −
+          </button>
         </div>
-
-        <div class="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
-          <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl px-3 py-2 shadow-md border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200 pointer-events-auto">
-            <input type="checkbox" id="searchMove" checked class="rounded text-[#005943] focus:ring-[#005943] cursor-pointer">
-            <label for="searchMove" class="cursor-pointer">Search as I move the map</label>
-          </div>
-
-          <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col pointer-events-auto overflow-hidden">
-            <button class="w-8 h-8 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-sm">+</button>
-            <button class="w-8 h-8 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">-</button>
-          </div>
-        </div>
-
 
         @if (selectedRestaurant) {
           <div class="absolute bottom-6 left-6 right-6 z-30 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-4 animate-in fade-in duration-200">
