@@ -22,6 +22,23 @@ export interface RestaurantItem {
   description?: string;
   specialOffer?: string;
   coords?: { x: number; y: number; lat: number; lng: number };
+  latitude?: number;
+  longitude?: number;
+  state?: string;
+  zip?: string;
+  phone?: string;
+  timeSlots?: any[];
+  reservations?: any[];
+}
+
+export interface FilterState {
+  cuisine: string[];
+  priceRange: { min: number; max: number };
+  setting: string[];
+  neighborhood: string[];
+  specialOffers: boolean;
+  bestRated: boolean;
+  availableNow: boolean;
 }
 
 @Component({
@@ -42,12 +59,24 @@ export class Restaurants implements OnInit {
   selectedTime = '19:00';
   selectedGuests = 2;
 
+  filters: FilterState = {
+    cuisine: [],
+    priceRange: { min: 0, max: 150 },
+    setting: [],
+    neighborhood: [],
+    specialOffers: false,
+    bestRated: false,
+    availableNow: false
+  };
+
   activeQuickFilters = new Set<string>();
   selectedCuisine = 'All';
   selectedPrice = 'All';
   selectedNeighborhood = 'All';
   sortBy = 'averageRating';
 
+  allRestaurants: RestaurantItem[] = [];
+  filteredRestaurants: RestaurantItem[] = [];
   restaurants: RestaurantItem[] = [];
   mapPins: RestaurantItem[] = [];
   loading = false;
@@ -69,6 +98,12 @@ export class Restaurants implements OnInit {
   userRole: string | null = null;
   user: any = null;
 
+  selectedSetting = '';
+  availableCuisines: string[] = [];
+  availableCities: string[] = [];
+  availableSettings: string[] = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
+  availablePriceRanges: string[] = ['€€', '€€€', '€€€€'];
+
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
   private map: any;
   private markersLayer: any = L.layerGroup();
@@ -81,6 +116,14 @@ export class Restaurants implements OnInit {
   }
 
   ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.initMap();
+    }, 100);
+  }
+
+  private initMap(): void {
+    if (!this.mapContainer) return;
+
     this.map = L.map(this.mapContainer.nativeElement, {
       center: [48.8566, 2.3522],
       zoom: 12,
@@ -92,6 +135,10 @@ export class Restaurants implements OnInit {
     }).addTo(this.map);
 
     this.markersLayer.addTo(this.map);
+
+    setTimeout(() => {
+      this.map.invalidateSize();
+    }, 200);
   }
 
   checkLoginStatus(): void {
@@ -122,16 +169,242 @@ export class Restaurants implements OnInit {
     this.loading = true;
 
     this.api.getRestaurants().then((data) => {
-      this.restaurants = data || [];
-      this.totalElements = this.restaurants.length;
-      this.totalPages = 1;
-      this.loading = false;
+      this.allRestaurants = data || [];
 
+      this.extractFilterOptions();
+      this.applyFilters();
+
+      this.loading = false;
       this.renderMapMarkers();
     }).catch((error) => {
       console.error("Failed to fetch:", error);
       this.loading = false;
     });
+  }
+
+  extractFilterOptions(): void {
+    const cuisines = new Set<string>();
+    const cities = new Set<string>();
+
+    this.allRestaurants.forEach(rest => {
+      if (rest.cuisineType) cuisines.add(rest.cuisineType);
+      if (rest.city) cities.add(rest.city);
+    });
+
+    this.availableCuisines = Array.from(cuisines).sort();
+    this.availableCities = Array.from(cities).sort();
+  }
+
+  applyFilters(): void {
+    let filtered = [...this.allRestaurants];
+
+    if (this.searchQuery.trim()) {
+      const query = this.searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(rest =>
+        rest.name?.toLowerCase().includes(query) ||
+        rest.cuisineType?.toLowerCase().includes(query) ||
+        rest.description?.toLowerCase().includes(query) ||
+        rest.address?.toLowerCase().includes(query)
+      );
+    }
+
+    if (this.searchCity && this.searchCity !== 'Paris') {
+      const city = this.searchCity.toLowerCase().trim();
+      filtered = filtered.filter(rest =>
+        rest.city?.toLowerCase().includes(city) ||
+        rest.address?.toLowerCase().includes(city)
+      );
+    }
+
+    if (this.filters.cuisine.length > 0) {
+      filtered = filtered.filter(rest =>
+        this.filters.cuisine.includes(rest.cuisineType)
+      );
+    } else if (this.selectedCuisine !== 'All') {
+      filtered = filtered.filter(rest =>
+        rest.cuisineType === this.selectedCuisine
+      );
+    }
+
+    if (this.filters.priceRange.min > 0 || this.filters.priceRange.max < 150) {
+      filtered = filtered.filter(rest => {
+        const price = this.getPriceValue(rest.priceRange);
+        return price >= this.filters.priceRange.min && price <= this.filters.priceRange.max;
+      });
+    } else if (this.selectedPrice !== 'All') {
+      filtered = filtered.filter(rest =>
+        rest.priceRange === this.selectedPrice
+      );
+    }
+
+    if (this.filters.neighborhood.length > 0) {
+      filtered = filtered.filter(rest =>
+        this.filters.neighborhood.includes(rest.city)
+      );
+    } else if (this.selectedNeighborhood !== 'All') {
+      filtered = filtered.filter(rest =>
+        rest.city === this.selectedNeighborhood
+      );
+    }
+
+    if (this.filters.setting.length > 0) {
+      filtered = filtered.filter(rest => {
+        return true;
+      });
+    }
+
+    if (this.selectedNeighborhood !== 'All') {
+      filtered = filtered.filter(rest =>
+        rest.city === this.selectedNeighborhood
+      );
+    }
+
+    if (this.activeQuickFilters.has('Special offers')) {
+      filtered = filtered.filter(rest => rest.specialOffer);
+    }
+
+    if (this.activeQuickFilters.has('Available now')) {
+      filtered = filtered.filter(rest => this.isRestaurantAvailable(rest));
+    }
+
+    if (this.activeQuickFilters.has('Best rated')) {
+      filtered = filtered.filter(rest => (rest.averageRating || 0) >= 4.5);
+    }
+
+    this.applySorting(filtered);
+
+    this.filteredRestaurants = filtered;
+    this.totalElements = filtered.length;
+    this.totalPages = Math.ceil(this.totalElements / this.itemsPerPage);
+
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = Math.max(1, this.totalPages);
+    }
+
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalElements);
+    this.restaurants = filtered.slice(startIndex, endIndex);
+  }
+
+  getPriceValue(priceRange: string): number {
+    const map: {[key: string]: number} = {
+      '€': 25,
+      '€€': 50,
+      '€€€': 100,
+      '€€€€': 150
+    };
+    return map[priceRange] || 50;
+  }
+
+  isRestaurantAvailable(restaurant: RestaurantItem): boolean {
+    if (restaurant.timeSlots && restaurant.timeSlots.length > 0) {
+      const today = new Date().toDateString();
+      const hasAvailableSlot = restaurant.timeSlots.some(slot => {
+        return slot.available !== false;
+      });
+      return hasAvailableSlot;
+    }
+    return true;
+  }
+
+  applySorting(restaurants: RestaurantItem[]): void {
+    switch (this.sortBy) {
+      case 'averageRating':
+        restaurants.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        break;
+      case 'name':
+        restaurants.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'reviewCount':
+        restaurants.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
+        break;
+      default:
+        break;
+    }
+  }
+
+  openFiltersModal(): void {
+    this.allFiltersModalOpen = true;
+  }
+
+  closeFiltersModal(): void {
+    this.allFiltersModalOpen = false;
+  }
+
+  clearAllFilters(): void {
+    this.filters = {
+      cuisine: [],
+      priceRange: { min: 0, max: 150 },
+      setting: [],
+      neighborhood: [],
+      specialOffers: false,
+      bestRated: false,
+      availableNow: false
+    };
+    this.activeQuickFilters.clear();
+    this.selectedCuisine = 'All';
+    this.selectedPrice = 'All';
+    this.selectedNeighborhood = 'All';
+    this.searchQuery = '';
+    this.searchCity = 'Paris';
+    this.currentPage = 1;
+    this.applyFilters();
+    this.closeFiltersModal();
+  }
+
+  toggleCuisineFilter(cuisine: string): void {
+    const index = this.filters.cuisine.indexOf(cuisine);
+    if (index > -1) {
+      this.filters.cuisine.splice(index, 1);
+    } else {
+      this.filters.cuisine.push(cuisine);
+    }
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  toggleSettingFilter(setting: string): void {
+    const index = this.filters.setting.indexOf(setting);
+    if (index > -1) {
+      this.filters.setting.splice(index, 1);
+    } else {
+      this.filters.setting.push(setting);
+    }
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  toggleNeighborhoodFilter(neighborhood: string): void {
+    const index = this.filters.neighborhood.indexOf(neighborhood);
+    if (index > -1) {
+      this.filters.neighborhood.splice(index, 1);
+    } else {
+      this.filters.neighborhood.push(neighborhood);
+    }
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  onSettingChange(): void {
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  getActiveFilterCount(): number {
+    let count = 0;
+    if (this.filters.cuisine.length > 0) count++;
+    if (this.filters.neighborhood.length > 0) count++;
+    if (this.filters.setting.length > 0) count++;
+    if (this.filters.priceRange.min > 0 || this.filters.priceRange.max < 150) count++;
+    if (this.filters.specialOffers) count++;
+    if (this.filters.availableNow) count++;
+    if (this.filters.bestRated) count++;
+    if (this.searchQuery) count++;
+    if (this.selectedSetting) count++;
+    if (this.selectedCuisine !== 'All') count++;
+    if (this.selectedNeighborhood !== 'All') count++;
+    if (this.selectedPrice !== 'All') count++;
+    return count;
   }
 
   renderMapMarkers(): void {
@@ -230,18 +503,18 @@ export class Restaurants implements OnInit {
   }
 
   onSortChange(): void {
-    this.loadRestaurants();
+    this.applyFilters();
   }
 
   goToPage(page: number): void {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
-    this.loadRestaurants();
+    this.applyFilters();
   }
 
   onSearch(): void {
     this.currentPage = 1;
-    this.loadRestaurants();
+    this.applyFilters();
   }
 
   nextPage(): void {
@@ -253,13 +526,28 @@ export class Restaurants implements OnInit {
   }
 
   toggleQuickFilter(filterName: string): void {
+    const filterMap: { [key: string]: keyof FilterState } = {
+      'Special offers': 'specialOffers',
+      'Available now': 'availableNow',
+      'Best rated': 'bestRated'
+    };
+
+    const filterKey = filterMap[filterName];
+    if (filterKey) {
+      const currentValue = this.filters[filterKey];
+      if (typeof currentValue === 'boolean') {
+        this.filters[filterKey] = !currentValue as any;
+      }
+    }
+
     if (this.activeQuickFilters.has(filterName)) {
       this.activeQuickFilters.delete(filterName);
     } else {
       this.activeQuickFilters.add(filterName);
     }
+
     this.currentPage = 1;
-    this.loadRestaurants();
+    this.applyFilters();
   }
 
   isQuickFilterActive(filterName: string): boolean {
@@ -267,15 +555,18 @@ export class Restaurants implements OnInit {
   }
 
   onCuisineChange(): void {
-    this.loadRestaurants();
+    this.currentPage = 1;
+    this.applyFilters();
   }
 
   onPriceChange(): void {
-    this.loadRestaurants();
+    this.currentPage = 1;
+    this.applyFilters();
   }
 
-  get filteredRestaurants(): RestaurantItem[] {
-    return this.restaurants;
+  onNeighborhoodChange(): void {
+    this.currentPage = 1;
+    this.applyFilters();
   }
 
   get paginatedRestaurants(): RestaurantItem[] {

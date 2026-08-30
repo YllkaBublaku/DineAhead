@@ -1,4 +1,3 @@
-/* Restaurants Page Styling */
 .map-container {
   height: calc(100vh - 170px);
 }
@@ -14,4 +13,94 @@
 
 .pin-active {
   animation: pulse-pin 1.5s infinite ease-in-out;
+}
+
+.quick-filter-btn {
+  @apply inline-flex items-center gap-1.5 border rounded-full px-3.5 py-1.5 text-xs font-semibold transition shrink-0;
+}
+
+.quick-filter-btn.inactive {
+  @apply bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:border-gray-400;
+}
+
+.quick-filter-btn.active {
+  @apply bg-[#005943] text-white border-[#005943];
+}
+
+.filter-select {
+  @apply appearance-none bg-white dark:bg-gray-800 border rounded-full pl-3.5 pr-8 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:border-gray-400 focus:outline-none cursor-pointer min-w-[100px] transition;
+  border-color: #d1d5db;
+}
+
+.dark .filter-select {
+  border-color: #374151;
+}
+
+.filter-select.active {
+  @apply bg-[#005943] text-white border-[#005943];
+}
+
+.filter-select.active option {
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+}
+
+.clear-filters-btn {
+  @apply inline-flex items-center gap-1 text-red-600 hover:text-red-700 text-xs font-semibold px-2 py-1.5 shrink-0 transition;
+}
+
+.filter-checkbox {
+  @apply w-4 h-4 rounded border-gray-300 dark:border-gray-700 transition-all duration-200 ease-in-out;
+  accent-color: #005943;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.filter-checkbox:checked {
+  background-color: #005943;
+  border-color: #005943;
+}
+
+.filter-checkbox:focus {
+  @apply ring-2 ring-[#005943] ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+}
+
+.filter-checkbox:hover {
+  transform: scale(1.05);
+}
+
+.filter-checkbox:checked:hover {
+  transform: scale(1.05);
+}
+
+.cuisine-chip {
+  @apply px-3 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 ease-in-out cursor-pointer;
+}
+
+.cuisine-chip.inactive {
+  @apply bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700;
+}
+
+.cuisine-chip.inactive:hover {
+  @apply border-gray-400 dark:border-gray-500 transform scale-105;
+}
+
+.cuisine-chip.active {
+  @apply bg-[#005943] text-white border-[#005943] transform scale-105;
+  box-shadow: 0 2px 8px rgba(0, 89, 67, 0.3);
+}
+
+.cuisine-chip.active:hover {
+  transform: scale(1.08);
+}
+
+.filter-label {
+  @apply flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer transition-colors;
+}
+
+.filter-label:hover {
+  @apply text-[#005943] dark:text-emerald-400;
+}
+
+.filter-label:hover .filter-checkbox {
+  transform: scale(1.05);
 }
