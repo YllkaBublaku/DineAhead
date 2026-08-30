@@ -1,11 +1,11 @@
-import {Injectable} from '@angular/core';
-import {HttpClient, HttpHeaders} from '@angular/common/http';
-import {Observable} from 'rxjs';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, firstValueFrom } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
-
 export class ApiService {
 
   private apiUrl = 'http://localhost:8080/api';
@@ -67,10 +67,78 @@ export class ApiService {
   }
 
   getRestaurants(): Promise<any[]> {
-    return fetch('http://localhost:8080/api/restaurants')
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch restaurants');
-        return response.json();
-      });
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/restaurants`)
+        .pipe(
+          map(response => {
+            // Handle different response structures
+            if (Array.isArray(response)) {
+              return response;
+            }
+            if (response && (response as any).content && Array.isArray((response as any).content)) {
+              return (response as any).content;
+            }
+            if (response && (response as any).data && Array.isArray((response as any).data)) {
+              return (response as any).data;
+            }
+            console.warn('Unexpected response format:', response);
+            return [];
+          })
+        )
+    );
+  }
+
+  getRestaurantsByCity(city: string): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/restaurants/city/${city}`)
+        .pipe(
+          map(response => {
+            if (Array.isArray(response)) {
+              return response;
+            }
+            if (response && (response as any).content && Array.isArray((response as any).content)) {
+              return (response as any).content;
+            }
+            return [];
+          })
+        )
+    );
+  }
+
+  getRestaurantById(id: number): Promise<any> {
+    return firstValueFrom(
+      this.http.get<any>(`${this.apiUrl}/restaurants/${id}`)
+    );
+  }
+
+  getRestaurantsByOwner(ownerId: number): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/restaurants/owner/${ownerId}`)
+        .pipe(
+          map(response => {
+            if (Array.isArray(response)) {
+              return response;
+            }
+            return [];
+          })
+        )
+    );
+  }
+
+  getFeatures(): Promise<string[]> {
+    return firstValueFrom(
+      this.http.get<string[]>(`${this.apiUrl}/restaurants/features`)
+        .pipe(
+          map(response => {
+            if (Array.isArray(response)) {
+              return response;
+            }
+            if (response && (response as any).content && Array.isArray((response as any).content)) {
+              return (response as any).content;
+            }
+            return [];
+          })
+        )
+    );
   }
 }

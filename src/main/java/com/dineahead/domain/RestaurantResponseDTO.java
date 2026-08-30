@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -26,4 +27,31 @@ public class RestaurantResponseDTO {
     private Integer reviewCount;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private List<String> features = new ArrayList<>();
+
+    public RestaurantResponseDTO(Restaurant restaurant) {
+        this.id = restaurant.getId();
+        this.name = restaurant.getName();
+        this.slug = restaurant.getSlug();
+        this.address = restaurant.getAddress();
+        this.city = restaurant.getCity();
+        this.cuisineType = restaurant.getCuisineType();
+        this.priceRange = restaurant.getPriceRange();
+        this.coverPhotoUrl = restaurant.getCoverPhotoUrl();
+        this.specialOffer = restaurant.getSpecialOffer();
+        this.gallery = restaurant.getGallery() != null ? restaurant.getGallery() : new ArrayList<>();
+        this.averageRating = restaurant.getAverageRating();
+        this.reviewCount = restaurant.getReviewCount();
+        this.latitude = restaurant.getLatitude();
+        this.longitude = restaurant.getLongitude();
+
+        if (restaurant.getRestaurantFeatures() != null && !restaurant.getRestaurantFeatures().isEmpty()) {
+            this.features = restaurant.getRestaurantFeatures().stream()
+                    .filter(rf -> rf.getFeature() != null)
+                    .map(rf -> rf.getFeature().getName())
+                    .collect(Collectors.toList());
+        } else {
+            this.features = new ArrayList<>();
+        }
+    }
 }

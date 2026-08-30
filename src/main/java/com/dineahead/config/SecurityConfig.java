@@ -79,16 +79,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ MUST match the exact origin that is making the request (Angular)
         configuration.setAllowedOriginPatterns(List.of("http://localhost:4200"));
-
-        // ✅ Must allow specific methods (and OPTIONS for preflight)
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // ✅ Must allow ALL headers
         configuration.setAllowedHeaders(List.of("*"));
-
-        // ✅ Must match `withCredentials: true` in Angular
         configuration.setAllowCredentials(true);
 
         configuration.setMaxAge(3600L);

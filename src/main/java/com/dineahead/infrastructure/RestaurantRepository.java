@@ -35,4 +35,8 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
                                        @Param("specialOffers") boolean specialOffers,
                                        Pageable pageable);
 
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.restaurantFeatures rf " +
+            "LEFT JOIN FETCH rf.feature f")
+    List<Restaurant> findAllWithFeatures();
 }

@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -23,8 +22,14 @@ public class RestaurantService {
         return restaurantRepository.save(restaurant);
     }
 
+    @Transactional(readOnly = true)
     public List<Restaurant> getAllRestaurants() {
-        return restaurantRepository.findAll();
+        List<Restaurant> restaurants = restaurantRepository.findAllWithFeatures();
+        restaurants.forEach(restaurant -> {
+            restaurant.getGallery().size();
+            restaurant.getRestaurantFeatures().size();
+        });
+        return restaurants;
     }
 
     public List<Restaurant> getRestaurantsByCity(String city) {

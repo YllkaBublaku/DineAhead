@@ -1,27 +1,24 @@
 package com.dineahead.controller;
 
+import com.dineahead.application.FeatureService;
 import com.dineahead.application.RestaurantService;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.RestaurantResponseDTO;
-import com.dineahead.domain.enums.PriceRange;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/restaurants")
 public class RestaurantController {
     private final RestaurantService restaurantService;
+    private final FeatureService featureService;
 
-    public RestaurantController(RestaurantService restaurantService) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService) {
         this.restaurantService = restaurantService;
+        this.featureService = featureService;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
@@ -39,15 +36,16 @@ public class RestaurantController {
                 restaurant.getAverageRating(),
                 restaurant.getReviewCount(),
                 restaurant.getLatitude(),
-                restaurant.getLongitude()
+                restaurant.getLongitude(),
+                restaurant.getFeatureNames()
         );
     }
 
     @GetMapping
     public ResponseEntity<List<RestaurantResponseDTO>> getAllRestaurants() {
-        List<RestaurantResponseDTO> dtos = restaurantService.getAllRestaurants()
-                .stream()
-                .map(this::mapToDTO)
+        List<Restaurant> restaurants = restaurantService.getAllRestaurants();
+        List<RestaurantResponseDTO> dtos = restaurants.stream()
+                .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
@@ -69,5 +67,10 @@ public class RestaurantController {
         return ResponseEntity.ok(restaurantService.getRestaurantsByOwner(ownerId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList()));
+    }
+
+    @GetMapping("/features")
+    public ResponseEntity<List<String>> getAllFeatures() {
+        return ResponseEntity.ok(featureService.getAllFeatureNames());
     }
 }

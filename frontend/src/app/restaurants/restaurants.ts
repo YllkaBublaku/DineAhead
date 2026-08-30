@@ -29,6 +29,7 @@ export interface RestaurantItem {
   phone?: string;
   timeSlots?: any[];
   reservations?: any[];
+  features?: string[];
 }
 
 export interface FilterState {
@@ -168,23 +169,44 @@ export class Restaurants implements OnInit {
   loadRestaurants(): void {
     this.loading = true;
 
-    this.api.getRestaurants().then((data) => {
-      this.allRestaurants = data || [];
+    this.api.getFeatures()
+      .then((features) => {
+        this.availableSettings = features || [];
+        return this.api.getRestaurants();
+      })
+      .then((data) => {
+        console.log('API Response:', data);
+        console.log('Is array?', Array.isArray(data));
+        console.log('Type:', typeof data);
 
-      this.extractFilterOptions();
-      this.applyFilters();
-
-      this.loading = false;
-      this.renderMapMarkers();
-    }).catch((error) => {
-      console.error("Failed to fetch:", error);
-      this.loading = false;
-    });
+        this.allRestaurants = Array.isArray(data) ? data : [];
+        this.extractFilterOptions();
+        this.applyFilters();
+        this.loading = false;
+        setTimeout(() => {
+          this.renderMapMarkers();
+          if (this.map) {
+            this.map.invalidateSize();
+          }
+        }, 100);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch:", error);
+        this.loading = false;
+        this.allRestaurants = [];
+        this.availableSettings = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
+      });
   }
 
   extractFilterOptions(): void {
     const cuisines = new Set<string>();
     const cities = new Set<string>();
+
+    if (!Array.isArray(this.allRestaurants)) {
+      console.warn('allRestaurants is not an array:', this.allRestaurants);
+      this.allRestaurants = [];
+      return;
+    }
 
     this.allRestaurants.forEach(rest => {
       if (rest.cuisineType) cuisines.add(rest.cuisineType);
@@ -196,6 +218,12 @@ export class Restaurants implements OnInit {
   }
 
   applyFilters(): void {
+
+    if (!Array.isArray(this.allRestaurants)) {
+      console.warn('allRestaurants is not an array in applyFilters');
+      this.allRestaurants = [];
+    }
+
     let filtered = [...this.allRestaurants];
 
     if (this.searchQuery.trim()) {
@@ -249,8 +277,19 @@ export class Restaurants implements OnInit {
 
     if (this.filters.setting.length > 0) {
       filtered = filtered.filter(rest => {
-        return true;
+        if (!rest.features || rest.features.length === 0) return false;
+        return this.filters.setting.every(setting =>
+          rest.features?.includes(setting)
+        );
       });
+    }
+
+    if (this.selectedSetting && this.selectedSetting !== '') {
+      if (!this.filters.setting.includes(this.selectedSetting)) {
+        filtered = filtered.filter(rest =>
+          rest.features?.includes(this.selectedSetting)
+        );
+      }
     }
 
     if (this.selectedNeighborhood !== 'All') {
@@ -345,6 +384,7 @@ export class Restaurants implements OnInit {
     this.selectedCuisine = 'All';
     this.selectedPrice = 'All';
     this.selectedNeighborhood = 'All';
+    this.selectedSetting = '';
     this.searchQuery = '';
     this.searchCity = 'Paris';
     this.currentPage = 1;
@@ -367,6 +407,9 @@ export class Restaurants implements OnInit {
     const index = this.filters.setting.indexOf(setting);
     if (index > -1) {
       this.filters.setting.splice(index, 1);
+      if (this.selectedSetting === setting) {
+        this.selectedSetting = '';
+      }
     } else {
       this.filters.setting.push(setting);
     }
@@ -386,6 +429,13 @@ export class Restaurants implements OnInit {
   }
 
   onSettingChange(): void {
+    if (this.selectedSetting && this.selectedSetting !== '') {
+      if (!this.filters.setting.includes(this.selectedSetting)) {
+        this.filters.setting.push(this.selectedSetting);
+      }
+    } else {
+      this.filters.setting = [];
+    }
     this.currentPage = 1;
     this.applyFilters();
   }
@@ -399,8 +449,8 @@ export class Restaurants implements OnInit {
     if (this.filters.specialOffers) count++;
     if (this.filters.availableNow) count++;
     if (this.filters.bestRated) count++;
-    if (this.searchQuery) count++;
-    if (this.selectedSetting) count++;
+    if (this.searchQuery && this.searchQuery.trim() !== '') count++;
+    if (this.selectedSetting && this.selectedSetting !== '') count++;
     if (this.selectedCuisine !== 'All') count++;
     if (this.selectedNeighborhood !== 'All') count++;
     if (this.selectedPrice !== 'All') count++;

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
@@ -121,4 +122,19 @@ public class Restaurant {
     @JsonIgnore
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RestaurantFeature> restaurantFeatures = new ArrayList<>();
+
+    @Transient
+    public List<String> getFeatureNames() {
+        if (restaurantFeatures == null || restaurantFeatures.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return restaurantFeatures.stream()
+                .filter(rf -> rf.getFeature() != null)
+                .map(rf -> rf.getFeature().getName())
+                .collect(Collectors.toList());
+    }
 }
