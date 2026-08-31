@@ -401,7 +401,7 @@
             [class.dark:bg-gray-900]="!mobileMapOpen"
             [class.shadow-xs]="!mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-      📋 List ({{ paginatedRestaurants.length }})
+      📋 List ({{ restaurants.length }})
     </button>
     <button (click)="mobileMapOpen = true"
             [class.bg-white]="mobileMapOpen"
@@ -419,7 +419,7 @@
 
       <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400">
         <span class="font-bold text-gray-900 dark:text-white">
-          Showing {{ paginatedRestaurants.length }} restaurants
+          Showing {{ restaurants.length }} restaurants
         </span>
         <div class="flex items-center gap-2">
           <label for="sortSelect" class="font-medium">Sort by:</label>
@@ -436,7 +436,7 @@
 
       <div class="space-y-6">
 
-        @for (rest of paginatedRestaurants; track rest.id) {
+        @for (rest of restaurants; track rest.id) {
           <a [routerLink]="['/restaurant', rest.id]" class="block cursor-pointer">
             <article (mouseenter)="selectRestaurantForMap(rest)"
                      class="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col sm:flex-row group"

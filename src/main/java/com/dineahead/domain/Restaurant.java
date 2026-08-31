@@ -128,6 +128,16 @@ public class Restaurant {
     private List<RestaurantFeature> restaurantFeatures = new ArrayList<>();
 
     @Transient
+    public boolean isRequiresDeposit() {
+        return depositSettings != null && depositSettings.isRequiresDeposit();
+    }
+
+    @Transient
+    public BigDecimal getDepositAmount() {
+        return depositSettings != null ? depositSettings.getDepositAmount() : BigDecimal.ZERO;
+    }
+
+    @Transient
     public List<String> getFeatureNames() {
         if (restaurantFeatures == null || restaurantFeatures.isEmpty()) {
             return new ArrayList<>();

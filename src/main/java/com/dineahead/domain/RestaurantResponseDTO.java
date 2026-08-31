@@ -28,6 +28,9 @@ public class RestaurantResponseDTO {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private List<String> features = new ArrayList<>();
+    private List<ReviewDTO> reviews = new ArrayList<>();
+    private boolean requiresDeposit;
+    private BigDecimal depositAmount;
 
     public RestaurantResponseDTO(Restaurant restaurant) {
         this.id = restaurant.getId();
@@ -53,5 +56,14 @@ public class RestaurantResponseDTO {
         } else {
             this.features = new ArrayList<>();
         }
+
+        if (restaurant.getReviews() != null && !restaurant.getReviews().isEmpty()) {
+            this.reviews = restaurant.getReviews().stream()
+                    .map(review -> new ReviewDTO(review))
+                    .collect(Collectors.toList());
+        }
+
+        this.requiresDeposit = restaurant.isRequiresDeposit();
+        this.depositAmount = restaurant.getDepositAmount();
     }
 }

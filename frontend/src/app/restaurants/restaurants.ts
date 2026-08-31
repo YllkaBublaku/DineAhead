@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnInit, Output, ViewChild, ElementRef} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output, ViewChild, ElementRef, ChangeDetectorRef} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -52,7 +52,7 @@ export class Restaurants implements OnInit {
   searchCity = 'Paris';
   searchQuery = '';
   currentPage = 1;
-  itemsPerPage = 3;
+  itemsPerPage = 10;
   @Input() showSearch = false;
   @Output() search = new EventEmitter<{ city: string; query: string }>();
 
@@ -120,7 +120,7 @@ export class Restaurants implements OnInit {
   private map: any;
   private markersLayer: any = L.layerGroup();
 
-  constructor(private route: ActivatedRoute, private router: Router, private api: ApiService) {
+  constructor(private route: ActivatedRoute, private router: Router, private api: ApiService, private cdr: ChangeDetectorRef) {
   }
 
   ngOnInit(): void {
@@ -188,14 +188,32 @@ export class Restaurants implements OnInit {
         return this.api.getRestaurants();
       })
       .then((data) => {
-        console.log('API Response:', data);
+        console.log('API Response full:', JSON.stringify(data, null, 2));
         console.log('Is array?', Array.isArray(data));
-        console.log('Type:', typeof data);
+        console.log('Data length:', data?.length);
 
         this.allRestaurants = Array.isArray(data) ? data : [];
+
+        if (this.allRestaurants.length > 0) {
+          console.log('First restaurant:', this.allRestaurants[0]);
+          console.log('City field:', this.allRestaurants[0].city);
+          console.log('Cuisine field:', this.allRestaurants[0].cuisineType);
+        } else {
+          console.warn('No restaurants found in API response!');
+        }
+
         this.extractFilterOptions();
         this.applyFilters();
         this.loading = false;
+
+        if (this.restaurants.length === 0 && this.allRestaurants.length > 0) {
+          console.log('Emergency: Setting restaurants directly');
+          this.restaurants = [...this.allRestaurants];
+          this.totalElements = this.allRestaurants.length;
+        }
+
+        this.cdr.detectChanges();
+
         setTimeout(() => {
           this.renderMapMarkers();
           if (this.map) {
@@ -208,6 +226,10 @@ export class Restaurants implements OnInit {
         this.loading = false;
         this.allRestaurants = [];
         this.availableSettings = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
+
+        if (this.map) {
+          this.markersLayer.clearLayers();
+        }
       });
   }
 
@@ -238,6 +260,7 @@ export class Restaurants implements OnInit {
     }
 
     let filtered = [...this.allRestaurants];
+    console.log('Initial restaurants count:', filtered.length);
 
     if (this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase().trim();
@@ -247,6 +270,7 @@ export class Restaurants implements OnInit {
         rest.description?.toLowerCase().includes(query) ||
         rest.address?.toLowerCase().includes(query)
       );
+      console.log('After search query filter:', filtered.length);
     }
 
     if (this.searchCity && this.searchCity !== 'Paris') {
@@ -255,6 +279,7 @@ export class Restaurants implements OnInit {
         rest.city?.toLowerCase().includes(city) ||
         rest.address?.toLowerCase().includes(city)
       );
+      console.log('After search city filter:', filtered.length);
     }
 
     if (this.filters.cuisine.length > 0) {
@@ -278,13 +303,13 @@ export class Restaurants implements OnInit {
       );
     }
 
-    if (this.filters.neighborhood.length > 0) {
-      filtered = filtered.filter(rest =>
-        this.filters.neighborhood.includes(rest.city)
-      );
-    } else if (this.selectedNeighborhood !== 'All') {
+    if (this.selectedNeighborhood !== 'All') {
       filtered = filtered.filter(rest =>
         rest.city === this.selectedNeighborhood
+      );
+    } else if (this.filters.neighborhood.length > 0) {
+      filtered = filtered.filter(rest =>
+        this.filters.neighborhood.includes(rest.city)
       );
     }
 
@@ -295,20 +320,6 @@ export class Restaurants implements OnInit {
           rest.features?.includes(setting)
         );
       });
-    }
-
-    if (this.selectedSetting && this.selectedSetting !== '') {
-      if (!this.filters.setting.includes(this.selectedSetting)) {
-        filtered = filtered.filter(rest =>
-          rest.features?.includes(this.selectedSetting)
-        );
-      }
-    }
-
-    if (this.selectedNeighborhood !== 'All') {
-      filtered = filtered.filter(rest =>
-        rest.city === this.selectedNeighborhood
-      );
     }
 
     if (this.activeQuickFilters.has('Special offers')) {
@@ -336,6 +347,12 @@ export class Restaurants implements OnInit {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalElements);
     this.restaurants = filtered.slice(startIndex, endIndex);
+
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.renderMapMarkers();
+    }, 50);
   }
 
   formatDate(date: Date): string {
@@ -581,6 +598,11 @@ export class Restaurants implements OnInit {
 
     this.markersLayer.clearLayers();
 
+    if (!this.restaurants || this.restaurants.length === 0) {
+      console.log('No restaurants to display on map');
+      return;
+    }
+
     const bounds: any[] = [];
 
     this.restaurants.forEach((restaurant: any) => {
@@ -618,6 +640,8 @@ export class Restaurants implements OnInit {
 
     if (bounds.length > 0) {
       this.map.fitBounds(bounds, {padding: [50, 50]});
+    } else {
+      this.map.setView([48.8566, 2.3522], 12);
     }
   }
 
@@ -625,6 +649,11 @@ export class Restaurants implements OnInit {
     if (!this.map) return;
 
     this.markersLayer.clearLayers();
+
+    if (!this.restaurants || this.restaurants.length === 0) {
+      console.log('No restaurants to refresh on map');
+      return;
+    }
 
     this.restaurants.forEach((restaurant: any) => {
       if (restaurant.latitude && restaurant.longitude) {

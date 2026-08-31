@@ -2,11 +2,15 @@ package com.dineahead.controller;
 
 import com.dineahead.application.FeatureService;
 import com.dineahead.application.RestaurantService;
+import com.dineahead.application.ReviewService;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.RestaurantResponseDTO;
+import com.dineahead.domain.Review;
+import com.dineahead.domain.ReviewDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,30 +19,16 @@ import java.util.stream.Collectors;
 public class RestaurantController {
     private final RestaurantService restaurantService;
     private final FeatureService featureService;
+    private final ReviewService reviewService;
 
-    public RestaurantController(RestaurantService restaurantService, FeatureService featureService) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService) {
         this.restaurantService = restaurantService;
         this.featureService = featureService;
+        this.reviewService = reviewService;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
-        return new RestaurantResponseDTO(
-                restaurant.getId(),
-                restaurant.getName(),
-                restaurant.getSlug(),
-                restaurant.getAddress(),
-                restaurant.getCity(),
-                restaurant.getCuisineType(),
-                restaurant.getPriceRange(),
-                restaurant.getCoverPhotoUrl(),
-                restaurant.getSpecialOffer(),
-                new java.util.ArrayList<>(),
-                restaurant.getAverageRating(),
-                restaurant.getReviewCount(),
-                restaurant.getLatitude(),
-                restaurant.getLongitude(),
-                restaurant.getFeatureNames()
-        );
+        return new RestaurantResponseDTO(restaurant);
     }
 
     @GetMapping
@@ -59,7 +49,8 @@ public class RestaurantController {
 
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantResponseDTO> getRestaurantById(@PathVariable Long id) {
-        return ResponseEntity.ok(mapToDTO(restaurantService.getRestaurantById(id)));
+        Restaurant restaurant = restaurantService.getRestaurantById(id);
+        return ResponseEntity.ok(new RestaurantResponseDTO(restaurant));
     }
 
     @GetMapping("/owner/{ownerId}")
@@ -72,5 +63,10 @@ public class RestaurantController {
     @GetMapping("/features")
     public ResponseEntity<List<String>> getAllFeatures() {
         return ResponseEntity.ok(featureService.getAllFeatureNames());
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<Review>> getReviewsByRestaurant(@PathVariable Long id) {
+        return ResponseEntity.ok(reviewService.getReviewsByRestaurant(id));
     }
 }

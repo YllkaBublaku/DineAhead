@@ -125,6 +125,12 @@ export class ApiService {
     );
   }
 
+  getReviewsByRestaurant(restaurantId: number): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/restaurants/${restaurantId}/reviews`)
+    );
+  }
+
   getFeatures(): Promise<string[]> {
     return firstValueFrom(
       this.http.get<string[]>(`${this.apiUrl}/restaurants/features`)

@@ -39,4 +39,17 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
             "LEFT JOIN FETCH r.restaurantFeatures rf " +
             "LEFT JOIN FETCH rf.feature f")
     List<Restaurant> findAllWithFeatures();
+
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.restaurantFeatures rf " +
+            "LEFT JOIN FETCH rf.feature f " +
+            "WHERE r.id = :id")
+    Optional<Restaurant> findByIdWithFeatures(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.restaurantFeatures rf " +
+            "LEFT JOIN FETCH rf.feature f " +
+            "LEFT JOIN FETCH r.depositSettings ds " +
+            "WHERE r.id = :id")
+    Optional<Restaurant> findByIdWithFeaturesAndDeposit(@Param("id") Long id);
 }

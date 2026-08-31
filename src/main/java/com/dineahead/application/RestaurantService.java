@@ -36,8 +36,10 @@ public class RestaurantService {
         return restaurantRepository.findByCity(city);
     }
 
+    @Transactional(readOnly = true)
     public Restaurant getRestaurantById(Long id) {
-        return restaurantRepository.findById(id).orElseThrow(() -> new RuntimeException("Restaurant not found!"));
+        return restaurantRepository.findByIdWithFeatures(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found!"));
     }
 
     public List<Restaurant> getRestaurantsByOwner(Long ownerId) {
