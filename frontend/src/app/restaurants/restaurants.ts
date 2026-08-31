@@ -52,17 +52,28 @@ export class Restaurants implements OnInit {
   searchCity = 'Paris';
   searchQuery = '';
   currentPage = 1;
-  itemsPerPage = 6;
-  selectedDate = 'Today, Aug 18';
+  itemsPerPage = 3;
   @Input() showSearch = false;
   @Output() search = new EventEmitter<{ city: string; query: string }>();
 
+  selectedDate = this.formatDate(new Date());
   selectedTime = '19:00';
   selectedGuests = 2;
 
+  dateModalOpen = false;
+  timeModalOpen = false;
+  guestsModalOpen = false;
+
+  currentMonth = new Date().getMonth();
+  currentYear = new Date().getFullYear();
+  selectedDay = new Date().getDate();
+
+  private searchTimeout: any;
+  timeSlots: string[] = [];
+
   filters: FilterState = {
     cuisine: [],
-    priceRange: { min: 0, max: 150 },
+    priceRange: {min: 0, max: 150},
     setting: [],
     neighborhood: [],
     specialOffers: false,
@@ -105,15 +116,17 @@ export class Restaurants implements OnInit {
   availableSettings: string[] = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
   availablePriceRanges: string[] = ['€€', '€€€', '€€€€'];
 
-  @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+  @ViewChild('mapContainer', {static: false}) mapContainer!: ElementRef;
   private map: any;
   private markersLayer: any = L.layerGroup();
 
-  constructor(private route: ActivatedRoute, private router: Router, private api: ApiService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private api: ApiService) {
+  }
 
   ngOnInit(): void {
     this.checkLoginStatus();
     this.loadRestaurants();
+    this.generateTimeSlots();
   }
 
   ngAfterViewInit(): void {
@@ -325,8 +338,104 @@ export class Restaurants implements OnInit {
     this.restaurants = filtered.slice(startIndex, endIndex);
   }
 
+  formatDate(date: Date): string {
+    const options: Intl.DateTimeFormatOptions = {month: 'short', day: 'numeric'};
+    return date.toLocaleDateString('en-US', options);
+  }
+
+  generateTimeSlots(): void {
+    this.timeSlots = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const h = hour.toString().padStart(2, '0');
+        const m = minute.toString().padStart(2, '0');
+        this.timeSlots.push(`${h}:${m}`);
+      }
+    }
+  }
+
+  getDaysInMonth(month: number, year: number): number[] {
+    const days = [];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
+  }
+
+  getFirstDayOfMonth(month: number, year: number): number {
+    return new Date(year, month, 1).getDay();
+  }
+
+  getMonthName(month: number): string {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month];
+  }
+
+  prevMonth(): void {
+    if (this.currentMonth === 0) {
+      this.currentMonth = 11;
+      this.currentYear--;
+    } else {
+      this.currentMonth--;
+    }
+  }
+
+  nextMonth(): void {
+    if (this.currentMonth === 11) {
+      this.currentMonth = 0;
+      this.currentYear++;
+    } else {
+      this.currentMonth++;
+    }
+  }
+
+  selectDate(day: number): void {
+    this.selectedDay = day;
+    const date = new Date(this.currentYear, this.currentMonth, day);
+    this.selectedDate = this.formatDate(date);
+    this.dateModalOpen = false;
+  }
+
+  isDateInPast(day: number, month: number, year: number): boolean {
+    const selectedDate = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    return selectedDate < today;
+  }
+
+  isTimeInPast(time: string): boolean {
+    const today = new Date();
+    const selectedDate = new Date(this.currentYear, this.currentMonth, this.selectedDay);
+    const todayDate = new Date();
+
+    if (selectedDate > todayDate) {
+      return false;
+    }
+
+    if (selectedDate.toDateString() === todayDate.toDateString()) {
+      const [hours, minutes] = time.split(':').map(Number);
+      const selectedTime = new Date();
+      selectedTime.setHours(hours, minutes, 0, 0);
+      return selectedTime < todayDate;
+    }
+    return true;
+  }
+
+  selectTime(time: string): void {
+    this.selectedTime = time;
+    this.timeModalOpen = false;
+  }
+
+  selectGuests(count: number): void {
+    this.selectedGuests = count;
+    this.guestsModalOpen = false;
+  }
+
   getPriceValue(priceRange: string): number {
-    const map: {[key: string]: number} = {
+    const map: { [key: string]: number } = {
       '€': 25,
       '€€': 50,
       '€€€': 100,
@@ -373,7 +482,7 @@ export class Restaurants implements OnInit {
   clearAllFilters(): void {
     this.filters = {
       cuisine: [],
-      priceRange: { min: 0, max: 150 },
+      priceRange: {min: 0, max: 150},
       setting: [],
       neighborhood: [],
       specialOffers: false,
@@ -396,8 +505,12 @@ export class Restaurants implements OnInit {
     const index = this.filters.cuisine.indexOf(cuisine);
     if (index > -1) {
       this.filters.cuisine.splice(index, 1);
+      if (this.selectedCuisine === cuisine) {
+        this.selectedCuisine = 'All';
+      }
     } else {
       this.filters.cuisine.push(cuisine);
+      this.selectedCuisine = cuisine;
     }
     this.currentPage = 1;
     this.applyFilters();
@@ -412,6 +525,7 @@ export class Restaurants implements OnInit {
       }
     } else {
       this.filters.setting.push(setting);
+      this.selectedSetting = setting;
     }
     this.currentPage = 1;
     this.applyFilters();
@@ -421,8 +535,12 @@ export class Restaurants implements OnInit {
     const index = this.filters.neighborhood.indexOf(neighborhood);
     if (index > -1) {
       this.filters.neighborhood.splice(index, 1);
+      if (this.selectedNeighborhood === neighborhood) {
+        this.selectedNeighborhood = 'All';
+      }
     } else {
       this.filters.neighborhood.push(neighborhood);
+      this.selectedNeighborhood = neighborhood;
     }
     this.currentPage = 1;
     this.applyFilters();
@@ -450,6 +568,7 @@ export class Restaurants implements OnInit {
     if (this.filters.availableNow) count++;
     if (this.filters.bestRated) count++;
     if (this.searchQuery && this.searchQuery.trim() !== '') count++;
+    if (this.searchCity && this.searchCity !== 'Paris') count++;
     if (this.selectedSetting && this.selectedSetting !== '') count++;
     if (this.selectedCuisine !== 'All') count++;
     if (this.selectedNeighborhood !== 'All') count++;
@@ -483,7 +602,7 @@ export class Restaurants implements OnInit {
           popupAnchor: [0, -14]
         });
 
-        const marker = L.marker([restaurant.latitude, restaurant.longitude], { icon: myIcon })
+        const marker = L.marker([restaurant.latitude, restaurant.longitude], {icon: myIcon})
           .bindPopup(`<strong>${restaurant.name}</strong><br>${restaurant.cuisineType} • ${restaurant.priceRange}`);
 
         marker.on('click', () => {
@@ -498,7 +617,7 @@ export class Restaurants implements OnInit {
     });
 
     if (bounds.length > 0) {
-      this.map.fitBounds(bounds, { padding: [50, 50] });
+      this.map.fitBounds(bounds, {padding: [50, 50]});
     }
   }
 
@@ -526,7 +645,7 @@ export class Restaurants implements OnInit {
           popupAnchor: [0, -14]
         });
 
-        const marker = L.marker([restaurant.latitude, restaurant.longitude], { icon: myIcon })
+        const marker = L.marker([restaurant.latitude, restaurant.longitude], {icon: myIcon})
           .bindPopup(`<strong>${restaurant.name}</strong><br>${restaurant.cuisineType} • ${restaurant.priceRange}`);
 
         marker.on('click', () => {
@@ -556,23 +675,81 @@ export class Restaurants implements OnInit {
     this.applyFilters();
   }
 
-  goToPage(page: number): void {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.applyFilters();
+  scrollToTop(): void {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  goToPage(page: number | string): void {
+    if (typeof page === 'number') {
+      if (page < 1 || page > this.totalPages) return;
+      this.currentPage = page;
+      this.applyFilters();
+      this.scrollToTop();
+    }
   }
 
   onSearch(): void {
-    this.currentPage = 1;
-    this.applyFilters();
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+
+    this.searchTimeout = setTimeout(() => {
+      this.currentPage = 1;
+      this.applyFilters();
+    }, 300);
   }
 
   nextPage(): void {
-    this.goToPage(this.currentPage + 1);
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.applyFilters();
+      this.scrollToTop();
+    }
   }
 
   prevPage(): void {
-    this.goToPage(this.currentPage - 1);
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.applyFilters();
+      this.scrollToTop();
+    }
+  }
+
+  getVisiblePages(): (number | string)[] {
+    const pages: (number | string)[] = [];
+    const total = this.totalPages;
+    const current = this.currentPage;
+
+    pages.push(1);
+
+    if (total <= 7) {
+      for (let i = 2; i <= total; i++) {
+        pages.push(i);
+      }
+      return pages;
+    }
+
+    if (current <= 3) {
+      pages.push(2, 3, 4);
+      pages.push('...');
+      pages.push(total);
+    } else if (current >= total - 2) {
+      pages.push('...');
+      for (let i = total - 3; i <= total; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push('...');
+      pages.push(current - 1);
+      pages.push(current);
+      pages.push(current + 1);
+      pages.push('...');
+      pages.push(total);
+    }
+    return pages;
   }
 
   toggleQuickFilter(filterName: string): void {
@@ -605,16 +782,45 @@ export class Restaurants implements OnInit {
   }
 
   onCuisineChange(): void {
+    if (this.selectedCuisine !== 'All') {
+      if (!this.filters.cuisine.includes(this.selectedCuisine)) {
+        this.filters.cuisine.push(this.selectedCuisine);
+      }
+    } else {
+      this.filters.cuisine = [];
+    }
     this.currentPage = 1;
     this.applyFilters();
   }
 
   onPriceChange(): void {
+    if (this.selectedPrice !== 'All') {
+      const priceMap: { [key: string]: { min: number; max: number } } = {
+        '€€': {min: 25, max: 50},
+        '€€€': {min: 50, max: 100},
+        '€€€€': {min: 100, max: 150}
+      };
+      const range = priceMap[this.selectedPrice];
+      if (range) {
+        this.filters.priceRange.min = range.min;
+        this.filters.priceRange.max = range.max;
+      }
+    } else {
+      this.filters.priceRange.min = 0;
+      this.filters.priceRange.max = 150;
+    }
     this.currentPage = 1;
     this.applyFilters();
   }
 
   onNeighborhoodChange(): void {
+    if (this.selectedNeighborhood !== 'All') {
+      if (!this.filters.neighborhood.includes(this.selectedNeighborhood)) {
+        this.filters.neighborhood.push(this.selectedNeighborhood);
+      }
+    } else {
+      this.filters.neighborhood = [];
+    }
     this.currentPage = 1;
     this.applyFilters();
   }
@@ -670,7 +876,7 @@ export class Restaurants implements OnInit {
 
   scrollFilters(offset: number): void {
     const el = document.getElementById('filters-carousel');
-    if (el) el.scrollBy({ left: offset, behavior: 'smooth' });
+    if (el) el.scrollBy({left: offset, behavior: 'smooth'});
   }
 
   toggleDarkMode(): void {
@@ -683,5 +889,79 @@ export class Restaurants implements OnInit {
 
   toggleMobileMap(): void {
     this.mobileMapOpen = !this.mobileMapOpen;
+  }
+
+
+  getActiveCity(): string {
+    if (this.selectedNeighborhood && this.selectedNeighborhood !== 'All') {
+      return this.selectedNeighborhood;
+    }
+
+    if (this.filters.neighborhood && this.filters.neighborhood.length > 0) {
+      return this.filters.neighborhood[0];
+    }
+
+    if (this.searchCity && this.searchCity !== 'Paris') {
+      return this.searchCity;
+    }
+    return 'Paris';
+  }
+
+  getActiveSearchTerm(): string {
+    return this.searchQuery?.trim() || '';
+  }
+
+  getPageTitle(): string {
+    const city = this.getActiveCity();
+    const searchTerm = this.getActiveSearchTerm();
+
+    if (this.totalElements === 0) {
+      if (city && city !== 'Paris') {
+        return `No Restaurants Found in ${city}`;
+      }
+      if (searchTerm) {
+        return `No Restaurants Found for "${searchTerm}"`;
+      }
+      return 'No Restaurants Found';
+    }
+
+    if (city && city !== 'Paris') {
+      return `The Best Restaurants in ${city}`;
+    }
+
+    if (searchTerm) {
+      return `Restaurants matching "${searchTerm}"`;
+    }
+
+    if (this.totalElements < 10) {
+      return `The Best Restaurants in Paris`;
+    }
+
+    return 'The 10 Best Restaurants in Paris';
+  }
+
+  getPageDescription(): string {
+    const city = this.getActiveCity();
+    const searchTerm = this.getActiveSearchTerm();
+
+    if (this.totalElements === 0) {
+      if (city && city !== 'Paris') {
+        return `We couldn't find any restaurants in ${city}. Try searching for a different city or neighborhood, or adjust your filters.`;
+      }
+      if (searchTerm) {
+        return `We couldn't find any restaurants matching "${searchTerm}". Try adjusting your search terms or explore our full list of restaurants.`;
+      }
+      return 'No restaurants found matching your criteria. Try adjusting your filters.';
+    }
+
+    if (city && city !== 'Paris') {
+      return `Discover the best dining experiences in ${city}. From cozy bistros to fine dining establishments, find the perfect restaurant for any occasion with easy instant online booking.`;
+    }
+
+    if (searchTerm) {
+      return `Showing ${this.totalElements} restaurant${this.totalElements > 1 ? 's' : ''} that match "${searchTerm}". Discover the best dining experiences with easy instant online booking.`;
+    }
+
+    return `Discover ${this.totalElements} exceptional restaurants in Paris, where centuries-old bistros and three-Michelin-starred temples sit side by side. Stroll arrondissement by arrondissement to discover cozy wine bars, innovative neo-bistros, and unforgettable culinary heritage with easy instant online booking.`;
   }
 }
