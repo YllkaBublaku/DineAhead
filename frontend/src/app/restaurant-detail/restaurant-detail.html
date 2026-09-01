@@ -13,6 +13,7 @@
         </svg>
         <input type="text"
                [(ngModel)]="searchCity"
+               (keyup)="onSearch()"
                placeholder="City or neighborhood"
                class="w-full text-xs sm:text-sm font-semibold text-gray-900 dark:text-white bg-transparent focus:outline-none placeholder-gray-400">
       </div>
@@ -25,6 +26,7 @@
         </svg>
         <input type="text"
                [(ngModel)]="searchQuery"
+               (keyup)="onSearch()"
                placeholder="Cuisine, restaurant name..."
                class="w-full text-xs sm:text-sm italic text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none placeholder-gray-400">
       </div>
@@ -47,13 +49,48 @@
         </svg>
       </button>
 
-      <a routerLink="/login"
-         class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#005943] hover:bg-[#004735] text-white rounded-lg transition shadow-xs active:scale-95">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-        </svg>
-        <span>Log In</span>
-      </a>
+      @if (!isLoggedIn) {
+        <a routerLink="/login" [queryParams]="{ returnUrl: '/restaurants' }"
+           class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#005943] hover:bg-[#004735] text-white rounded-lg transition shadow-xs active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          <span>Log In</span>
+        </a>
+      } @else {
+        <div class="relative group">
+          <button class="flex items-center gap-2 focus:outline-none">
+            <div class="w-9 h-9 rounded-full bg-[#005943] text-white flex items-center justify-center font-bold text-sm">
+              {{ user?.initials || 'U' }}
+            </div>
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+
+          <div class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
+              <p class="text-sm font-bold text-gray-900 dark:text-white">{{ user?.firstName }} {{ user?.lastName }}</p>
+              <p class="text-xs text-gray-500">{{ user?.email }}</p>
+            </div>
+
+            <a routerLink="/dashboard" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+              My Dashboard
+            </a>
+
+            @if (userRole === 'ADMIN') {
+              <a routerLink="/restaurant-dashboard" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/></svg>
+                Restaurant Dashboard
+              </a>
+            }
+
+            <button (click)="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition mt-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+              Log Out
+            </button>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </header>
@@ -66,8 +103,10 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
         </svg>
-        Paris restaurants
+        Home
       </a>
+      <span>›</span>
+      <a routerLink="/restaurants" class="hover:text-emerald-700">Restaurants</a>
       <span>›</span>
       <span class="font-medium text-gray-800">{{ restaurant.name }}</span>
     </div>
@@ -106,7 +145,8 @@
 
           <div class="flex items-center gap-4 mt-3">
             <div class="flex items-center gap-1 text-xl font-black text-gray-900">
-              <span class="text-amber-500 text-2xl">★</span> {{ restaurant.averageRating?.toFixed(1) || 'N/A' }}
+              <span class="text-amber-500 text-2xl">★</span>
+              {{ restaurant.averageRating ? restaurant.averageRating.toFixed(1) : 'N/A' }}
             </div>
             <span class="text-sm text-gray-500">({{ restaurant.reviewCount || 0 }} reviews)</span>
           </div>
@@ -238,48 +278,53 @@
 
           <h4 class="text-lg font-extrabold text-gray-900 mt-6">All reviews</h4>
 
-          @for (review of reviews; track review.id) {
-            <div class="border-t border-gray-200 pt-8">
-              <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-full bg-[#e5e9ec] flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
-                  {{ review.user?.firstName?.charAt(0) || review.user?.lastName?.charAt(0) || '?' }}
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
+          @if (reviews.length > 0) {
+            @for (review of reviews; track review.id) {
+              <div class="border-t border-gray-200 pt-8">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-full bg-[#e5e9ec] flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
+                    {{ review.user?.firstName?.charAt(0) || review.user?.lastName?.charAt(0) || review.author?.charAt(0) || '?' }}
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
             <span class="font-bold text-gray-900">
-              {{ review.user?.firstName || 'Anonymous' }} {{ review.user?.lastName || '' }}
+              {{ review.user?.firstName || review.author || 'Anonymous' }}
+              {{ review.user?.lastName || '' }}
             </span>
-                    <span class="text-xs text-gray-400">•</span>
-                    <span class="text-xs text-gray-500">{{ formatDate(review.createdAt) }}</span>
+                      <span class="text-xs text-gray-400">•</span>
+                      <span class="text-xs text-gray-500">{{ formatDate(review.createdAt) || review.date || 'Recently' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="font-bold text-sm text-gray-900">★ {{ review.rating || 0 }}</span>
+                      @if (review.foodRating) {
+                        <span class="text-xs text-gray-400">•</span>
+                        <span class="text-xs text-gray-500">Food: {{ review.foodRating }}</span>
+                      }
+                      @if (review.serviceRating) {
+                        <span class="text-xs text-gray-400">•</span>
+                        <span class="text-xs text-gray-500">Service: {{ review.serviceRating }}</span>
+                      }
+                      @if (review.ambianceRating) {
+                        <span class="text-xs text-gray-400">•</span>
+                        <span class="text-xs text-gray-500">Ambiance: {{ review.ambianceRating }}</span>
+                      }
+                    </div>
+                    <p class="mt-3 text-sm text-gray-700 leading-relaxed">{{ review.comment || review.text || 'No comment provided.' }}</p>
+                    <button class="mt-3 flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#005943] transition">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
+                      </svg>
+                      Helpful
+                    </button>
                   </div>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="font-bold text-sm text-gray-900">★ {{ review.rating }}</span>
-                    @if (review.foodRating) {
-                      <span class="text-xs text-gray-400">•</span>
-                      <span class="text-xs text-gray-500">Food: {{ review.foodRating }}</span>
-                    }
-                    @if (review.serviceRating) {
-                      <span class="text-xs text-gray-400">•</span>
-                      <span class="text-xs text-gray-500">Service: {{ review.serviceRating }}</span>
-                    }
-                    @if (review.ambianceRating) {
-                      <span class="text-xs text-gray-400">•</span>
-                      <span class="text-xs text-gray-500">Ambiance: {{ review.ambianceRating }}</span>
-                    }
-                  </div>
-                  <p class="mt-3 text-sm text-gray-700 leading-relaxed">{{ review.comment || 'No comment provided.' }}</p>
-                  <button class="mt-3 flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#005943] transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
-                    </svg>
-                    Helpful
-                  </button>
                 </div>
               </div>
+            }
+          } @else {
+            <div class="text-center py-8">
+              <div class="text-4xl mb-3">📝</div>
+              <p class="text-gray-500">No reviews yet. Be the first to review!</p>
             </div>
-          }
-          @if (reviews.length === 0) {
-            <p class="text-gray-500 text-sm py-4">No reviews yet. Be the first to review!</p>
           }
         </div>
       </div>
@@ -446,19 +491,21 @@
             @for (rec of otherRecommendations; track rec.id) {
               <div [routerLink]="['/restaurant', rec.id]" class="min-w-[320px] max-w-[320px] shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl transition cursor-pointer flex gap-4 p-4">
                 <div class="w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-                  <img [src]="rec.image" class="w-full h-full object-cover">
+                  <img [src]="rec.coverPhotoUrl || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=400&h=300&q=80'"
+                       [alt]="rec.name"
+                       class="w-full h-full object-cover">
                 </div>
                 <div class="flex-1 flex flex-col justify-between min-w-0">
                   <div>
                     <div class="flex justify-between items-start gap-2">
                       <p class="font-bold text-gray-900 text-base truncate">{{ rec.name }}</p>
-                      <span class="font-bold text-emerald-600 text-base shrink-0">{{ rec.rating?.toFixed(1) || 'N/A' }}</span>
+                      <span class="font-bold text-emerald-600 text-base shrink-0">{{ rec.averageRating?.toFixed(1) || 'N/A' }}</span>
                     </div>
-                    <p class="text-sm text-gray-500 truncate">{{ rec.location }}</p>
-                    <p class="text-sm text-gray-500 truncate">{{ rec.cuisine }} · {{ rec.price }}</p>
+                    <p class="text-sm text-gray-500 truncate">{{ rec.city || 'Paris' }}</p>
+                    <p class="text-sm text-gray-500 truncate">{{ rec.cuisineType || 'Various' }} · {{ rec.priceRange || '€€' }}</p>
                   </div>
-                  @if (rec.offer) {
-                    <span class="mt-1 inline-block bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full w-fit truncate max-w-full border border-green-100">{{ rec.offer }}</span>
+                  @if (rec.specialOffer) {
+                    <span class="mt-1 inline-block bg-green-50 text-green-700 text-xs font-bold px-3 py-1 rounded-full w-fit truncate max-w-full border border-green-100">{{ rec.specialOffer }}</span>
                   }
                 </div>
               </div>

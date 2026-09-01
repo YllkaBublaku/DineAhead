@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output, ChangeDetectorRef} from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -79,6 +79,10 @@ export class RestaurantDetail implements OnInit {
   loading = true;
   error = false;
 
+  isLoggedIn = false;
+  userRole: string | null = null;
+  user: any = null;
+
   currentMonth = new Date().getMonth();
   currentYear = new Date().getFullYear();
   calendarDays: { day: number; isPast: boolean }[] = [];
@@ -96,7 +100,8 @@ export class RestaurantDetail implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private api: ApiService
+    private api: ApiService,
+    private cdr: ChangeDetectorRef  // Add this
   ) {}
 
   ngOnInit(): void {
@@ -105,10 +110,35 @@ export class RestaurantDetail implements OnInit {
       if (id) {
         this.loadRestaurant(id);
       } else {
-        this.router.navigate(['/restaurants']);
+        this.router.navigate(['/restaurants-detail']);
       }
     });
     this.generateCalendar();
+    this.checkLoginStatus();
+  }
+
+  checkLoginStatus(): void {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      this.user = JSON.parse(storedUser);
+      this.isLoggedIn = true;
+      this.userRole = this.user.role;
+
+      const first = this.user.firstName?.charAt(0) || '';
+      const last = this.user.lastName?.charAt(0) || '';
+      this.user.initials = (first + last).toUpperCase() || 'U';
+    } else {
+      this.isLoggedIn = false;
+      this.user = null;
+      this.userRole = null;
+    }
+  }
+
+  logout(): void {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    this.checkLoginStatus();
+    this.router.navigate(['/']);
   }
 
   loadRestaurant(id: number): void {
@@ -117,30 +147,39 @@ export class RestaurantDetail implements OnInit {
 
     this.api.getRestaurantById(id)
       .then((data) => {
-        console.log('Restaurant data:', data);
+        console.log('=== Restaurant Data ===');
+        console.log('Full data:', data);
+        console.log('Name:', data?.name);
+        console.log('Address:', data?.address);
+        console.log('Rating:', data?.averageRating);
+        console.log('Features:', data?.features);
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
           this.loadReviews(id);
           this.loadSimilarRestaurants();
           this.generateTags();
           this.loading = false;
+
+          this.cdr.detectChanges();
         } else {
           this.error = true;
           this.loading = false;
+          this.cdr.detectChanges();
         }
       })
       .catch((error) => {
         console.error('Error loading restaurant:', error);
         this.error = true;
         this.loading = false;
+        this.cdr.detectChanges();
       });
   }
 
   mapToRestaurantItem(data: any): RestaurantItem {
     return {
       id: data.id,
-      name: data.name,
-      slug: data.slug,
+      name: data.name || 'Unknown Restaurant',
+      slug: data.slug || '',
       address: data.address || 'Address not available',
       city: data.city || 'Paris',
       cuisineType: data.cuisineType || 'Various',
@@ -179,33 +218,35 @@ export class RestaurantDetail implements OnInit {
           memberSince: 'Member',
           isHelpful: false
         }));
+        this.cdr.detectChanges();
       })
       .catch((error) => {
         console.error('Error loading reviews:', error);
         this.reviews = [];
+        this.cdr.detectChanges();
       });
   }
 
   loadSimilarRestaurants(): void {
     this.api.getRestaurants()
       .then((data) => {
+        console.log('All restaurants for recommendations:', data);
         if (data && Array.isArray(data)) {
-          // Filter out current restaurant and get similar ones
-          const filtered = data
-            .filter((r: any) => r.id !== this.restaurant?.id)
-            .slice(0, 4);
-          this.similarRestaurants = filtered.map((r: any) => this.mapToRestaurantItem(r));
+          const filtered = data.filter((r: any) => r.id !== this.restaurant?.id);
 
-          const others = data
-            .filter((r: any) => r.id !== this.restaurant?.id)
-            .slice(4, 8);
-          this.otherRecommendations = others.map((r: any) => this.mapToRestaurantItem(r));
+          this.similarRestaurants = filtered.slice(0, 4).map((r: any) => this.mapToRestaurantItem(r));
+          this.otherRecommendations = filtered.slice(4, 8).map((r: any) => this.mapToRestaurantItem(r));
+
+          console.log('Similar restaurants:', this.similarRestaurants.length);
+          console.log('Other recommendations:', this.otherRecommendations.length);
         }
+        this.cdr.detectChanges();
       })
       .catch((error) => {
         console.error('Error loading similar restaurants:', error);
         this.similarRestaurants = [];
         this.otherRecommendations = [];
+        this.cdr.detectChanges();
       });
   }
 
@@ -219,6 +260,7 @@ export class RestaurantDetail implements OnInit {
       const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
       this.calendarDays.push({ day: i, isPast });
     }
+    this.cdr.detectChanges();
   }
 
   prevMonth(): void {
@@ -250,20 +292,17 @@ export class RestaurantDetail implements OnInit {
   generateTags(): void {
     const tags = new Set<string>();
     if (this.restaurant) {
-      // Add cuisine type as tag
       if (this.restaurant.cuisineType) tags.add(this.restaurant.cuisineType);
-      // Add features as tags
       if (this.restaurant.features) {
         this.restaurant.features.forEach(f => tags.add(f));
       }
-      // Add city
       if (this.restaurant.city) tags.add(this.restaurant.city);
     }
-    // Add default tags if empty
     if (tags.size === 0) {
       ['French', 'European', 'Cosy', 'Good for families', 'Outdoor dining', 'Romantic'].forEach(t => tags.add(t));
     }
     this.tags = Array.from(tags);
+    this.cdr.detectChanges();
   }
 
   onHeaderSearch(event: { city: string; query: string }): void {
@@ -289,12 +328,14 @@ export class RestaurantDetail implements OnInit {
     setTimeout(() => {
       this.bookingModalOpen = false;
       this.bookingSuccess = false;
+      this.cdr.detectChanges();
     }, 2500);
   }
 
   closeBookingModal(): void {
     this.bookingModalOpen = false;
     this.bookingSuccess = false;
+    this.cdr.detectChanges();
   }
 
   toggleReviewHelpful(review: ReviewItem): void {

@@ -2,6 +2,7 @@ package com.dineahead.application;
 
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.enums.PriceRange;
+import com.dineahead.infrastructure.RestaurantFeatureRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,9 +14,11 @@ import java.util.List;
 @Service
 public class RestaurantService {
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantFeatureRepository restaurantFeatureRepository;
 
-    public RestaurantService(RestaurantRepository restaurantRepository) {
+    public RestaurantService(RestaurantRepository restaurantRepository, RestaurantFeatureRepository restaurantFeatureRepository) {
         this.restaurantRepository = restaurantRepository;
+        this.restaurantFeatureRepository = restaurantFeatureRepository;
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -38,8 +41,13 @@ public class RestaurantService {
 
     @Transactional(readOnly = true)
     public Restaurant getRestaurantById(Long id) {
-        return restaurantRepository.findByIdWithFeatures(id)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found!"));
+        Restaurant restaurant = restaurantRepository.findByIdWithFeaturesAndDeposit(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + id));
+
+        List<String> gallery = restaurantRepository.findGalleryByRestaurantId(id);
+        restaurant.setGallery(gallery);
+
+        return restaurant;
     }
 
     public List<Restaurant> getRestaurantsByOwner(Long ownerId) {

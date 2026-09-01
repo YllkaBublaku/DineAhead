@@ -79,9 +79,9 @@ export class Login implements OnInit {
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
         if (returnUrl === '/') {
           if (response.role === 'ADMIN') {
-            this.router.navigate(['/restaurant-dashboard']);
+            this.router.navigate(['/']);
           } else {
-            this.router.navigate(['/dashboard']);
+            this.router.navigate(['/']);
           }
         } else {
           this.router.navigate([returnUrl]);
