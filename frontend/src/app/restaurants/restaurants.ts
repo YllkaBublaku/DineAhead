@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import {ApiService} from '../services/api.service';
 import * as L from 'leaflet';
+import {FavoritesService} from '../services/favorites.service';
 
 export interface RestaurantItem {
   id: number;
@@ -123,11 +124,20 @@ export class Restaurants implements OnInit {
   private map: any;
   private markersLayer: any = L.layerGroup();
 
-  constructor(private route: ActivatedRoute, private router: Router, private api: ApiService, private cdr: ChangeDetectorRef) {
-  }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private api: ApiService,
+    private cdr: ChangeDetectorRef,
+    private favoritesService: FavoritesService
+  ) {}
 
   ngOnInit(): void {
     this.checkLoginStatus();
+
+    this.favoritesService.favorites$.subscribe(() => {
+      this.cdr.detectChanges();
+    })
 
     this.route.queryParams.subscribe(params => {
       if (params['q']) {
@@ -920,15 +930,25 @@ export class Restaurants implements OnInit {
       event.preventDefault();
       event.stopPropagation();
     }
-    if (this.favorites.has(id)) {
-      this.favorites.delete(id);
-    } else {
-      this.favorites.add(id);
+
+    const restaurant = this.allRestaurants.find(r => r.id === id);
+    if (restaurant) {
+      this.favoritesService.toggleFavorite({
+        id: restaurant.id,
+        name: restaurant.name,
+        coverPhotoUrl: restaurant.coverPhotoUrl || '',
+        cuisineType: restaurant.cuisineType || '',
+        priceRange: restaurant.priceRange || '',
+        averageRating: restaurant.averageRating || 0,
+        reviewCount: restaurant.reviewCount || 0,
+        address: restaurant.address || '',
+        city: restaurant.city || ''
+      });
     }
   }
 
   isFavorite(id: number): boolean {
-    return this.favorites.has(id);
+    return this.favoritesService.isFavorite(id);
   }
 
   openBookingModal(rest: RestaurantItem, slot: any, event?: Event): void {

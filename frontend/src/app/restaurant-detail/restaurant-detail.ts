@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import * as L from 'leaflet';
+import {FavoritesService} from '../services/favorites.service';
 
 export interface MenuItem {
   id: number;
@@ -104,7 +105,6 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   currentMonth = new Date().getMonth();
   currentYear = new Date().getFullYear();
   calendarDays: { day: number; isPast: boolean }[] = [];
-  selectedDate: Date = new Date();
   showAllReviews = false;
 
   restaurant: RestaurantItem | null = null;
@@ -115,6 +115,13 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   menuItems: any[] = [];
   tags: string[] = [];
 
+  bookingStep: 'date' | 'time' | 'guests' = 'date';
+  selectedDate: Date | null = null;
+  selectedTime: string | null = null;
+  selectedGuests: number = 2;
+  availableTimes: string[] = [];
+  guestOptions: number[] = Array.from({length: 30}, (_, i) => i + 1);
+
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
   private map: any;
   private marker: any;
@@ -123,10 +130,18 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private favoritesService: FavoritesService
   ) {}
 
   ngOnInit(): void {
+    this.favoritesService.favorites$.subscribe(() => {
+      if (this.restaurant) {
+        this.isFavorite = this.favoritesService.isFavorite(this.restaurant.id);
+        this.cdr.detectChanges();
+      }
+    });
+
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
@@ -137,6 +152,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     });
     this.generateCalendar();
     this.checkLoginStatus();
+    this.generateTimeSlots();
   }
 
   checkLoginStatus(): void {
@@ -174,6 +190,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
+          this.isFavorite = this.favoritesService.isFavorite(this.restaurant.id);
           this.loadReviews(id);
           this.loadSimilarRestaurants();
           this.generateTags();
@@ -404,7 +421,19 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   toggleFavorite(): void {
-    this.isFavorite = !this.isFavorite;
+    if (this.restaurant) {
+      this.isFavorite = this.favoritesService.toggleFavorite({
+        id: this.restaurant.id,
+        name: this.restaurant.name,
+        coverPhotoUrl: this.restaurant.coverPhotoUrl || '',
+        cuisineType: this.restaurant.cuisineType || '',
+        priceRange: this.restaurant.priceRange || '',
+        averageRating: this.restaurant.averageRating || 0,
+        reviewCount: this.restaurant.reviewCount || 0,
+        address: this.restaurant.address || '',
+        city: this.restaurant.city || ''
+      });
+    }
   }
 
   selectTab(tab: 'about' | 'menu' | 'reviews'): void {
@@ -412,15 +441,19 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   openBookingModal(slot: string): void {
-    this.selectedTimeslot = slot;
     this.bookingModalOpen = true;
+    this.bookingStep = 'date';
+    this.selectedTime = null;
+    this.selectedGuests = 2;
+    this.bookingSuccess = false;
+    this.cdr.detectChanges();
   }
 
   confirmBooking(): void {
     this.bookingSuccess = true;
     setTimeout(() => {
-      this.bookingModalOpen = false;
       this.bookingSuccess = false;
+      this.resetBooking();
       this.cdr.detectChanges();
     }, 2500);
   }
@@ -643,6 +676,101 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.map.invalidateSize();
       }
     }, 300);
+  }
+
+  generateTimeSlots(): void {
+    this.availableTimes = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const h = hour.toString().padStart(2, '0');
+        const m = minute.toString().padStart(2, '0');
+        this.availableTimes.push(`${h}:${m}`);
+      }
+    }
+  }
+
+  selectDate(day: number): void {
+    const selectedDate = new Date(this.currentYear, this.currentMonth, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return;
+    }
+
+    this.selectedDate = selectedDate;
+    this.bookingStep = 'time';
+    this.cdr.detectChanges();
+  }
+
+  selectTime(time: string): void {
+    if (this.isTimeInPast(time)) {
+      return;
+    }
+    this.selectedTime = time;
+    this.bookingStep = 'guests';
+    this.cdr.detectChanges();
+  }
+
+  selectGuests(count: number): void {
+    this.selectedGuests = count;
+    this.bookingStep = 'date';
+    this.cdr.detectChanges();
+  }
+
+  goBackToDate(): void {
+    this.bookingStep = 'date';
+    this.selectedTime = null;
+    this.cdr.detectChanges();
+  }
+
+  goBackToTime(): void {
+    this.bookingStep = 'time';
+    this.cdr.detectChanges();
+  }
+
+  isTimeInPast(time: string): boolean {
+    const checkDate = this.selectedDate || new Date();
+    const today = new Date();
+
+    if (checkDate > new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+      return false;
+    }
+    if (checkDate.toDateString() === today.toDateString()) {
+      const [hours, minutes] = time.split(':').map(Number);
+      const selectedTime = new Date();
+      selectedTime.setHours(hours, minutes, 0, 0);
+      return selectedTime < today;
+    }
+    return true;
+  }
+
+  isDateInPast(day: number, month: number, year: number): boolean {
+    const selectedDate = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    return selectedDate < today;
+  }
+
+  resetBooking(): void {
+    this.bookingStep = 'date';
+    this.selectedDate = null;
+    this.selectedTime = null;
+    this.selectedGuests = 2;
+    this.bookingModalOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  getFormattedDate(): string {
+    if (!this.selectedDate) return 'Select a date';
+    const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    return this.selectedDate.toLocaleDateString('en-US', options);
+  }
+
+  getFormattedTime(): string {
+    return this.selectedTime || 'Select a time';
   }
 
   ngOnDestroy(): void {
