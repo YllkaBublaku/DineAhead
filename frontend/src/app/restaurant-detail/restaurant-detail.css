@@ -1,0 +1,20 @@
+.custom-map-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-map-marker .flex {
+  animation: pulse-marker 2s infinite;
+}
+
+@keyframes pulse-marker {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 89, 67, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(0, 89, 67, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 89, 67, 0);
+  }
+}

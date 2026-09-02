@@ -126,8 +126,31 @@ export class ApiService {
   }
 
   getReviewsByRestaurant(restaurantId: number): Promise<any[]> {
+    console.log('Fetching reviews for restaurant:', restaurantId);
     return firstValueFrom(
-      this.http.get<any[]>(`${this.apiUrl}/restaurants/${restaurantId}/reviews`)
+      this.http.get<any>(`${this.apiUrl}/restaurants/${restaurantId}/reviews`)
+        .pipe(
+          map(response => {
+            console.log('Reviews raw response:', response);
+            if (Array.isArray(response)) {
+              return response;
+            }
+            if (response && response.content && Array.isArray(response.content)) {
+              return response.content;
+            }
+            if (response && response._embedded) {
+              for (const key in response._embedded) {
+                if (Array.isArray(response._embedded[key])) {
+                  return response._embedded[key];
+                }
+              }
+            }
+            if (response && typeof response === 'object') {
+              return [response];
+            }
+            return [];
+          })
+        )
     );
   }
 

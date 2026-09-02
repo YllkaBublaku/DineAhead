@@ -5,7 +5,7 @@
       DineAhead
     </a>
 
-    <div class="hidden md:flex items-center flex-1 max-w-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1.5 shadow-xs">
+    <div class="hidden md:flex items-center flex-1 max-w-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1.5 shadow-xs relative">
 
       <div class="flex items-center gap-2 px-3 py-1 flex-1 min-w-0">
         <svg class="w-4 h-4 text-gray-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -13,29 +13,59 @@
         </svg>
         <input type="text"
                [(ngModel)]="searchCity"
-               (keyup)="onSearch()"
+               (keyup)="onSearchInput()"
+               (keydown.enter)="onSearch()"
                placeholder="City or neighborhood"
                class="w-full text-xs sm:text-sm font-semibold text-gray-900 dark:text-white bg-transparent focus:outline-none placeholder-gray-400">
       </div>
 
       <div class="h-5 w-px bg-gray-300 dark:bg-gray-600 shrink-0"></div>
 
-      <div class="flex items-center gap-2 px-3 py-1 flex-[1.4] min-w-0">
+      <div class="flex items-center gap-2 px-3 py-1 flex-[1.4] min-w-0 relative">
         <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
         <input type="text"
                [(ngModel)]="searchQuery"
-               (keyup)="onSearch()"
+               (keyup)="onSearchInput()"
+               (keydown.enter)="onSearch()"
+               (focus)="showSuggestions = true"
+               (blur)="onSearchBlur()"
                placeholder="Cuisine, restaurant name..."
                class="w-full text-xs sm:text-sm italic text-gray-800 dark:text-gray-100 bg-transparent focus:outline-none placeholder-gray-400">
+
+        @if (searchQuery && searchQuery.length > 0) {
+          <button (click)="searchQuery = ''; onSearch()"
+                  class="absolute right-14 text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        }
+
+        @if (showSuggestions && searchSuggestions.length > 0) {
+          <div class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+            @for (suggestion of searchSuggestions; track suggestion.id) {
+              <div (click)="selectSuggestion(suggestion)"
+                   class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition border-b border-gray-100 dark:border-gray-800 last:border-0">
+                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ suggestion.name }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ suggestion.cuisineType }} • {{ suggestion.city }}</p>
+                </div>
+                <span class="text-xs font-bold text-emerald-600">{{ suggestion.averageRating?.toFixed(1) || 'N/A' }}</span>
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <button (click)="onSearch()" class="bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold uppercase tracking-wider px-5 py-2 rounded-full transition shadow-xs shrink-0">
         Search
       </button>
     </div>
-
 
     <div class="flex items-center gap-4 shrink-0">
       <button (click)="toggleDarkMode()"
@@ -401,14 +431,14 @@
             [class.dark:bg-gray-900]="!mobileMapOpen"
             [class.shadow-xs]="!mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-      📋 List ({{ restaurants.length }})
+       List ({{ restaurants.length }})
     </button>
     <button (click)="mobileMapOpen = true"
             [class.bg-white]="mobileMapOpen"
             [class.dark:bg-gray-900]="mobileMapOpen"
             [class.shadow-xs]="mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-      🗺️ Map View
+       Map View
     </button>
   </div>
 

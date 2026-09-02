@@ -21,6 +21,7 @@ public class ReviewDTO {
 
     public ReviewDTO(Review review) {
         this.id = review.getId();
+
         if (review.getUser() != null) {
             String firstName = review.getUser().getFirstName() != null ? review.getUser().getFirstName() : "";
             String lastName = review.getUser().getLastName() != null ? review.getUser().getLastName() : "";
@@ -31,6 +32,7 @@ public class ReviewDTO {
         } else {
             this.userName = "Anonymous";
         }
+
         this.rating = review.getRating();
         this.foodRating = review.getFoodRating();
         this.serviceRating = review.getServiceRating();

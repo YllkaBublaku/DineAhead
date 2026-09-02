@@ -1,9 +1,10 @@
-import {Component, EventEmitter, Input, OnInit, Output, ChangeDetectorRef} from '@angular/core';
+import {Component, EventEmitter, Input, OnInit, Output, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
+import * as L from 'leaflet';
 
 export interface MenuItem {
   id: number;
@@ -77,10 +78,9 @@ export interface ReviewItem {
   templateUrl: './restaurant-detail.html',
   styleUrl: './restaurant-detail.css',
 })
-export class RestaurantDetail implements OnInit {
+export class RestaurantDetail implements OnInit, OnDestroy {
   searchCity = 'Paris';
   searchQuery = '';
-
   @Input() showSearch = false;
   @Output() search = new EventEmitter<{ city: string; query: string }>();
 
@@ -96,10 +96,16 @@ export class RestaurantDetail implements OnInit {
   userRole: string | null = null;
   user: any = null;
 
+  showSuggestions = false;
+  searchSuggestions: RestaurantItem[] = [];
+  allRestaurants: RestaurantItem[] = [];
+  private searchTimeout: any;
+
   currentMonth = new Date().getMonth();
   currentYear = new Date().getFullYear();
   calendarDays: { day: number; isPast: boolean }[] = [];
   selectedDate: Date = new Date();
+  showAllReviews = false;
 
   restaurant: RestaurantItem | null = null;
   reviews: ReviewItem[] = [];
@@ -107,14 +113,17 @@ export class RestaurantDetail implements OnInit {
   otherRecommendations: RestaurantItem[] = [];
 
   menuItems: any[] = [];
-
   tags: string[] = [];
+
+  @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+  private map: any;
+  private marker: any;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef  // Add this
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -162,18 +171,18 @@ export class RestaurantDetail implements OnInit {
       .then((data) => {
         console.log('=== Restaurant Data ===');
         console.log('Full data:', data);
-        console.log('Name:', data?.name);
-        console.log('Address:', data?.address);
-        console.log('Rating:', data?.averageRating);
-        console.log('Features:', data?.features);
+
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
           this.loadReviews(id);
           this.loadSimilarRestaurants();
           this.generateTags();
           this.loading = false;
-
           this.cdr.detectChanges();
+
+          setTimeout(() => {
+            this.initMap();
+          }, 200);
         } else {
           this.error = true;
           this.loading = false;
@@ -185,6 +194,20 @@ export class RestaurantDetail implements OnInit {
         this.error = true;
         this.loading = false;
         this.cdr.detectChanges();
+      });
+
+    this.loadAllRestaurants()
+  }
+
+  loadAllRestaurants(): void {
+    this.api.getRestaurants()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          this.allRestaurants = data.map((r: any) => this.mapToRestaurantItem(r));
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading restaurants for suggestions:', error);
       });
   }
 
@@ -221,17 +244,46 @@ export class RestaurantDetail implements OnInit {
   }
 
   loadReviews(restaurantId: number): void {
+    console.log('=== Loading reviews for restaurant:', restaurantId, '===');
+
     this.api.getReviewsByRestaurant(restaurantId)
-      .then((data) => {
-        console.log('Reviews loaded:', data);
-        this.reviews = (data || []).map((review: any) => ({
-          ...review,
-          author: review.user ? `${review.user.firstName} ${review.user.lastName}` : 'Anonymous',
-          text: review.comment || '',
-          date: review.createdAt ? this.formatDate(review.createdAt) : 'Recently',
-          memberSince: 'Member',
-          isHelpful: false
-        }));
+      .then((data: any) => {
+        console.log('Reviews API response:', data);
+
+        let reviewsData: any[] = [];
+
+        if (Array.isArray(data)) {
+          reviewsData = data;
+        } else if (data && data.content && Array.isArray(data.content)) {
+          reviewsData = data.content;
+        } else if (data && data._embedded) {
+          for (const key in data._embedded) {
+            if (Array.isArray(data._embedded[key])) {
+              reviewsData = data._embedded[key];
+              break;
+            }
+          }
+        }
+
+        if (reviewsData && Array.isArray(reviewsData) && reviewsData.length > 0) {
+          this.reviews = reviewsData.map((review: any) => ({
+            id: review.id,
+            rating: review.rating || 0,
+            foodRating: review.foodRating || null,
+            serviceRating: review.serviceRating || null,
+            ambianceRating: review.ambianceRating || null,
+            comment: review.comment || 'No comment provided.',
+            createdAt: review.createdAt || new Date().toISOString(),
+            author: review.userName || 'Anonymous',
+            text: review.comment || 'No comment provided.',
+            date: review.createdAt ? this.formatDate(review.createdAt) : 'Recently',
+            memberSince: 'Member',
+            isHelpful: false
+          }));
+          console.log('Mapped reviews:', this.reviews);
+        } else {
+          this.reviews = [];
+        }
         this.cdr.detectChanges();
       })
       .catch((error) => {
@@ -246,18 +298,36 @@ export class RestaurantDetail implements OnInit {
       .then((data) => {
         console.log('All restaurants for recommendations:', data);
         if (data && Array.isArray(data) && data.length > 0) {
-
           const filtered = data.filter((r: any) => r.id !== this.restaurant?.id);
-          this.similarRestaurants = filtered.slice(0, 4).map((r: any) => this.mapToRestaurantItem(r));
 
-          if (filtered.length > 4) {
-            this.otherRecommendations = filtered.slice(4, 8).map((r: any) => this.mapToRestaurantItem(r));
+          console.log('Filtered restaurants (excluding current):', filtered.length);
+
+          if (filtered.length > 0) {
+            const similarCuisine = filtered.filter((r: any) =>
+              r.cuisineType === this.restaurant?.cuisineType
+            );
+
+            const differentCuisine = filtered.filter((r: any) =>
+              r.cuisineType !== this.restaurant?.cuisineType
+            );
+
+            this.similarRestaurants = [
+              ...similarCuisine.map((r: any) => this.mapToRestaurantItem(r)),
+              ...differentCuisine.map((r: any) => this.mapToRestaurantItem(r))
+            ].slice(0, 4);
+
+            const usedIds = new Set(this.similarRestaurants.map(r => r.id));
+            this.otherRecommendations = filtered
+              .filter((r: any) => !usedIds.has(r.id))
+              .slice(0, 4)
+              .map((r: any) => this.mapToRestaurantItem(r));
+
+            console.log('Similar restaurants:', this.similarRestaurants.length);
+            console.log('Other recommendations:', this.otherRecommendations.length);
           } else {
+            this.similarRestaurants = [];
             this.otherRecommendations = [];
           }
-
-          console.log('Similar restaurants:', this.similarRestaurants.length);
-          console.log('Other recommendations:', this.otherRecommendations.length);
         } else {
           console.warn('No restaurants available for recommendations');
           this.similarRestaurants = [];
@@ -396,16 +466,57 @@ export class RestaurantDetail implements OnInit {
     }
   }
 
-  onSearch(): void {
-    this.search.emit({ city: this.searchCity, query: this.searchQuery });
-    if (!this.showSearch) {
-      this.router.navigate(['/restaurants'], {
-        queryParams: {
-          city: this.searchCity || 'Paris',
-          q: this.searchQuery || undefined,
-        },
-      });
+  onSearchInput(): void {
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
     }
+
+    this.showSuggestions = true;
+
+    this.searchTimeout = setTimeout(() => {
+      if (this.searchQuery && this.searchQuery.trim().length > 0) {
+        const query = this.searchQuery.toLowerCase().trim();
+
+        const allRestaurants = [...this.allRestaurants];
+
+        this.searchSuggestions = allRestaurants.filter(rest =>
+          rest.name?.toLowerCase().includes(query) ||
+          rest.cuisineType?.toLowerCase().includes(query) ||
+          rest.city?.toLowerCase().includes(query)
+        ).slice(0, 5);
+      } else {
+        this.searchSuggestions = [];
+      }
+    }, 300);
+  }
+
+  selectSuggestion(restaurant: RestaurantItem): void {
+    this.showSuggestions = false;
+
+    this.router.navigate(['/restaurants'], {
+      queryParams: {
+        city: restaurant.city || 'Paris',
+        q: restaurant.name,
+      },
+    });
+  }
+
+  onSearch(): void {
+    this.showSuggestions = false;
+    this.searchSuggestions = [];
+
+    this.router.navigate(['/restaurants'], {
+      queryParams: {
+        city: this.searchCity || 'Paris',
+        q: this.searchQuery || undefined,
+      },
+    });
+  }
+
+  onSearchBlur(): void {
+    setTimeout(() => {
+      this.showSuggestions = false;
+    }, 200);
   }
 
   get averageFoodRating(): number {
@@ -444,7 +555,20 @@ export class RestaurantDetail implements OnInit {
   formatDate(dateString: string): string {
     if (!dateString) return 'Recently';
     try {
-      const date = new Date(dateString);
+      let date: Date;
+      if (typeof dateString === 'string') {
+        date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+          const cleanDate = dateString.replace(/\.\d+/, '');
+          date = new Date(cleanDate);
+          if (isNaN(date.getTime())) {
+            return 'Recently';
+          }
+        }
+      } else {
+        return 'Recently';
+      }
+
       const now = new Date();
       const diffTime = Math.abs(now.getTime() - date.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -473,4 +597,59 @@ export class RestaurantDetail implements OnInit {
     if (!this.restaurant?.menuItems) return [];
     return this.restaurant.menuItems.filter(item => item.category === category);
   }
+
+  private initMap(): void {
+    if (!this.mapContainer || !this.restaurant) return;
+
+    const lat = this.restaurant.latitude || 48.8566;
+    const lng = this.restaurant.longitude || 2.3522;
+
+    this.map = L.map(this.mapContainer.nativeElement, {
+      center: [lat, lng],
+      zoom: 15,
+      zoomControl: false
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(this.map);
+
+    const customIcon = L.divIcon({
+      className: 'custom-map-marker',
+      html: `
+      <div class="flex items-center justify-center w-10 h-10 bg-[#005943] rounded-full shadow-lg border-2 border-white">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+    `,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+      popupAnchor: [0, -40]
+    });
+
+    this.marker = L.marker([lat, lng], { icon: customIcon })
+      .addTo(this.map)
+      .bindPopup(`
+      <div class="text-center">
+        <p class="font-bold text-sm">${this.restaurant?.name || 'Restaurant'}</p>
+        <p class="text-xs text-gray-600">${this.restaurant?.address || ''}</p>
+      </div>
+    `);
+
+    setTimeout(() => {
+      if (this.map) {
+        this.map.invalidateSize();
+      }
+    }, 300);
+  }
+
+  ngOnDestroy(): void {
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+  }
+
 }

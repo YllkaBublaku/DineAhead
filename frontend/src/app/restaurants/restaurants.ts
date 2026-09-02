@@ -116,6 +116,9 @@ export class Restaurants implements OnInit {
   availableSettings: string[] = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
   availablePriceRanges: string[] = ['€€', '€€€', '€€€€'];
 
+  showSuggestions = false;
+  searchSuggestions: RestaurantItem[] = [];
+
   @ViewChild('mapContainer', {static: false}) mapContainer!: ElementRef;
   private map: any;
   private markersLayer: any = L.layerGroup();
@@ -125,7 +128,17 @@ export class Restaurants implements OnInit {
 
   ngOnInit(): void {
     this.checkLoginStatus();
-    this.loadRestaurants();
+
+    this.route.queryParams.subscribe(params => {
+      if (params['q']) {
+        this.searchQuery = params['q'];
+      }
+      if (params['city']) {
+        this.searchCity = params['city'];
+      }
+      this.loadRestaurants();
+    });
+
     this.generateTimeSlots();
   }
 
@@ -188,48 +201,35 @@ export class Restaurants implements OnInit {
         return this.api.getRestaurants();
       })
       .then((data) => {
-        console.log('API Response full:', JSON.stringify(data, null, 2));
-        console.log('Is array?', Array.isArray(data));
-        console.log('Data length:', data?.length);
+        console.log('API Response:', data);
 
         this.allRestaurants = Array.isArray(data) ? data : [];
 
-        if (this.allRestaurants.length > 0) {
-          console.log('First restaurant:', this.allRestaurants[0]);
-          console.log('City field:', this.allRestaurants[0].city);
-          console.log('Cuisine field:', this.allRestaurants[0].cuisineType);
-        } else {
-          console.warn('No restaurants found in API response!');
-        }
-
-        this.extractFilterOptions();
-        this.applyFilters();
-        this.loading = false;
-
-        if (this.restaurants.length === 0 && this.allRestaurants.length > 0) {
-          console.log('Emergency: Setting restaurants directly');
-          this.restaurants = [...this.allRestaurants];
-          this.totalElements = this.allRestaurants.length;
-        }
-
-        this.cdr.detectChanges();
-
-        setTimeout(() => {
-          this.renderMapMarkers();
-          if (this.map) {
-            this.map.invalidateSize();
+        this.route.queryParams.subscribe(params => {
+          if (params['q']) {
+            this.searchQuery = params['q'];
           }
-        }, 100);
+          if (params['city']) {
+            this.searchCity = params['city'];
+          }
+          this.extractFilterOptions();
+          this.applyFilters();
+          this.loading = false;
+          this.cdr.detectChanges();
+
+          setTimeout(() => {
+            this.renderMapMarkers();
+            if (this.map) {
+              this.map.invalidateSize();
+            }
+          }, 100);
+        }).unsubscribe();
       })
       .catch((error) => {
         console.error("Failed to fetch:", error);
         this.loading = false;
         this.allRestaurants = [];
         this.availableSettings = ['With friends', 'Good for families', 'Outdoor dining', 'Traditional'];
-
-        if (this.map) {
-          this.markersLayer.clearLayers();
-        }
       });
   }
 
@@ -262,7 +262,7 @@ export class Restaurants implements OnInit {
     let filtered = [...this.allRestaurants];
     console.log('Initial restaurants count:', filtered.length);
 
-    if (this.searchQuery.trim()) {
+    if (this.searchQuery && this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(rest =>
         rest.name?.toLowerCase().includes(query) ||
@@ -720,15 +720,66 @@ export class Restaurants implements OnInit {
     }
   }
 
-  onSearch(): void {
+  onSearchInput(): void {
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout);
     }
 
+    this.showSuggestions = true;
+
     this.searchTimeout = setTimeout(() => {
-      this.currentPage = 1;
-      this.applyFilters();
+      if (this.searchQuery && this.searchQuery.trim().length > 0) {
+        const query = this.searchQuery.toLowerCase().trim();
+
+        const allRestaurants = [...this.allRestaurants];
+
+        this.searchSuggestions = allRestaurants.filter(rest =>
+          rest.name?.toLowerCase().includes(query) ||
+          rest.cuisineType?.toLowerCase().includes(query) ||
+          rest.city?.toLowerCase().includes(query)
+        ).slice(0, 5);
+      } else {
+        this.searchSuggestions = [];
+      }
     }, 300);
+  }
+
+  selectSuggestion(restaurant: RestaurantItem): void {
+    this.searchQuery = restaurant.name;
+    this.searchCity = restaurant.city || 'Paris';
+    this.showSuggestions = false;
+
+    this.currentPage = 1;
+    this.applyFilters();
+
+    this.router.navigate(['/restaurants'], {
+      queryParams: {
+        city: this.searchCity || 'Paris',
+        q: this.searchQuery || undefined,
+      },
+      replaceUrl: true
+    });
+  }
+
+  onSearch(): void {
+    this.showSuggestions = false;
+    this.searchSuggestions = [];
+    this.currentPage = 1;
+    this.applyFilters();
+
+    this.router.navigate(['/restaurants'], {
+      queryParams: {
+        city: this.searchCity || 'Paris',
+        q: this.searchQuery || undefined,
+      },
+      replaceUrl: true
+    });
+  }
+
+  onSearchBlur(): void {
+    setTimeout(() => {
+      this.showSuggestions = false;
+    }, 200);
   }
 
   nextPage(): void {

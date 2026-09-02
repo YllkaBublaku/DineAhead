@@ -66,7 +66,7 @@ public class RestaurantController {
     }
 
     @GetMapping("/{id}/reviews")
-    public ResponseEntity<List<Review>> getReviewsByRestaurant(@PathVariable Long id) {
+    public ResponseEntity<List<ReviewDTO>> getReviewsByRestaurant(@PathVariable Long id) {
         return ResponseEntity.ok(reviewService.getReviewsByRestaurant(id));
     }
 }

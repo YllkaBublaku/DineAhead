@@ -2,6 +2,7 @@ package com.dineahead.controller;
 
 import com.dineahead.application.ReviewService;
 import com.dineahead.domain.Review;
+import com.dineahead.domain.ReviewDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,12 +23,12 @@ public class ReviewController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<List<Review>> getReviewsByRestaurant(@PathVariable Long restaurantId) {
+    public ResponseEntity<List<ReviewDTO>> getReviewsByRestaurant(@PathVariable Long restaurantId) {
         return ResponseEntity.ok(reviewService.getReviewsByRestaurant(restaurantId));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Review>> getReviewsByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<ReviewDTO>> getReviewsByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUser(userId));
     }
 }

@@ -22,6 +22,7 @@ public class RestaurantResponseDTO {
     private String priceRange;
     private String coverPhotoUrl;
     private String specialOffer;
+    private String phone;
     private String description;
     private List<String> gallery = new ArrayList<>();
     private BigDecimal averageRating;
@@ -43,6 +44,7 @@ public class RestaurantResponseDTO {
         this.priceRange = restaurant.getPriceRange();
         this.coverPhotoUrl = restaurant.getCoverPhotoUrl();
         this.specialOffer = restaurant.getSpecialOffer();
+        this.phone = restaurant.getPhone();
         this.description = restaurant.getDescription();
 
         if (restaurant.getGallery() != null) {
