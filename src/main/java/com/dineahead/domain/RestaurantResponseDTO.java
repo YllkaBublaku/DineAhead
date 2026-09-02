@@ -22,12 +22,14 @@ public class RestaurantResponseDTO {
     private String priceRange;
     private String coverPhotoUrl;
     private String specialOffer;
+    private String description;
     private List<String> gallery = new ArrayList<>();
     private BigDecimal averageRating;
     private Integer reviewCount;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private List<String> features = new ArrayList<>();
+    private List<MenuItemDTO> menuItems = new ArrayList<>();
     private boolean requiresDeposit;
     private BigDecimal depositAmount;
 
@@ -41,6 +43,7 @@ public class RestaurantResponseDTO {
         this.priceRange = restaurant.getPriceRange();
         this.coverPhotoUrl = restaurant.getCoverPhotoUrl();
         this.specialOffer = restaurant.getSpecialOffer();
+        this.description = restaurant.getDescription();
 
         if (restaurant.getGallery() != null) {
             this.gallery = new ArrayList<>(restaurant.getGallery());
@@ -60,6 +63,14 @@ public class RestaurantResponseDTO {
                     .collect(Collectors.toList());
         } else {
             this.features = new ArrayList<>();
+        }
+
+        if (restaurant.getMenuItems() != null && !restaurant.getMenuItems().isEmpty()) {
+            this.menuItems = restaurant.getMenuItems().stream()
+                    .map(menuItem -> new MenuItemDTO(menuItem))
+                    .collect(Collectors.toList());
+        } else {
+            this.menuItems = new ArrayList<>();
         }
 
         this.requiresDeposit = restaurant.isRequiresDeposit();

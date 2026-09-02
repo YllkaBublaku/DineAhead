@@ -5,6 +5,18 @@ import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 
+export interface MenuItem {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  category?: string;
+  isAvailable?: boolean;
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+}
+
 export interface RestaurantItem {
   id: number;
   name: string;
@@ -36,6 +48,7 @@ export interface RestaurantItem {
   offer?: string;
   requiresDeposit?: boolean;
   depositAmount?: number;
+  menuItems?: MenuItem[];
 }
 
 export interface ReviewItem {
@@ -203,6 +216,7 @@ export class RestaurantDetail implements OnInit {
       offer: data.specialOffer || null,
       requiresDeposit: data.requiresDeposit || false,
       depositAmount: data.depositAmount || 0,
+      menuItems: data.menuItems || [],
     };
   }
 
@@ -231,14 +245,23 @@ export class RestaurantDetail implements OnInit {
     this.api.getRestaurants()
       .then((data) => {
         console.log('All restaurants for recommendations:', data);
-        if (data && Array.isArray(data)) {
-          const filtered = data.filter((r: any) => r.id !== this.restaurant?.id);
+        if (data && Array.isArray(data) && data.length > 0) {
 
+          const filtered = data.filter((r: any) => r.id !== this.restaurant?.id);
           this.similarRestaurants = filtered.slice(0, 4).map((r: any) => this.mapToRestaurantItem(r));
-          this.otherRecommendations = filtered.slice(4, 8).map((r: any) => this.mapToRestaurantItem(r));
+
+          if (filtered.length > 4) {
+            this.otherRecommendations = filtered.slice(4, 8).map((r: any) => this.mapToRestaurantItem(r));
+          } else {
+            this.otherRecommendations = [];
+          }
 
           console.log('Similar restaurants:', this.similarRestaurants.length);
           console.log('Other recommendations:', this.otherRecommendations.length);
+        } else {
+          console.warn('No restaurants available for recommendations');
+          this.similarRestaurants = [];
+          this.otherRecommendations = [];
         }
         this.cdr.detectChanges();
       })
@@ -435,5 +458,19 @@ export class RestaurantDetail implements OnInit {
     } catch {
       return 'Recently';
     }
+  }
+
+  getMenuCategories(): string[] {
+    if (!this.restaurant?.menuItems) return [];
+    const categories = new Set<string>();
+    this.restaurant.menuItems.forEach(item => {
+      if (item.category) categories.add(item.category);
+    });
+    return Array.from(categories);
+  }
+
+  getMenuItemsByCategory(category: string): MenuItem[] {
+    if (!this.restaurant?.menuItems) return [];
+    return this.restaurant.menuItems.filter(item => item.category === category);
   }
 }

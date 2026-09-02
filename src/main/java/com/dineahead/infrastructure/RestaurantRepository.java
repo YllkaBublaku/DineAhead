@@ -44,7 +44,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
             "LEFT JOIN FETCH r.restaurantFeatures rf " +
             "LEFT JOIN FETCH rf.feature f " +
             "LEFT JOIN FETCH r.depositSettings ds " +
-            "LEFT JOIN FETCH r.gallery " +
             "WHERE r.id = :id")
     Optional<Restaurant> findByIdWithFeaturesAndDeposit(@Param("id") Long id);
 

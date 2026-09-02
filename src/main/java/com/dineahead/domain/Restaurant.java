@@ -127,6 +127,10 @@ public class Restaurant {
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RestaurantFeature> restaurantFeatures = new ArrayList<>();
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MenuItem> menuItems = new ArrayList<>();
+
     @Transient
     public boolean isRequiresDeposit() {
         return depositSettings != null && depositSettings.isRequiresDeposit();
