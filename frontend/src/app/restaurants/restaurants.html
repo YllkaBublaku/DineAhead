@@ -129,7 +129,7 @@
 
       <div class="inline-flex items-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full px-3.5 py-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 shadow-xs shrink-0 select-none">
 
-        <div class="relative inline-block">
+      <div class="relative inline-block">
           <div class="flex items-center gap-1.5 pr-2.5 cursor-pointer hover:text-[#005943] dark:hover:text-emerald-400"
                (click)="dateModalOpen = !dateModalOpen; timeModalOpen = false; guestsModalOpen = false">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,6 +266,16 @@
             </div>
           }
         </div>
+        @if (selectedBookingDate || selectedBookingTime) {
+          <div class="h-3.5 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
+          <button (click)="resetBookingFilters()"
+                  class="flex items-center gap-1 pl-2.5 pr-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            <span class="text-[10px] font-medium">Reset</span>
+          </button>
+        }
       </div>
 
       <button (click)="openFiltersModal()"
@@ -431,14 +441,14 @@
             [class.dark:bg-gray-900]="!mobileMapOpen"
             [class.shadow-xs]="!mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-       List ({{ restaurants.length }})
+      List ({{ restaurants.length }})
     </button>
     <button (click)="mobileMapOpen = true"
             [class.bg-white]="mobileMapOpen"
             [class.dark:bg-gray-900]="mobileMapOpen"
             [class.shadow-xs]="mobileMapOpen"
             class="flex-1 py-2 rounded-lg text-center transition">
-       Map View
+      Map View
     </button>
   </div>
 

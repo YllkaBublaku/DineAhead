@@ -2,25 +2,30 @@ package com.dineahead.application;
 
 import com.dineahead.domain.MenuItem;
 import com.dineahead.domain.Restaurant;
+import com.dineahead.domain.TimeSlot;
 import com.dineahead.domain.enums.PriceRange;
 import com.dineahead.infrastructure.MenuItemRepository;
 import com.dineahead.infrastructure.RestaurantFeatureRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
+import com.dineahead.infrastructure.TimeSlotRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class RestaurantService {
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
+    private final TimeSlotRepository timeSlotRepository;
 
-    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository) {
+    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository) {
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
+        this.timeSlotRepository = timeSlotRepository;
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -35,10 +40,12 @@ public class RestaurantService {
             if (restaurant.getGallery() != null) {
                 restaurant.getGallery().size();
             }
-
             if (restaurant.getRestaurantFeatures() != null) {
                 restaurant.getRestaurantFeatures().size();
             }
+
+            List<TimeSlot> timeSlots = timeSlotRepository.findByRestaurantIdAndIsActiveTrue(restaurant.getId());
+            restaurant.setTimeSlots(timeSlots);
 
             List<MenuItem> menuItems = menuItemRepository.findByRestaurantId(restaurant.getId());
             restaurant.setMenuItems(menuItems);
@@ -56,13 +63,11 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepository.findByIdWithFeaturesAndDeposit(id)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + id));
 
-        System.out.println("=== Restaurant Details ===");
-        System.out.println("ID: " + restaurant.getId());
-        System.out.println("Name: " + restaurant.getName());
-        System.out.println("Description: " + restaurant.getDescription());
-
         List<String> gallery = restaurantRepository.findGalleryByRestaurantId(id);
         restaurant.setGallery(gallery);
+
+        List<TimeSlot> timeSlots = timeSlotRepository.findByRestaurantIdAndIsActiveTrue(id);
+        restaurant.setTimeSlots(timeSlots);
 
         List<MenuItem> menuItems = menuItemRepository.findByRestaurantId(id);
         restaurant.setMenuItems(menuItems);

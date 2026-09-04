@@ -28,7 +28,12 @@ export interface RestaurantItem {
   state?: string;
   zip?: string;
   phone?: string;
-  timeSlots?: any[];
+  timeSlots?: {
+    slotTime?: string;
+    slotDate?: string;
+    maxCapacity?: number;
+    isActive?: boolean;
+  }[];
   reservations?: any[];
   features?: string[];
 }
@@ -61,6 +66,10 @@ export class Restaurants implements OnInit {
   selectedTime = '19:00';
   selectedGuests = 2;
 
+  selectedBookingDate: Date | null = null;
+  selectedBookingTime: string | null = null;
+  selectedBookingGuests: number = 2;
+
   dateModalOpen = false;
   timeModalOpen = false;
   guestsModalOpen = false;
@@ -91,7 +100,6 @@ export class Restaurants implements OnInit {
   allRestaurants: RestaurantItem[] = [];
   filteredRestaurants: RestaurantItem[] = [];
   restaurants: RestaurantItem[] = [];
-  mapPins: RestaurantItem[] = [];
   loading = false;
   errorMessage = '';
   totalElements = 0;
@@ -272,6 +280,42 @@ export class Restaurants implements OnInit {
     let filtered = [...this.allRestaurants];
     console.log('Initial restaurants count:', filtered.length);
 
+    if (this.selectedBookingDate && this.selectedBookingTime) {
+      const year = this.selectedBookingDate.getFullYear();
+      const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
+      const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
+      const selectedDateStr = `${year}-${month}-${day}`;
+
+      console.log('=== BOOKING FILTER DEBUG ===');
+      console.log('Selected Date:', this.selectedBookingDate);
+      console.log('Formatted Date String:', selectedDateStr);
+      console.log('Selected Time:', this.selectedBookingTime);
+      console.log('Selected Guests:', this.selectedBookingGuests);
+
+      filtered = filtered.filter(rest => {
+        if (rest.timeSlots && rest.timeSlots.length > 0) {
+          const hasMatch = rest.timeSlots.some(slot => {
+            const slotTime = slot.slotTime as string;
+            if (!slotTime) return false;
+
+            const timeStr = slotTime.substring(0, 5);
+            const selectedTimeStr = this.selectedBookingTime;
+
+            const timeMatch = timeStr === selectedTimeStr;
+            const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
+            const isActive = slot.isActive !== false;
+            const dateMatch = slot.slotDate === selectedDateStr;
+
+            return timeMatch && guestsMatch && isActive && dateMatch;
+          });
+          return hasMatch;
+        }
+        return true;
+      });
+
+      console.log('After booking filter:', filtered.length);
+    }
+
     if (this.searchQuery && this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(rest =>
@@ -423,7 +467,11 @@ export class Restaurants implements OnInit {
     const date = new Date(this.currentYear, this.currentMonth, day);
     this.selectedDate = this.formatDate(date);
     this.dateModalOpen = false;
+
+    this.selectedBookingDate = date;
+    this.applyFilters();
   }
+
 
   isDateInPast(day: number, month: number, year: number): boolean {
     const selectedDate = new Date(year, month, day);
@@ -454,11 +502,34 @@ export class Restaurants implements OnInit {
   selectTime(time: string): void {
     this.selectedTime = time;
     this.timeModalOpen = false;
+
+    this.selectedBookingTime = time;
+    this.applyFilters();
   }
 
   selectGuests(count: number): void {
     this.selectedGuests = count;
     this.guestsModalOpen = false;
+
+    this.selectedBookingGuests = count;
+    this.applyFilters();
+  }
+
+  resetBookingFilters(): void {
+    this.selectedBookingDate = null;
+    this.selectedBookingTime = null;
+    this.selectedBookingGuests = 2;
+
+    this.selectedDate = this.formatDate(new Date());
+    this.selectedTime = '19:00';
+    this.selectedGuests = 2;
+
+    this.selectedDay = new Date().getDate();
+    this.currentMonth = new Date().getMonth();
+    this.currentYear = new Date().getFullYear();
+
+    this.applyFilters();
+    this.cdr.detectChanges();
   }
 
   getPriceValue(priceRange: string): number {
@@ -472,12 +543,35 @@ export class Restaurants implements OnInit {
   }
 
   isRestaurantAvailable(restaurant: RestaurantItem): boolean {
+    if (this.selectedBookingDate && this.selectedBookingTime) {
+      const year = this.selectedBookingDate.getFullYear();
+      const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
+      const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
+      const selectedDateStr = `${year}-${month}-${day}`;
+
+      if (restaurant.timeSlots && restaurant.timeSlots.length > 0) {
+        return restaurant.timeSlots.some(slot => {
+          const slotTime = slot.slotTime as string;
+          if (!slotTime) return false;
+
+          const timeStr = slotTime.substring(0, 5);
+          const selectedTimeStr = this.selectedBookingTime;
+
+          const timeMatch = timeStr === selectedTimeStr;
+          const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
+          const isActive = slot.isActive !== false;
+          const dateMatch = slot.slotDate === selectedDateStr;
+
+          return timeMatch && guestsMatch && isActive && dateMatch;
+        });
+      }
+      return true;
+    }
+
     if (restaurant.timeSlots && restaurant.timeSlots.length > 0) {
-      const today = new Date().toDateString();
-      const hasAvailableSlot = restaurant.timeSlots.some(slot => {
-        return slot.available !== false;
+      return restaurant.timeSlots.some(slot => {
+        return slot.isActive !== false;
       });
-      return hasAvailableSlot;
     }
     return true;
   }
@@ -524,6 +618,13 @@ export class Restaurants implements OnInit {
     this.searchQuery = '';
     this.searchCity = 'Paris';
     this.currentPage = 1;
+
+    this.selectedBookingDate = null;
+    this.selectedBookingTime = null;
+    this.selectedBookingGuests = 2;
+    this.selectedDate = this.formatDate(new Date());
+    this.selectedTime = '19:00';
+    this.selectedGuests = 2;
     this.applyFilters();
     this.closeFiltersModal();
   }

@@ -31,6 +31,7 @@ public class RestaurantResponseDTO {
     private BigDecimal longitude;
     private List<String> features = new ArrayList<>();
     private List<MenuItemDTO> menuItems = new ArrayList<>();
+    private List<TimeSlotDTO> timeSlots = new ArrayList<>();
     private boolean requiresDeposit;
     private BigDecimal depositAmount;
 
@@ -73,6 +74,15 @@ public class RestaurantResponseDTO {
                     .collect(Collectors.toList());
         } else {
             this.menuItems = new ArrayList<>();
+        }
+
+        if (restaurant.getTimeSlots() != null && !restaurant.getTimeSlots().isEmpty()) {
+            this.timeSlots = restaurant.getTimeSlots().stream()
+                    .filter(TimeSlot::isActive)
+                    .map(TimeSlotDTO::new)
+                    .collect(Collectors.toList());
+        } else {
+            this.timeSlots = new ArrayList<>();
         }
 
         this.requiresDeposit = restaurant.isRequiresDeposit();

@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -29,6 +30,9 @@ public class TimeSlot {
 
     @Column(name = "slot_time", nullable = false)
     private LocalTime slotTime;
+
+    @Column(name = "slot_date")
+    private LocalDate slotDate;
 
     @Column(name = "max_capacity")
     private Integer maxCapacity;
