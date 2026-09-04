@@ -6,6 +6,14 @@ import { Footer } from '../footer/footer';
 import {ApiService} from '../services/api.service';
 import * as L from 'leaflet';
 import {FavoritesService} from '../services/favorites.service';
+import { TimeFormatPipe } from '../pipes/time-format.pipe';
+
+export interface TimeSlot {
+  slotTime?: string;
+  slotDate?: string;
+  maxCapacity?: number;
+  isActive?: boolean;
+}
 
 export interface RestaurantItem {
   id: number;
@@ -28,12 +36,7 @@ export interface RestaurantItem {
   state?: string;
   zip?: string;
   phone?: string;
-  timeSlots?: {
-    slotTime?: string;
-    slotDate?: string;
-    maxCapacity?: number;
-    isActive?: boolean;
-  }[];
+  timeSlots?: TimeSlot[];
   reservations?: any[];
   features?: string[];
 }
@@ -48,9 +51,18 @@ export interface FilterState {
   availableNow: boolean;
 }
 
+export interface BookingRequest {
+  restaurantId: number;
+  date: string;
+  time: string;
+  guests: number;
+  specialRequests?: string;
+  depositAmount?: number;
+}
+
 @Component({
   selector: 'app-restaurants',
-  imports: [RouterLink, CommonModule, FormsModule, Footer],
+  imports: [RouterLink, CommonModule, FormsModule, Footer, TimeFormatPipe],
   templateUrl: './restaurants.html',
   styleUrl: './restaurants.css',
 })
@@ -69,6 +81,8 @@ export class Restaurants implements OnInit {
   selectedBookingDate: Date | null = null;
   selectedBookingTime: string | null = null;
   selectedBookingGuests: number = 2;
+  modalSelectedTime: string | null = null;
+  modalSelectedDate: Date | null = null;
 
   dateModalOpen = false;
   timeModalOpen = false;
@@ -110,7 +124,7 @@ export class Restaurants implements OnInit {
   allFiltersModalOpen = false;
   bookingModalOpen = false;
   selectedRestaurant: RestaurantItem | null = null;
-  selectedTimeslot: any = null;
+  selectedTimeslot: TimeSlot | null = null;
   hoveredRestaurantId: number | null = null;
   favorites = new Set<number>([1, 3]);
   bookingSuccess = false;
@@ -127,6 +141,16 @@ export class Restaurants implements OnInit {
 
   showSuggestions = false;
   searchSuggestions: RestaurantItem[] = [];
+
+  bookingLoading = false;
+  bookingError = '';
+  paymentModalOpen = false;
+  bookingForm = {
+    specialRequests: '',
+    paymentMethod: 'card'
+  };
+  isPaymentRequired = false;
+  bookingDepositAmount = 0;
 
   @ViewChild('mapContainer', {static: false}) mapContainer!: ElementRef;
   private map: any;
@@ -286,15 +310,12 @@ export class Restaurants implements OnInit {
       const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
       const selectedDateStr = `${year}-${month}-${day}`;
 
-      console.log('=== BOOKING FILTER DEBUG ===');
-      console.log('Selected Date:', this.selectedBookingDate);
-      console.log('Formatted Date String:', selectedDateStr);
-      console.log('Selected Time:', this.selectedBookingTime);
-      console.log('Selected Guests:', this.selectedBookingGuests);
-
       filtered = filtered.filter(rest => {
         if (rest.timeSlots && rest.timeSlots.length > 0) {
+
           const hasMatch = rest.timeSlots.some(slot => {
+            if (slot.isActive === false) return false;
+
             const slotTime = slot.slotTime as string;
             if (!slotTime) return false;
 
@@ -303,17 +324,14 @@ export class Restaurants implements OnInit {
 
             const timeMatch = timeStr === selectedTimeStr;
             const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
-            const isActive = slot.isActive !== false;
             const dateMatch = slot.slotDate === selectedDateStr;
 
-            return timeMatch && guestsMatch && isActive && dateMatch;
+            return timeMatch && guestsMatch && dateMatch;
           });
           return hasMatch;
         }
         return true;
       });
-
-      console.log('After booking filter:', filtered.length);
     }
 
     if (this.searchQuery && this.searchQuery.trim()) {
@@ -598,6 +616,7 @@ export class Restaurants implements OnInit {
 
   closeFiltersModal(): void {
     this.allFiltersModalOpen = false;
+    this.clearAllFilters();
   }
 
   clearAllFilters(): void {
@@ -1052,27 +1071,255 @@ export class Restaurants implements OnInit {
     return this.favoritesService.isFavorite(id);
   }
 
-  openBookingModal(rest: RestaurantItem, slot: any, event?: Event): void {
+  async openBookingModal(rest: RestaurantItem, slot: TimeSlot, event?: Event): Promise<void> {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
+
+    const slotTime = (slot.slotTime as string).substring(0, 5);
+
+    this.modalSelectedTime = slotTime;
+
+    if (slot.slotDate) {
+      const dateParts = slot.slotDate.split('-');
+      if (dateParts.length === 3) {
+        this.modalSelectedDate = new Date(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        );
+      }
+    } else if (!this.selectedBookingDate) {
+      this.modalSelectedDate = new Date();
+    }
+
+    this.selectedBookingTime = slotTime;
+    this.selectedTime = slotTime;
+
+    if (this.modalSelectedDate) {
+      this.selectedBookingDate = this.modalSelectedDate;
+      this.selectedDate = this.formatDate(this.modalSelectedDate);
+      this.selectedDay = this.modalSelectedDate.getDate();
+      this.currentMonth = this.modalSelectedDate.getMonth();
+      this.currentYear = this.modalSelectedDate.getFullYear();
+    }
+
+    if (!this.selectedBookingGuests) {
+      this.selectedBookingGuests = 2;
+      this.selectedGuests = 2;
+    }
+
     this.selectedRestaurant = rest;
     this.selectedTimeslot = slot;
     this.bookingModalOpen = true;
     this.bookingSuccess = false;
+    this.bookingError = '';
+
+    this.applyFilters();
+
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(rest.id);
+      if (depositInfo && depositInfo.requiresDeposit) {
+        this.isPaymentRequired = true;
+        this.bookingDepositAmount = depositInfo.amount || 0;
+      } else {
+        this.isPaymentRequired = false;
+        this.bookingDepositAmount = 0;
+      }
+    } catch (error) {
+      this.isPaymentRequired = false;
+      this.bookingDepositAmount = 0;
+    }
   }
 
-  confirmBooking(): void {
-    this.bookingSuccess = true;
-    setTimeout(() => {
-      this.bookingModalOpen = false;
-      this.bookingSuccess = false;
-    }, 2500);
+  async confirmBooking(): Promise<void> {
+    if (!this.selectedRestaurant || !this.selectedTimeslot) return;
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(this.selectedRestaurant.id);
+
+      if (depositInfo && depositInfo.requiresDeposit && depositInfo.amount > 0) {
+        this.isPaymentRequired = true;
+        this.bookingDepositAmount = depositInfo.amount;
+        this.bookingLoading = false;
+        this.paymentModalOpen = true;
+        return;
+      }
+
+      await this.createBooking();
+      this.bookingSuccess = true;
+      setTimeout(() => {
+        this.bookingModalOpen = false;
+        this.bookingSuccess = false;
+        this.resetBookingState();
+      }, 2500);
+
+    } catch (error) {
+      console.error('Booking failed:', error);
+      this.bookingError = 'Failed to book reservation. Please try again.';
+      this.bookingLoading = false;
+    }
   }
+
+  async processPayment(): Promise<void> {
+    if (!this.selectedRestaurant || !this.selectedTimeslot) return;
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+
+    try {
+      const paymentResult = await this.api.processPayment({
+        restaurantId: this.selectedRestaurant.id,
+        amount: this.bookingDepositAmount,
+        method: this.bookingForm.paymentMethod as 'card' | 'paypal' | 'cash',
+        bookingData: {
+          date: this.selectedTimeslot.slotDate,
+          time: this.selectedTimeslot.slotTime,
+          guests: this.selectedBookingGuests,
+          specialRequests: this.bookingForm.specialRequests
+        }
+      });
+
+      if (paymentResult.success) {
+        await this.createBooking();
+        this.bookingSuccess = true;
+        this.paymentModalOpen = false;
+        setTimeout(() => {
+          this.bookingModalOpen = false;
+          this.bookingSuccess = false;
+          this.resetBookingState();
+        }, 2500);
+      } else {
+        this.bookingError = 'Payment failed. Please try again.';
+      }
+    } catch (error) {
+      console.error('Payment failed:', error);
+      this.bookingError = 'Payment processing failed. Please try again.';
+    } finally {
+      this.bookingLoading = false;
+    }
+  }
+
+  async createBooking(): Promise<void> {
+    if (!this.selectedRestaurant || !this.selectedTimeslot) return;
+
+    try {
+      await this.api.createReservation({
+        restaurantId: this.selectedRestaurant.id,
+        date: this.selectedTimeslot.slotDate,
+        time: this.selectedTimeslot.slotTime,
+        guests: this.selectedBookingGuests,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'confirmed',
+        depositPaid: this.isPaymentRequired,
+        depositAmount: this.bookingDepositAmount
+      });
+    } catch (error) {
+      console.error('Failed to create booking:', error);
+      throw error;
+    }
+  }
+
+  resetBookingState(): void {
+    this.selectedRestaurant = null;
+    this.selectedTimeslot = null;
+    this.bookingForm = {
+      specialRequests: '',
+      paymentMethod: 'card'
+    };
+    this.isPaymentRequired = false;
+    this.bookingDepositAmount = 0;
+    this.bookingError = '';
+  }
+
+  getAvailableTimeSlots(restaurant: RestaurantItem): TimeSlot[] {
+    if (!restaurant.timeSlots) return [];
+
+    const selectedDate = this.selectedBookingDate;
+    const guests = this.selectedBookingGuests || 2;
+
+    let targetDate = selectedDate;
+    if (!targetDate) {
+      targetDate = new Date();
+    }
+
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slotsForDate = restaurant.timeSlots.filter(slot => {
+      if (slot.isActive === false) return false;
+      if (slot.slotDate !== dateStr) return false;
+      if (slot.maxCapacity && guests > slot.maxCapacity) return false;
+      return true;
+    });
+
+    let filteredSlots = slotsForDate;
+    if (this.bookingModalOpen && this.modalSelectedTime) {
+      filteredSlots = filteredSlots.filter(slot => {
+        const slotTime = (slot.slotTime as string).substring(0, 5);
+        return slotTime === this.modalSelectedTime;
+      });
+    }
+
+    const seenTimes = new Set<string>();
+    const uniqueSlots = filteredSlots.filter(slot => {
+      const time = (slot.slotTime as string).substring(0, 5);
+      if (seenTimes.has(time)) {
+        return false;
+      }
+      seenTimes.add(time);
+      return true;
+    });
+
+    return uniqueSlots.sort((a, b) => {
+      const timeA = (a.slotTime as string).substring(0, 5);
+      const timeB = (b.slotTime as string).substring(0, 5);
+      return timeA.localeCompare(timeB);
+    });
+  }
+
+  async isRestaurantRequiresDeposit(restaurant: RestaurantItem): Promise<boolean> {
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(restaurant.id);
+      return depositInfo && depositInfo.requiresDeposit;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async getDepositAmount(restaurant: RestaurantItem): Promise<number> {
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(restaurant.id);
+      return depositInfo && depositInfo.amount ? depositInfo.amount : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  isRestaurantExpensive(restaurant: RestaurantItem): boolean {
+    const priceValue = this.getPriceValue(restaurant.priceRange);
+    return priceValue >= 100; // €€€ or above
+  }
+
 
   closeBookingModal(): void {
     this.bookingModalOpen = false;
+    this.selectedTimeslot = null;
+
+    this.modalSelectedTime = null;
+    this.modalSelectedDate = null;
+    this.selectedBookingTime = null;
+    this.selectedTime = '19:00';
+
+    if (this.selectedBookingDate) {}
+
+    this.applyFilters();
   }
 
   scrollFilters(offset: number): void {

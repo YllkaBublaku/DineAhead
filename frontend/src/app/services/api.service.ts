@@ -18,6 +18,19 @@ export class ApiService {
     });
   }
 
+  private getToken(): string | null {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.token || userData.accessToken || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   registerUser(userData: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/users/register`, userData, {
       headers: this.getHeaders(),
@@ -169,5 +182,68 @@ export class ApiService {
           })
         )
     );
+  }
+
+  async getRestaurantDeposit(restaurantId: number): Promise<any> {
+    try {
+      const response = await fetch(`/api/restaurants/${restaurantId}/deposit-settings`, {
+        headers: {
+          'Authorization': `Bearer ${this.getToken()}`
+        }
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching deposit info:', error);
+      return null;
+    }
+  }
+
+  async processPayment(paymentData: any): Promise<any> {
+    try {
+      const response = await fetch('/api/payments/process-deposit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getToken()}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Payment processing failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Payment error:', error);
+      throw error;
+    }
+  }
+
+  async createReservation(reservationData: any): Promise<any> {
+    try {
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getToken()}`
+        },
+        body: JSON.stringify(reservationData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Reservation creation failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Reservation error:', error);
+      throw error;
+    }
   }
 }
