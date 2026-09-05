@@ -1,0 +1,73 @@
+.restaurant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9999px;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.restaurant-badge svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.badge-offer {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.dark .badge-offer {
+  background-color: rgba(6, 78, 59, 0.8);
+  color: #34d399;
+  border-color: #065f46;
+}
+
+.badge-deposit {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.dark .badge-deposit {
+  background-color: rgba(120, 53, 15, 0.3);
+  color: #fbbf24;
+  border-color: #78350f;
+}
+
+.similar-restaurant-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 420px;
+}
+
+.time-slot-btn {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  transition: all 0.2s;
+  white-space: nowrap;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.time-slot-btn:hover {
+  border-color: #005943;
+}
+
+.dark .time-slot-btn {
+  border-color: #374151;
+}

@@ -48,9 +48,6 @@ export interface RestaurantItem {
   styleUrl: './similar-restaurants.css'
 })
 export class SimilarRestaurants implements OnInit, AfterViewInit {
-  searchCity = 'Paris';
-  searchQuery = '';
-
   selectedDate = this.formatDate(new Date());
   selectedTime = '19:00';
   selectedGuests = 2;
@@ -83,6 +80,21 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   private searchTimeout: any;
 
   sortBy = 'averageRating';
+  infoMessage: string = '';
+
+  bookingModalOpen = false;
+  bookingSuccess = false;
+  bookingLoading = false;
+  bookingError = '';
+  isPaymentRequired = false;
+  bookingDepositAmount = 0;
+  selectedRestaurantForBooking: RestaurantItem | null = null;
+  selectedTimeslotForBooking: TimeSlot | null = null;
+
+  bookingForm = {
+    specialRequests: '',
+    paymentMethod: 'card'
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -95,11 +107,19 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.generateTimeSlots();
 
+    const today = new Date();
+    this.selectedDate = this.formatDate(today);
+    this.selectedDay = today.getDate();
+    this.currentMonth = today.getMonth();
+    this.currentYear = today.getFullYear();
+
     this.route.queryParams.subscribe(params => {
       const restaurantId = params['restaurantId'];
       if (restaurantId) {
         this.loadReferenceRestaurant(restaurantId);
       } else {
+        this.referenceRestaurantName = 'Restaurants';
+        this.infoMessage = 'Here are some great options. Just enter your preferred date, time, and number of people so we can give you the best match.';
         this.loadAllRestaurants();
       }
     });
@@ -117,15 +137,22 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         this.referenceRestaurantName = restaurant.name;
         this.referenceCuisine = restaurant.cuisineType || '';
         this.referenceCity = restaurant.city || 'Paris';
+
+        this.infoMessage = `Here are some great options similar to <strong>${restaurant.name}</strong>. Just enter your preferred date, time, and number of people so we can give you the best match.`;
+
         document.title = `Similar to ${restaurant.name} - DineAhead`;
+        this.cdr.detectChanges();
       }
       await this.loadAllRestaurants();
     } catch (error) {
       console.error('Failed to load reference restaurant:', error);
+      this.referenceRestaurantName = 'the selected restaurant';
+      this.infoMessage = 'Here are some great options. Just enter your preferred date, time, and number of people so we can give you the best match.';
       await this.loadAllRestaurants();
+    } finally {
+      this.loading = false;
     }
   }
-
   async loadAllRestaurants(): Promise<void> {
     this.loading = true;
     try {
@@ -320,22 +347,62 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     this.selectedBookingDate = null;
     this.selectedBookingTime = null;
     this.selectedBookingGuests = 2;
-    this.selectedDate = this.formatDate(new Date());
+
+    const today = new Date();
+    this.selectedDate = this.formatDate(today);
     this.selectedTime = '19:00';
     this.selectedGuests = 2;
-    this.selectedDay = new Date().getDate();
-    this.currentMonth = new Date().getMonth();
-    this.currentYear = new Date().getFullYear();
+    this.selectedDay = today.getDate();
+    this.currentMonth = today.getMonth();
+    this.currentYear = today.getFullYear();
+
     this.applyFilters();
   }
 
   getAvailableTimeSlots(restaurant: RestaurantItem): TimeSlot[] {
-    if (!restaurant.timeSlots) return [];
+    if (!restaurant.timeSlots || restaurant.timeSlots.length === 0) {
+      return [];
+    }
 
-    const selectedDate = this.selectedBookingDate;
+    let targetDate = this.selectedBookingDate;
+    if (!targetDate) {
+      targetDate = new Date();
+
+      const todayStr = this.formatDateToYYYYMMDD(targetDate);
+      const hasTodaySlots = restaurant.timeSlots.some(slot =>
+        slot.slotDate === todayStr && slot.isActive !== false
+      );
+
+      if (!hasTodaySlots) {
+        const availableDates = restaurant.timeSlots
+          .filter(slot => slot.isActive !== false && slot.slotDate)
+          .map(slot => slot.slotDate)
+          .filter((date): date is string => date !== undefined && date !== null && date !== '')
+          .sort();
+
+        if (availableDates.length > 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          for (const dateStr of availableDates) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const slotDate = new Date(year, month - 1, day);
+            slotDate.setHours(0, 0, 0, 0);
+
+            if (slotDate >= today) {
+              targetDate = slotDate;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!targetDate) {
+      return [];
+    }
+
     const guests = this.selectedBookingGuests || 2;
-
-    let targetDate = selectedDate || new Date();
     const year = targetDate.getFullYear();
     const month = String(targetDate.getMonth() + 1).padStart(2, '0');
     const day = String(targetDate.getDate()).padStart(2, '0');
@@ -349,16 +416,25 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     });
 
     const seenTimes = new Set<string>();
-    return slotsForDate.filter(slot => {
+    const uniqueSlots = slotsForDate.filter(slot => {
       const time = (slot.slotTime as string).substring(0, 5);
       if (seenTimes.has(time)) return false;
       seenTimes.add(time);
       return true;
-    }).sort((a, b) => {
+    });
+
+    return uniqueSlots.sort((a, b) => {
       const timeA = (a.slotTime as string).substring(0, 5);
       const timeB = (b.slotTime as string).substring(0, 5);
       return timeA.localeCompare(timeB);
     });
+  }
+
+  private formatDateToYYYYMMDD(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   getPriceValue(priceRange: string): number {
@@ -374,27 +450,6 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   isRestaurantExpensive(restaurant: RestaurantItem): boolean {
     const priceValue = this.getPriceValue(restaurant.priceRange);
     return priceValue >= 100;
-  }
-
-  async openBookingModal(rest: RestaurantItem, slot: TimeSlot, event?: Event): Promise<void> {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    const params: any = {};
-    if (this.selectedBookingDate) {
-      const dateStr = this.selectedBookingDate.toISOString().split('T')[0];
-      params.date = dateStr;
-    }
-    if (this.selectedBookingTime) {
-      params.time = this.selectedBookingTime;
-    }
-    if (this.selectedBookingGuests) {
-      params.guests = this.selectedBookingGuests;
-    }
-
-    this.router.navigate(['/restaurant', rest.id], { queryParams: params });
   }
 
   scrollFilters(offset: number): void {
@@ -465,4 +520,91 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     const emptyCount = firstDay === 0 ? 6 : firstDay - 1;
     return Array(emptyCount).fill(0);
   }
+
+  async openBookingModal(rest: RestaurantItem, slot: TimeSlot, event?: Event): Promise<void> {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    this.selectedRestaurantForBooking = rest;
+    this.selectedTimeslotForBooking = slot;
+    this.bookingModalOpen = true;
+    this.bookingSuccess = false;
+    this.bookingError = '';
+    this.bookingLoading = false;
+
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(rest.id);
+      if (depositInfo && depositInfo.requiresDeposit) {
+        this.isPaymentRequired = true;
+        this.bookingDepositAmount = depositInfo.amount || 0;
+      } else {
+        this.isPaymentRequired = false;
+        this.bookingDepositAmount = 0;
+      }
+    } catch (error) {
+      this.isPaymentRequired = false;
+      this.bookingDepositAmount = 0;
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  closeBookingModal(): void {
+    this.bookingModalOpen = false;
+    this.bookingSuccess = false;
+    this.selectedRestaurantForBooking = null;
+    this.selectedTimeslotForBooking = null;
+    this.bookingError = '';
+    this.bookingForm = {
+      specialRequests: '',
+      paymentMethod: 'card'
+    };
+    this.cdr.detectChanges();
+  }
+
+  async confirmBooking(): Promise<void> {
+    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) return;
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+
+    try {
+      const depositInfo = await this.api.getRestaurantDeposit(this.selectedRestaurantForBooking.id);
+
+      if (depositInfo && depositInfo.requiresDeposit && depositInfo.amount > 0) {
+        this.isPaymentRequired = true;
+        this.bookingDepositAmount = depositInfo.amount;
+        this.bookingLoading = false;
+        this.bookingError = `A deposit of €${depositInfo.amount} is required to secure your reservation.`;
+        this.bookingLoading = false;
+        return;
+      }
+
+      await this.api.createReservation({
+        restaurantId: this.selectedRestaurantForBooking.id,
+        date: this.selectedTimeslotForBooking.slotDate,
+        time: this.selectedTimeslotForBooking.slotTime,
+        guests: this.selectedBookingGuests,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'confirmed',
+        depositPaid: false,
+        depositAmount: 0
+      });
+
+      this.bookingSuccess = true;
+      this.bookingLoading = false;
+
+      setTimeout(() => {
+        this.closeBookingModal();
+      }, 2500);
+
+    } catch (error) {
+      console.error('Booking failed:', error);
+      this.bookingError = 'Failed to book reservation. Please try again.';
+      this.bookingLoading = false;
+    }
+  }
 }
+

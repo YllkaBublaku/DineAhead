@@ -403,6 +403,7 @@
       </div>
 
       <div class="lg:col-span-5 order-first lg:order-last sticky top-24 self-start">
+
         <div class="sticky top-24 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
 
           <div class="flex items-center justify-between mb-5">
@@ -473,19 +474,20 @@
                 <div class="text-[10px] font-bold text-gray-500 uppercase mb-2">Sun</div>
 
                 @for (day of calendarDays; track day.day) {
-                  <button (click)="!day.isPast && selectDate(day.day)"
-                          [disabled]="day.isPast"
+                  @let hasSlots = hasAvailableSlotsForDate(day.day);
+                  <button (click)="!day.isPast && hasSlots && selectDate(day.day)"
+                          [disabled]="day.isPast || !hasSlots"
                           class="flex flex-col items-center justify-center h-10 rounded-lg border transition text-sm font-medium"
-                          [class.border-transparent]="!day.isPast"
-                          [class.hover:border-gray-200]="!day.isPast"
-                          [class.text-gray-700]="!day.isPast"
-                          [class.text-gray-400]="day.isPast"
-                          [class.cursor-not-allowed]="day.isPast"
-                          [class.bg-white]="!day.isPast"
-                          [class.bg-gray-100]="day.isPast"
-                          [class.hover:bg-gray-50]="!day.isPast"
-                          [class.bg-[#005943]]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast"
-                          [class.text-white]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast">
+                          [class.border-transparent]="!day.isPast && hasSlots"
+                          [class.hover:border-gray-200]="!day.isPast && hasSlots"
+                          [class.text-gray-700]="!day.isPast && hasSlots"
+                          [class.text-gray-400]="day.isPast || !hasSlots"
+                          [class.cursor-not-allowed]="day.isPast || !hasSlots"
+                          [class.bg-white]="!day.isPast && hasSlots"
+                          [class.bg-gray-100]="day.isPast || !hasSlots"
+                          [class.hover:bg-gray-50]="!day.isPast && hasSlots"
+                          [class.bg-[#005943]]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && hasSlots"
+                          [class.text-white]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && hasSlots">
                     <span>{{ day.day }}</span>
                   </button>
                 }
@@ -508,25 +510,30 @@
                 Back to date
               </button>
               <div class="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                @for (time of availableTimes; track time) {
-                  @let isPastTime = isTimeInPast(time);
-                  <button (click)="!isPastTime && selectTime(time)"
-                          [disabled]="isPastTime"
-                          class="py-2 px-3 text-sm font-semibold rounded-lg border transition"
-                          [class.bg-[#005943]]="time === selectedTime && !isPastTime"
-                          [class.text-white]="time === selectedTime && !isPastTime"
-                          [class.border-[#005943]]="time === selectedTime && !isPastTime"
-                          [class.bg-white]="time !== selectedTime && !isPastTime"
-                          [class.dark:bg-gray-800]="time !== selectedTime && !isPastTime"
-                          [class.text-gray-700]="time !== selectedTime && !isPastTime"
-                          [class.dark:text-gray-200]="time !== selectedTime && !isPastTime"
-                          [class.border-gray-300]="time !== selectedTime && !isPastTime"
-                          [class.dark:border-gray-700]="time !== selectedTime && !isPastTime"
-                          [class.text-gray-400]="isPastTime"
-                          [class.border-gray-200]="isPastTime"
-                          [class.cursor-not-allowed]="isPastTime">
-                    {{ time }}
-                  </button>
+                @let availableTimes = getAvailableTimesForDate();
+                @if (availableTimes.length === 0) {
+                  <p class="text-sm text-gray-500 col-span-3 text-center py-4">No available times for this date</p>
+                } @else {
+                  @for (time of availableTimes; track time) {
+                    @let isPastTime = isTimeInPast(time);
+                    <button (click)="!isPastTime && selectTime(time)"
+                            [disabled]="isPastTime"
+                            class="py-2 px-3 text-sm font-semibold rounded-lg border transition"
+                            [class.bg-[#005943]]="time === selectedTime && !isPastTime"
+                            [class.text-white]="time === selectedTime && !isPastTime"
+                            [class.border-[#005943]]="time === selectedTime && !isPastTime"
+                            [class.bg-white]="time !== selectedTime && !isPastTime"
+                            [class.dark:bg-gray-800]="time !== selectedTime && !isPastTime"
+                            [class.text-gray-700]="time !== selectedTime && !isPastTime"
+                            [class.dark:text-gray-200]="time !== selectedTime && !isPastTime"
+                            [class.border-gray-300]="time !== selectedTime && !isPastTime"
+                            [class.dark:border-gray-700]="time !== selectedTime && !isPastTime"
+                            [class.text-gray-400]="isPastTime"
+                            [class.border-gray-200]="isPastTime"
+                            [class.cursor-not-allowed]="isPastTime">
+                      {{ time }}
+                    </button>
+                  }
                 }
               </div>
             </div>
@@ -585,7 +592,9 @@
 
           <p class="mt-8 text-[10px] text-gray-400 leading-tight">Offers are based on time, date, and number of guests and may vary as you continue the booking process.</p>
 
-          <div [routerLink]="['/similar-restaurants']" class="mt-4 border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer">
+          <div [routerLink]="['/similar-restaurants']"
+               [queryParams]="{ restaurantId: restaurant?.id }"
+               class="mt-4 border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition cursor-pointer">
             <div class="flex items-center gap-3">
               <div class="bg-red-50 text-red-500 p-2 rounded-lg">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

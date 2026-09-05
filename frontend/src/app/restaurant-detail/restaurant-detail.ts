@@ -464,6 +464,87 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  hasAvailableSlotsForDate(day: number): boolean {
+    if (!this.restaurant?.timeSlots || this.restaurant.timeSlots.length === 0) {
+      return false;
+    }
+
+    const date = new Date(this.currentYear, this.currentMonth, day);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${dayStr}`;
+
+    const hasSlots = this.restaurant.timeSlots.some(slot =>
+      slot.slotDate === dateStr &&
+      slot.isActive !== false
+    );
+
+    return hasSlots;
+  }
+
+  getAvailableTimesForDate(): string[] {
+    if (!this.restaurant?.timeSlots || !this.selectedDate) {
+      return [];
+    }
+
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slots = this.restaurant.timeSlots
+      .filter(slot =>
+        slot.slotDate === dateStr &&
+        slot.isActive !== false
+      )
+      .map(slot => {
+        const time = slot.slotTime as string;
+        return time.substring(0, 5);
+      })
+      .filter((time, index, self) => self.indexOf(time) === index)
+      .sort();
+
+    return slots;
+  }
+
+  isTimeSlotAvailable(time: string): boolean {
+    if (!this.restaurant?.timeSlots) return true;
+
+    const year = this.selectedDate?.getFullYear() || new Date().getFullYear();
+    const month = String((this.selectedDate?.getMonth() || new Date().getMonth()) + 1).padStart(2, '0');
+    const day = String(this.selectedDate?.getDate() || new Date().getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slot = this.restaurant.timeSlots.find(s =>
+      s.slotDate === dateStr &&
+      (s.slotTime as string).substring(0, 5) === time &&
+      s.isActive !== false
+    );
+
+    return true;
+  }
+
+  isGuestCountAvailable(guestCount: number): boolean {
+    if (!this.restaurant?.timeSlots || !this.selectedDate || !this.selectedTime) return true;
+
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slot = this.restaurant.timeSlots.find(s =>
+      s.slotDate === dateStr &&
+      (s.slotTime as string).substring(0, 5) === this.selectedTime &&
+      s.isActive !== false
+    );
+
+    if (!slot) return false;
+    if (!slot.maxCapacity) return true;
+
+    return guestCount <= slot.maxCapacity;
+  }
+
   toggleReviewHelpful(review: ReviewItem): void {
   }
 
@@ -700,20 +781,27 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     }
 
     this.selectedDate = selectedDate;
+    this.selectedTime = null;
     this.bookingStep = 'time';
     this.cdr.detectChanges();
   }
 
   selectTime(time: string): void {
-    if (this.isTimeInPast(time)) {
+    if (!this.isTimeSlotAvailable(time) || this.isTimeInPast(time)) {
       return;
     }
+
     this.selectedTime = time;
     this.bookingStep = 'guests';
     this.cdr.detectChanges();
   }
 
+
   selectGuests(count: number): void {
+    if (!this.isGuestCountAvailable(count)) {
+      return;
+    }
+
     this.selectedGuests = count;
     this.bookingStep = 'date';
     this.cdr.detectChanges();
@@ -733,16 +821,19 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   isTimeInPast(time: string): boolean {
     const checkDate = this.selectedDate || new Date();
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (checkDate > new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+    if (checkDate > today) {
       return false;
     }
+
     if (checkDate.toDateString() === today.toDateString()) {
       const [hours, minutes] = time.split(':').map(Number);
       const selectedTime = new Date();
       selectedTime.setHours(hours, minutes, 0, 0);
-      return selectedTime < today;
+      return selectedTime < new Date();
     }
+
     return true;
   }
 
