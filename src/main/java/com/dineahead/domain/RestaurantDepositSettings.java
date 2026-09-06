@@ -25,6 +25,7 @@ public class RestaurantDepositSettings {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false, unique = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @Column(name = "requires_deposit")

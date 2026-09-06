@@ -67,7 +67,19 @@ export class Login implements OnInit {
     this.api.loginUser(loginData).subscribe({
       next: (response: any) => {
         this.isLoading.set(false);
-        localStorage.setItem('user', JSON.stringify(response));
+
+        const user = {
+          id: response.id || response.userId || response.user?.id || null,
+          firstName: response.firstName || response.user?.firstName || '',
+          lastName: response.lastName || response.user?.lastName || '',
+          email: response.email || response.user?.email || this.email,
+          role: response.role || response.user?.role || 'USER',
+          token: response.token || response.accessToken || response.jwt || null,
+          initials: this.getInitials(response.firstName || response.user?.firstName || '',
+            response.lastName || response.user?.lastName || '')
+        };
+
+        localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('isLoggedIn', 'true');
 
         if (this.rememberMe) {
@@ -92,6 +104,12 @@ export class Login implements OnInit {
         this.errorMessage.set(error.error?.message || 'Invalid email or password.');
       }
     });
+  }
+
+  private getInitials(firstName: string, lastName: string): string {
+    const first = firstName?.charAt(0) || '';
+    const last = lastName?.charAt(0) || '';
+    return (first + last).toUpperCase() || 'U';
   }
 
   openForgotModal() {

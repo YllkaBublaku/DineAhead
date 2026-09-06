@@ -64,7 +64,7 @@ export class Header implements OnInit, OnDestroy {
           localStorage.setItem('isLoggedIn', 'true');
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.isLoggedIn = false;
         this.user = null;
         this.userAvatar = null;

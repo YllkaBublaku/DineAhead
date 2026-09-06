@@ -5,6 +5,7 @@ import com.dineahead.domain.RestaurantDepositSettings;
 import com.dineahead.infrastructure.RestaurantDepositSettingsRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -18,12 +19,14 @@ public class RestaurantDepositSettingsService {
         this.restaurantRepository = restaurantRepository;
     }
 
+    @Transactional
     public RestaurantDepositSettings addOrUpdateDepositSettings(Long restaurantId, RestaurantDepositSettings settings) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(() -> new RuntimeException("Restaurant not found"));
         settings.setRestaurant(restaurant);
         return depositSettingsRepository.save(settings);
     }
 
+    @Transactional(readOnly = true)
     public Optional<RestaurantDepositSettings> getDepositSettingsByRestaurant(Long restaurantId) {
         return depositSettingsRepository.findByRestaurantId(restaurantId);
     }

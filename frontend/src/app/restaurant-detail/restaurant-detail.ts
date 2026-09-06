@@ -89,7 +89,6 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   isFavorite = false;
   bookingSuccess = false;
   bookingModalOpen = false;
-  selectedTimeslot: string | null = null;
   loading = true;
   error = false;
 
@@ -104,7 +103,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   currentMonth = new Date().getMonth();
   currentYear = new Date().getFullYear();
-  calendarDays: { day: number; isPast: boolean }[] = [];
+  calendarDays: { day: number; isPast: boolean, hasSlots: boolean }[] = [];
   showAllReviews = false;
 
   restaurant: RestaurantItem | null = null;
@@ -150,7 +149,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.router.navigate(['/restaurants-detail']);
       }
     });
-    this.generateCalendar();
+
     this.checkLoginStatus();
     this.generateTimeSlots();
   }
@@ -188,9 +187,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         console.log('=== Restaurant Data ===');
         console.log('Full data:', data);
 
+        console.log('TimeSlots in response:', data.timeSlots);
+        console.log('TimeSlots type:', typeof data.timeSlots);
+        console.log('TimeSlots is array?', Array.isArray(data.timeSlots));
+
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
           this.isFavorite = this.favoritesService.isFavorite(this.restaurant.id);
+
+          this.generateCalendar();
           this.loadReviews(id);
           this.loadSimilarRestaurants();
           this.generateTags();
@@ -257,6 +262,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       requiresDeposit: data.requiresDeposit || false,
       depositAmount: data.depositAmount || 0,
       menuItems: data.menuItems || [],
+      timeSlots: data.timeSlots || []
     };
   }
 
@@ -367,11 +373,19 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(this.currentYear, this.currentMonth, i);
-      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      this.calendarDays.push({ day: i, isPast });
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const isPast = date < todayDate;
+      const hasSlots = this.hasAvailableSlotsForDate(i);
+
+      this.calendarDays.push({
+        day: i,
+        isPast: isPast,
+        hasSlots: hasSlots
+      });
     }
     this.cdr.detectChanges();
   }
+
 
   prevMonth(): void {
     if (this.currentMonth === 0) {
@@ -465,7 +479,12 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   hasAvailableSlotsForDate(day: number): boolean {
+    console.log('Checking slots for day:', day);
+    console.log('Restaurant:', this.restaurant?.name);
+    console.log('TimeSlots:', this.restaurant?.timeSlots);
+
     if (!this.restaurant?.timeSlots || this.restaurant.timeSlots.length === 0) {
+      console.log('No time slots available for this restaurant');
       return false;
     }
 
@@ -475,11 +494,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     const dayStr = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${dayStr}`;
 
+    console.log('Looking for date:', dateStr);
+    console.log('Available slot dates:', this.restaurant.timeSlots.map(s => s.slotDate));
+
     const hasSlots = this.restaurant.timeSlots.some(slot =>
       slot.slotDate === dateStr &&
       slot.isActive !== false
     );
 
+    console.log('Has slots for date', dateStr, '?', hasSlots);
     return hasSlots;
   }
 
@@ -526,7 +549,9 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   isGuestCountAvailable(guestCount: number): boolean {
-    if (!this.restaurant?.timeSlots || !this.selectedDate || !this.selectedTime) return true;
+    if (!this.restaurant?.timeSlots || !this.selectedDate || !this.selectedTime) {
+      return true;
+    }
 
     const year = this.selectedDate.getFullYear();
     const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
@@ -539,10 +564,47 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       s.isActive !== false
     );
 
-    if (!slot) return false;
+    if (!slot) return true;
     if (!slot.maxCapacity) return true;
-
     return guestCount <= slot.maxCapacity;
+  }
+
+  getMaxCapacityForSelectedTime(): number | null {
+    if (!this.restaurant?.timeSlots || !this.selectedDate || !this.selectedTime) {
+      return null;
+    }
+
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slot = this.restaurant.timeSlots.find(s =>
+      s.slotDate === dateStr &&
+      (s.slotTime as string).substring(0, 5) === this.selectedTime &&
+      s.isActive !== false
+    );
+
+    return slot?.maxCapacity || null;
+  }
+
+  getMaxCapacityForTime(time: string): number | null {
+    if (!this.restaurant?.timeSlots || !this.selectedDate) {
+      return null;
+    }
+
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const slot = this.restaurant.timeSlots.find(s =>
+      s.slotDate === dateStr &&
+      (s.slotTime as string).substring(0, 5) === time &&
+      s.isActive !== false
+    );
+
+    return slot?.maxCapacity || null;
   }
 
   toggleReviewHelpful(review: ReviewItem): void {
@@ -803,7 +865,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     }
 
     this.selectedGuests = count;
-    this.bookingStep = 'date';
+    this.bookingStep = 'guests';
     this.cdr.detectChanges();
   }
 

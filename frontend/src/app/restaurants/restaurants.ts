@@ -1115,22 +1115,30 @@ export class Restaurants implements OnInit {
     this.bookingModalOpen = true;
     this.bookingSuccess = false;
     this.bookingError = '';
-
-    this.applyFilters();
+    this.isPaymentRequired = false;
+    this.bookingDepositAmount = 0;
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(rest.id);
-      if (depositInfo && depositInfo.requiresDeposit) {
+      console.log('Deposit info:', depositInfo);
+
+      if (depositInfo && depositInfo.requiresDeposit === true) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount || 0;
+        console.log('Deposit required! Amount:', this.bookingDepositAmount);
       } else {
         this.isPaymentRequired = false;
         this.bookingDepositAmount = 0;
+        console.log('No deposit required');
       }
     } catch (error) {
+      console.error('Error fetching deposit info:', error);
       this.isPaymentRequired = false;
       this.bookingDepositAmount = 0;
     }
+
+    this.applyFilters();
+    this.cdr.detectChanges();
   }
 
   async confirmBooking(): Promise<void> {
@@ -1141,8 +1149,9 @@ export class Restaurants implements OnInit {
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(this.selectedRestaurant.id);
+      console.log('Confirm booking - deposit info:', depositInfo);
 
-      if (depositInfo && depositInfo.requiresDeposit && depositInfo.amount > 0) {
+      if (depositInfo && depositInfo.requiresDeposit === true && depositInfo.amount > 0) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount;
         this.bookingLoading = false;
@@ -1304,7 +1313,7 @@ export class Restaurants implements OnInit {
 
   isRestaurantExpensive(restaurant: RestaurantItem): boolean {
     const priceValue = this.getPriceValue(restaurant.priceRange);
-    return priceValue >= 100; // €€€ or above
+    return priceValue >= 100;
   }
 
 

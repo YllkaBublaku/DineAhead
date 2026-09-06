@@ -851,34 +851,38 @@
               </div>
             }
 
-            <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
-              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div class="grid grid-cols-3 gap-2 mb-4 text-sm">
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Date</span>
                 <span class="font-semibold">{{ selectedBookingDate | date:'MMM d, yyyy' }}</span>
               </div>
-              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Time</span>
-                <span class="font-semibold">{{  selectedBookingTime?.substring(0, 5) || ''  }}</span>
+                <span class="font-semibold">{{ selectedBookingTime?.substring(0, 5) || '' }}</span>
               </div>
-              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Guests</span>
-                <span class="font-semibold">{{ selectedBookingGuests }} guests</span>
+                <span class="font-semibold">{{ selectedBookingGuests }}</span>
               </div>
-              @if (isPaymentRequired && bookingDepositAmount > 0) {
-                <div class="p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg col-span-2">
-                  <span class="text-gray-500 dark:text-gray-400 block text-xs">Deposit Required</span>
-                  <span class="font-semibold text-amber-600">€{{ bookingDepositAmount }}</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">This will be deducted from your final bill</p>
-                </div>
-              }
             </div>
 
+            <!-- Deposit Required - Only ONE section (moved to the top, combined) -->
             @if (isPaymentRequired && bookingDepositAmount > 0) {
-              <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                <p class="text-xs text-blue-700 dark:text-blue-300">
-                  💡 A deposit of <strong>€{{ bookingDepositAmount }}</strong> is required to secure your reservation.
-                  This amount will be deducted from your final bill.
-                </p>
+              <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div class="flex items-start gap-3">
+                  <!-- SVG icon instead of emoji -->
+                  <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <p class="text-sm font-bold text-amber-700 dark:text-amber-400">
+                      Deposit Required: €{{ bookingDepositAmount }}
+                    </p>
+                    <p class="text-xs text-amber-600 dark:text-amber-300">
+                      This amount will be deducted from your final bill
+                    </p>
+                  </div>
+                </div>
               </div>
             }
 
@@ -908,7 +912,7 @@
               </div>
 
               @if (bookingForm.paymentMethod === 'card') {
-                <div class="space-y-3 mb-4">
+                <div class="space-y-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div>
                     <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">Card Number</label>
                     <input type="text" placeholder="1234 5678 9012 3456"
@@ -928,6 +932,33 @@
                   </div>
                 </div>
               }
+
+              @if (bookingForm.paymentMethod === 'paypal') {
+                <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div class="flex items-center gap-2">
+                    <!-- PayPal SVG icon -->
+                    <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.74c.053-.338.341-.58.683-.58h8.057c2.86 0 4.782.574 5.849 1.54 1.067.966 1.447 2.248 1.228 3.68-.047.282-.126.54-.239.779-.305.64-.808 1.206-1.498 1.68-.694.476-1.553.829-2.569 1.06-.982.222-2.06.337-3.216.337h-2.22l-.434 2.522h1.869c.153 0 .295.01.425.027.13.017.246.04.35.068.105.028.193.064.264.108.071.044.126.097.166.16.04.063.065.137.075.222.01.085.006.172-.012.263l-.004.014-.064.423-.067.399-.069.372-.105.562-.12.638-.133.725-.147.82c-.047.263-.114.496-.2.7-.087.203-.196.38-.328.53-.133.15-.288.27-.466.36-.178.09-.377.16-.596.21-.219.05-.456.075-.712.075h-1.66l-.61 3.614c-.053.307-.165.531-.338.672-.174.141-.388.213-.642.213z"/>
+                    </svg>
+                    <span class="text-sm text-blue-700 dark:text-blue-300">
+                      You will be redirected to PayPal to complete your payment.
+                    </span>
+                  </div>
+                </div>
+              }
+
+              @if (bookingForm.paymentMethod === 'cash') {
+                <div class="mb-4 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-sm text-green-700 dark:text-green-300">
+                      You will pay the deposit in person at the restaurant.
+                    </span>
+                  </div>
+                </div>
+              }
             }
 
             <div class="flex items-center gap-3">
@@ -935,7 +966,7 @@
                       class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
                 Cancel
               </button>
-              <button (click)="confirmBooking()"
+              <button (click)="isPaymentRequired ? processPayment() : confirmBooking()"
                       [disabled]="bookingLoading"
                       class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                 @if (bookingLoading) {

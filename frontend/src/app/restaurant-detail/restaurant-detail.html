@@ -474,20 +474,19 @@
                 <div class="text-[10px] font-bold text-gray-500 uppercase mb-2">Sun</div>
 
                 @for (day of calendarDays; track day.day) {
-                  @let hasSlots = hasAvailableSlotsForDate(day.day);
-                  <button (click)="!day.isPast && hasSlots && selectDate(day.day)"
-                          [disabled]="day.isPast || !hasSlots"
+                  <button (click)="!day.isPast && day.hasSlots && selectDate(day.day)"
+                          [disabled]="day.isPast || !day.hasSlots"
                           class="flex flex-col items-center justify-center h-10 rounded-lg border transition text-sm font-medium"
-                          [class.border-transparent]="!day.isPast && hasSlots"
-                          [class.hover:border-gray-200]="!day.isPast && hasSlots"
-                          [class.text-gray-700]="!day.isPast && hasSlots"
-                          [class.text-gray-400]="day.isPast || !hasSlots"
-                          [class.cursor-not-allowed]="day.isPast || !hasSlots"
-                          [class.bg-white]="!day.isPast && hasSlots"
-                          [class.bg-gray-100]="day.isPast || !hasSlots"
-                          [class.hover:bg-gray-50]="!day.isPast && hasSlots"
-                          [class.bg-[#005943]]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && hasSlots"
-                          [class.text-white]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && hasSlots">
+                          [class.border-transparent]="!day.isPast && day.hasSlots"
+                          [class.hover:border-gray-200]="!day.isPast && day.hasSlots"
+                          [class.text-gray-700]="!day.isPast && day.hasSlots"
+                          [class.text-gray-400]="day.isPast || !day.hasSlots"
+                          [class.cursor-not-allowed]="day.isPast || !day.hasSlots"
+                          [class.bg-white]="!day.isPast && day.hasSlots"
+                          [class.bg-gray-100]="day.isPast || !day.hasSlots"
+                          [class.hover:bg-gray-50]="!day.isPast && day.hasSlots"
+                          [class.bg-[#005943]]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && day.hasSlots"
+                          [class.text-white]="selectedDate && selectedDate.getDate() === day.day && selectedDate.getMonth() === currentMonth && selectedDate.getFullYear() === currentYear && !day.isPast && day.hasSlots">
                     <span>{{ day.day }}</span>
                   </button>
                 }
@@ -547,46 +546,58 @@
                 </svg>
                 Back to time
               </button>
+
+              @let maxCapacity = getMaxCapacityForSelectedTime();
+              @if (maxCapacity) {
+                <p class="text-xs text-gray-500 mb-3">Maximum {{ maxCapacity }} guests per booking</p>
+              }
+
               <div class="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
                 @for (guest of guestOptions; track guest) {
-                  <button (click)="selectGuests(guest)"
+                  @let isAvailable = isGuestCountAvailable(guest);
+                  <button (click)="isAvailable && selectGuests(guest)"
+                          [disabled]="!isAvailable"
                           class="py-2 px-3 text-sm font-semibold rounded-lg border transition"
-                          [class.bg-[#005943]]="guest === selectedGuests"
-                          [class.text-white]="guest === selectedGuests"
-                          [class.border-[#005943]]="guest === selectedGuests"
-                          [class.bg-white]="guest !== selectedGuests"
-                          [class.dark:bg-gray-800]="guest !== selectedGuests"
-                          [class.text-gray-700]="guest !== selectedGuests"
-                          [class.dark:text-gray-200]="guest !== selectedGuests"
-                          [class.border-gray-300]="guest !== selectedGuests"
-                          [class.dark:border-gray-700]="guest !== selectedGuests">
+                          [class.bg-[#005943]]="guest === selectedGuests && isAvailable"
+                          [class.text-white]="guest === selectedGuests && isAvailable"
+                          [class.border-[#005943]]="guest === selectedGuests && isAvailable"
+                          [class.bg-white]="guest !== selectedGuests && isAvailable"
+                          [class.dark:bg-gray-800]="guest !== selectedGuests && isAvailable"
+                          [class.text-gray-700]="guest !== selectedGuests && isAvailable"
+                          [class.dark:text-gray-200]="guest !== selectedGuests && isAvailable"
+                          [class.border-gray-300]="guest !== selectedGuests && isAvailable"
+                          [class.dark:border-gray-700]="guest !== selectedGuests && isAvailable"
+                          [class.text-gray-400]="!isAvailable"
+                          [class.border-gray-200]="!isAvailable"
+                          [class.cursor-not-allowed]="!isAvailable"
+                          [class.opacity-40]="!isAvailable">
                     {{ guest }} {{ guest === 1 ? 'guest' : 'guests' }}
                   </button>
                 }
               </div>
-            </div>
-          }
 
-          @if (selectedDate && selectedTime && selectedGuests) {
-            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div class="flex items-center justify-between text-sm mb-4">
-                <div>
-                  <p class="text-gray-500 text-xs">Date</p>
-                  <p class="font-bold text-gray-900 text-xs">{{ getFormattedDate() }}</p>
+              @if (selectedDate && selectedTime && selectedGuests) {
+                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div class="flex items-center justify-between text-sm mb-4">
+                    <div>
+                      <p class="text-gray-500 text-xs">Date</p>
+                      <p class="font-bold text-gray-900 text-xs">{{ getFormattedDate() }}</p>
+                    </div>
+                    <div>
+                      <p class="text-gray-500 text-xs">Time</p>
+                      <p class="font-bold text-gray-900 text-xs">{{ getFormattedTime() }}</p>
+                    </div>
+                    <div>
+                      <p class="text-gray-500 text-xs">Guests</p>
+                      <p class="font-bold text-gray-900 text-xs">{{ selectedGuests }}</p>
+                    </div>
+                  </div>
+                  <button (click)="confirmBooking()"
+                          class="w-full py-3 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
+                    Confirm Booking
+                  </button>
                 </div>
-                <div>
-                  <p class="text-gray-500 text-xs">Time</p>
-                  <p class="font-bold text-gray-900 text-xs">{{ getFormattedTime() }}</p>
-                </div>
-                <div>
-                  <p class="text-gray-500 text-xs">Guests</p>
-                  <p class="font-bold text-gray-900 text-xs">{{ selectedGuests }}</p>
-                </div>
-              </div>
-              <button (click)="confirmBooking()"
-                      class="w-full py-3 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
-                Confirm Booking
-              </button>
+              }
             </div>
           }
 

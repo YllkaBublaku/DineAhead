@@ -73,10 +73,21 @@ export class ApiService {
     });
   }
 
-  getCurrentUser(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/users/me`, {
-      withCredentials: true
-    });
+  public getCurrentUser(): any | null {
+    const userJson = localStorage.getItem('user');
+    if (!userJson) return null;
+
+    try {
+      return JSON.parse(userJson);
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+      return null;
+    }
+  }
+
+  public getCurrentUserId(): number | null {
+    const user = this.getCurrentUser();
+    return user?.id || user?.userId || null;
   }
 
   getRestaurants(): Promise<any[]> {
@@ -84,7 +95,6 @@ export class ApiService {
       this.http.get<any[]>(`${this.apiUrl}/restaurants`)
         .pipe(
           map(response => {
-            // Handle different response structures
             if (Array.isArray(response)) {
               return response;
             }
@@ -186,39 +196,75 @@ export class ApiService {
 
   async getRestaurantDeposit(restaurantId: number): Promise<any> {
     try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/deposit-settings`, {
-        headers: {
-          'Authorization': `Bearer ${this.getToken()}`
-        }
+      const token = this.getToken();
+      const headers: any = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${this.apiUrl}/deposit-settings/restaurant/${restaurantId}`, {
+        headers: headers
       });
 
       if (!response.ok) {
-        return null;
+        if (response.status === 404) {
+          console.log('No deposit settings found, returning default');
+          return {
+            requiresDeposit: false,
+            amount: 0
+          };
+        }
+        throw new Error(`Failed to fetch deposit settings: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('Deposit settings response:', data);
+
+      if (!data) {
+        return {
+          requiresDeposit: false,
+          amount: 0
+        };
+      }
+
+      return {
+        requiresDeposit: data.requiresDeposit || false,
+        amount: data.depositAmount || data.amount || 0
+      };
     } catch (error) {
       console.error('Error fetching deposit info:', error);
-      return null;
+      return {
+        requiresDeposit: false,
+        amount: 0
+      };
     }
   }
 
   async processPayment(paymentData: any): Promise<any> {
     try {
-      const response = await fetch('/api/payments/process-deposit', {
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${this.apiUrl}/payments/process-deposit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getToken()}`
-        },
+        headers: headers,
         body: JSON.stringify(paymentData)
       });
 
       if (!response.ok) {
-        throw new Error('Payment processing failed');
+        const errorText = await response.text();
+        console.error('Payment error response:', errorText);
+        throw new Error(`Payment processing failed: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('Payment processed:', result);
+      return result;
     } catch (error) {
       console.error('Payment error:', error);
       throw error;
@@ -227,20 +273,48 @@ export class ApiService {
 
   async createReservation(reservationData: any): Promise<any> {
     try {
-      const response = await fetch('/api/reservations', {
+      const currentUser = this.getCurrentUser();
+      const userId = currentUser?.id || currentUser?.userId || null;
+
+      const formattedData: any = {
+        restaurant: { id: reservationData.restaurantId },
+        reservationDate: reservationData.date,
+        reservationTime: reservationData.time,
+        partySize: reservationData.guests,
+        specialRequests: reservationData.specialRequests || '',
+        status: 'PENDING'
+      };
+
+      if (userId) {
+        formattedData.user = { id: userId };
+      }
+
+      console.log('Creating reservation for user:', userId || 'Anonymous');
+      console.log('Reservation data:', formattedData);
+
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${this.apiUrl}/reservations`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getToken()}`
-        },
-        body: JSON.stringify(reservationData)
+        headers: headers,
+        body: JSON.stringify(formattedData)
       });
 
       if (!response.ok) {
-        throw new Error('Reservation creation failed');
+        const errorText = await response.text();
+        console.error('Reservation API error:', errorText);
+        throw new Error(`Reservation creation failed: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('Reservation created:', result);
+      return result;
     } catch (error) {
       console.error('Reservation error:', error);
       throw error;

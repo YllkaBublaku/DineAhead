@@ -41,7 +41,7 @@ export class OauthRedirectComponent implements OnInit {
             }, 2000);
           }
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('OAuth redirect error:', error);
           this.error = 'Authentication failed. Please try again.';
           setTimeout(() => {
