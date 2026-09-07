@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -58,6 +59,12 @@ public class Reservation {
     @Column(name = "deposit_status")
     private DepositStatus depositStatus;
 
+    @Column(name = "deposit_paid")
+    private Boolean depositPaid = false;
+
+    @Column(name = "deposit_amount", precision = 10, scale = 2)
+    private BigDecimal depositAmount = BigDecimal.ZERO;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -69,4 +76,15 @@ public class Reservation {
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        if (depositPaid == null) {
+            depositPaid = false;
+        }
+        if (depositAmount == null) {
+            depositAmount = BigDecimal.ZERO;
+        }
+    }
 }

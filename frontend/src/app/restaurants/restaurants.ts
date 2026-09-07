@@ -7,6 +7,8 @@ import {ApiService} from '../services/api.service';
 import * as L from 'leaflet';
 import {FavoritesService} from '../services/favorites.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
+import {environment} from '../../environments/environment';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -92,6 +94,8 @@ export class Restaurants implements OnInit {
   currentYear = new Date().getFullYear();
   selectedDay = new Date().getDate();
 
+  stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
+
   private searchTimeout: any;
   timeSlots: string[] = [];
 
@@ -165,6 +169,8 @@ export class Restaurants implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    console.log('=== STRIPE FRONTEND KEY ===');
+    console.log('Publishable Key:', environment.stripePublishableKey);
     this.checkLoginStatus();
 
     this.favoritesService.favorites$.subscribe(() => {
@@ -1181,20 +1187,48 @@ export class Restaurants implements OnInit {
     this.bookingError = '';
 
     try {
-      const paymentResult = await this.api.processPayment({
+      const reservation = await this.api.createReservation({
         restaurantId: this.selectedRestaurant.id,
-        amount: this.bookingDepositAmount,
-        method: this.bookingForm.paymentMethod as 'card' | 'paypal' | 'cash',
-        bookingData: {
-          date: this.selectedTimeslot.slotDate,
-          time: this.selectedTimeslot.slotTime,
-          guests: this.selectedBookingGuests,
-          specialRequests: this.bookingForm.specialRequests
-        }
+        date: this.selectedTimeslot.slotDate,
+        time: this.selectedTimeslot.slotTime,
+        guests: this.selectedBookingGuests,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'confirmed',
+        depositPaid: false,
+        depositAmount: this.bookingDepositAmount
       });
 
-      if (paymentResult.success) {
-        await this.createBooking();
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const paymentIntentData = await this.api.createPaymentIntent(
+        reservation.id,
+        userId,
+        this.bookingForm.paymentMethod
+      );
+
+      const stripe = await this.stripePromise;
+
+      if (!stripe) {
+        throw new Error('Stripe failed to load');
+      }
+
+      if (this.bookingForm.paymentMethod === 'card') {
+        const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
+
+        if (result.success) {
+          this.bookingSuccess = true;
+          this.paymentModalOpen = false;
+          setTimeout(() => {
+            this.bookingModalOpen = false;
+            this.bookingSuccess = false;
+            this.resetBookingState();
+          }, 2500);
+        } else {
+          throw new Error('Payment confirmation failed');
+        }
+      } else {
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
         setTimeout(() => {
@@ -1202,13 +1236,10 @@ export class Restaurants implements OnInit {
           this.bookingSuccess = false;
           this.resetBookingState();
         }, 2500);
-      } else {
-        this.bookingError = 'Payment failed. Please try again.';
       }
     } catch (error) {
       console.error('Payment failed:', error);
-      this.bookingError = 'Payment processing failed. Please try again.';
-    } finally {
+      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
       this.bookingLoading = false;
     }
   }

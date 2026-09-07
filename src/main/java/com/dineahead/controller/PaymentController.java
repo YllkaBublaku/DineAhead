@@ -2,12 +2,11 @@ package com.dineahead.controller;
 
 import com.dineahead.application.PaymentService;
 import com.dineahead.domain.Payment;
-import com.dineahead.domain.enums.PaymentMethod;
 import com.dineahead.domain.enums.PaymentStatus;
+import com.stripe.exception.StripeException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,29 +21,65 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    @PostMapping("/create-payment-intent")
+    public ResponseEntity<?> createPaymentIntent(@RequestBody Map<String, Object> request) {
+        try {
+            Long reservationId = Long.valueOf(request.get("reservationId").toString());
+            Long userId = request.get("userId") != null ?
+                    Long.valueOf(request.get("userId").toString()) : null;
+            String paymentMethodType = request.get("paymentMethod") != null ?
+                    request.get("paymentMethod").toString() : "card";
+
+            String stripePaymentMethod;
+            if ("paypal".equals(paymentMethodType)) {
+                stripePaymentMethod = "paypal";
+            } else {
+                stripePaymentMethod = "card";
+            }
+
+            Map<String, Object> result = paymentService.createPaymentIntent(reservationId, userId, stripePaymentMethod);
+            return ResponseEntity.ok(result);
+        } catch (StripeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Payment processing failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/confirm-payment")
+    public ResponseEntity<?> confirmPayment(@RequestBody Map<String, String> request) {
+        try {
+            String paymentIntentId = request.get("paymentIntentId");
+            Payment payment = paymentService.confirmPayment(paymentIntentId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("paymentId", payment.getId());
+            response.put("status", payment.getStatus().toString());
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
     @PostMapping("/process-deposit")
     public ResponseEntity<?> processDeposit(@RequestBody Map<String, Object> paymentRequest) {
         try {
-            Long restaurantId = paymentRequest.get("restaurantId") != null ?
-                    Long.valueOf(paymentRequest.get("restaurantId").toString()) : null;
             Double amount = paymentRequest.get("amount") != null ?
                     Double.valueOf(paymentRequest.get("amount").toString()) : 0;
             String method = paymentRequest.get("method") != null ?
                     paymentRequest.get("method").toString() : "card";
 
-            Map<String, Object> bookingData = paymentRequest.get("bookingData") != null ?
-                    (Map<String, Object>) paymentRequest.get("bookingData") : new HashMap<>();
-
-            PaymentMethod paymentMethod;
-            try {
-                paymentMethod = PaymentMethod.valueOf(method.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                paymentMethod = PaymentMethod.CARD;
-            }
-
             Payment payment = new Payment();
-            payment.setAmount(BigDecimal.valueOf(amount));
-            payment.setPaymentMethod(paymentMethod);
+            payment.setAmount(java.math.BigDecimal.valueOf(amount));
+            payment.setPaymentMethod(com.dineahead.domain.enums.PaymentMethod.valueOf(method.toUpperCase()));
             payment.setStatus(PaymentStatus.SUCCEEDED);
 
             Payment processedPayment = paymentService.processDeposit(payment);

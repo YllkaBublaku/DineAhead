@@ -320,4 +320,66 @@ export class ApiService {
       throw error;
     }
   }
+
+  async createPaymentIntent(reservationId: number, userId: number | null, paymentMethod: string): Promise<any> {
+    try {
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${this.apiUrl}/payments/create-payment-intent`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          reservationId: reservationId,
+          userId: userId,
+          paymentMethod: paymentMethod
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Create payment intent error:', errorText);
+        throw new Error(`Failed to create payment intent: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Create payment intent error:', error);
+      throw error;
+    }
+  }
+
+  async confirmPayment(paymentIntentId: string): Promise<any> {
+    try {
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${this.apiUrl}/payments/confirm-payment`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ paymentIntentId: paymentIntentId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Confirm payment error:', errorText);
+        throw new Error(`Failed to confirm payment: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      throw error;
+    }
+  }
 }

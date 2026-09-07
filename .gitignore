@@ -23,3 +23,12 @@
 hs_err_pid*
 replay_pid*
 target/
+
+# Environment variables
+.env
+*.env
+*.env.local
+*.env.production
+
+# Frontend environment files
+frontend/src/environments/environment.ts
