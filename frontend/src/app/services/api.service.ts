@@ -382,4 +382,42 @@ export class ApiService {
       throw error;
     }
   }
+
+  async updateReservation(reservationId: number, data: any): Promise<any> {
+    try {
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log(`Updating reservation ${reservationId} with data:`, data);
+
+      const response = await fetch(`${this.apiUrl}/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: headers,
+        body: JSON.stringify(data)
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update reservation error response:', errorText);
+        throw new Error(`Failed to update reservation: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('Update reservation success, result:', result);
+      return result;
+    } catch (error) {
+      console.error('Update reservation error:', error);
+      throw error;
+    }
+  }
+
+
 }

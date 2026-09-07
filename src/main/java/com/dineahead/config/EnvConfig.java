@@ -29,5 +29,4 @@ public class EnvConfig {
             System.setProperty("STRIPE_PUBLISHABLE_KEY", stripePublishableKey);
         }
     }
-
 }

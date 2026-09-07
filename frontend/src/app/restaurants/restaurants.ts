@@ -96,6 +96,7 @@ export class Restaurants implements OnInit {
 
   stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
 
+  bookingMessage: string = '';
   private searchTimeout: any;
   timeSlots: string[] = [];
 
@@ -169,8 +170,6 @@ export class Restaurants implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('=== STRIPE FRONTEND KEY ===');
-    console.log('Publishable Key:', environment.stripePublishableKey);
     this.checkLoginStatus();
 
     this.favoritesService.favorites$.subscribe(() => {
@@ -1162,21 +1161,27 @@ export class Restaurants implements OnInit {
         this.bookingDepositAmount = depositInfo.amount;
         this.bookingLoading = false;
         this.paymentModalOpen = true;
+        this.cdr.detectChanges();
         return;
       }
 
       await this.createBooking();
       this.bookingSuccess = true;
+      this.bookingLoading = false;
+      this.cdr.detectChanges(); // Force UI update
+
       setTimeout(() => {
         this.bookingModalOpen = false;
         this.bookingSuccess = false;
         this.resetBookingState();
+        this.cdr.detectChanges();
       }, 2500);
 
     } catch (error) {
       console.error('Booking failed:', error);
       this.bookingError = 'Failed to book reservation. Please try again.';
       this.bookingLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -1193,54 +1198,81 @@ export class Restaurants implements OnInit {
         time: this.selectedTimeslot.slotTime,
         guests: this.selectedBookingGuests,
         specialRequests: this.bookingForm.specialRequests || '',
-        status: 'confirmed',
-        depositPaid: false,
-        depositAmount: this.bookingDepositAmount
+        status: 'PENDING'
       });
 
-      const userJson = localStorage.getItem('user');
-      const user = userJson ? JSON.parse(userJson) : null;
-      const userId = user?.id || null;
-
-      const paymentIntentData = await this.api.createPaymentIntent(
-        reservation.id,
-        userId,
-        this.bookingForm.paymentMethod
-      );
-
-      const stripe = await this.stripePromise;
-
-      if (!stripe) {
-        throw new Error('Stripe failed to load');
-      }
+      console.log('Reservation created:', reservation);
 
       if (this.bookingForm.paymentMethod === 'card') {
-        const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
+        const userJson = localStorage.getItem('user');
+        const user = userJson ? JSON.parse(userJson) : null;
+        const userId = user?.id || null;
 
-        if (result.success) {
+        const paymentIntentData = await this.api.createPaymentIntent(
+          reservation.id,
+          userId,
+          'card'
+        );
+
+        console.log('Payment intent created:', paymentIntentData);
+
+        const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
+        console.log('Payment confirmation result:', result);
+
+        if (result.success || result.status === 'SUCCEEDED') {
+          const updateResult = await this.api.updateReservation(reservation.id, {
+            depositPaid: true,
+            depositAmount: this.bookingDepositAmount,
+            status: 'CONFIRMED'
+          });
+
+          console.log('Update result received:', updateResult);
+
           this.bookingSuccess = true;
           this.paymentModalOpen = false;
+          this.bookingLoading = false;
+          this.cdr.detectChanges();
+
           setTimeout(() => {
             this.bookingModalOpen = false;
             this.bookingSuccess = false;
             this.resetBookingState();
+            this.cdr.detectChanges();
           }, 2500);
         } else {
           throw new Error('Payment confirmation failed');
         }
+
       } else {
+        console.log('Cash payment selected - no online payment needed');
+
+        const updateResult = await this.api.updateReservation(reservation.id, {
+          depositPaid: false,
+          depositAmount: this.bookingDepositAmount,
+          status: 'PENDING'
+        });
+
+        console.log('Cash reservation updated:', updateResult);
+
+        this.bookingMessage = 'Your reservation is confirmed! Please pay the deposit when you arrive at the restaurant.';
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+
         setTimeout(() => {
           this.bookingModalOpen = false;
           this.bookingSuccess = false;
           this.resetBookingState();
+          this.cdr.detectChanges();
         }, 2500);
       }
+
     } catch (error) {
       console.error('Payment failed:', error);
       this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
       this.bookingLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
