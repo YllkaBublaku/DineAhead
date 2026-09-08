@@ -120,7 +120,6 @@ export class Restaurants implements OnInit {
   filteredRestaurants: RestaurantItem[] = [];
   restaurants: RestaurantItem[] = [];
   loading = false;
-  errorMessage = '';
   totalElements = 0;
   totalPages = 0;
 
@@ -133,6 +132,7 @@ export class Restaurants implements OnInit {
   hoveredRestaurantId: number | null = null;
   favorites = new Set<number>([1, 3]);
   bookingSuccess = false;
+  private mapInitialized = false;
 
   isLoggedIn = false;
   userRole: string | null = null;
@@ -190,9 +190,22 @@ export class Restaurants implements OnInit {
   }
 
   ngAfterViewInit(): void {
+    this.initializeMapWithRetry();
+  }
+
+  private initializeMapWithRetry(retryCount: number = 0): void {
     setTimeout(() => {
-      this.initMap();
-    }, 100);
+      if (this.mapContainer && this.mapContainer.nativeElement) {
+        const container = this.mapContainer.nativeElement;
+
+        if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+          this.initMap();
+          this.mapInitialized = true;
+        } else if (retryCount < 5) {
+          this.initializeMapWithRetry(retryCount + 1);
+        }
+      }
+    }, 200 + (retryCount * 100));
   }
 
   private initMap(): void {
@@ -309,33 +322,40 @@ export class Restaurants implements OnInit {
     let filtered = [...this.allRestaurants];
     console.log('Initial restaurants count:', filtered.length);
 
-    if (this.selectedBookingDate && this.selectedBookingTime) {
-      const year = this.selectedBookingDate.getFullYear();
-      const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
-      const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
-      const selectedDateStr = `${year}-${month}-${day}`;
-
+    if (this.selectedBookingDate || this.selectedBookingTime) {
       filtered = filtered.filter(rest => {
-        if (rest.timeSlots && rest.timeSlots.length > 0) {
-
-          const hasMatch = rest.timeSlots.some(slot => {
-            if (slot.isActive === false) return false;
-
-            const slotTime = slot.slotTime as string;
-            if (!slotTime) return false;
-
-            const timeStr = slotTime.substring(0, 5);
-            const selectedTimeStr = this.selectedBookingTime;
-
-            const timeMatch = timeStr === selectedTimeStr;
-            const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
-            const dateMatch = slot.slotDate === selectedDateStr;
-
-            return timeMatch && guestsMatch && dateMatch;
-          });
-          return hasMatch;
+        if (!rest.timeSlots || rest.timeSlots.length === 0) {
+          return true;
         }
-        return true;
+
+        return rest.timeSlots.some(slot => {
+          if (slot.isActive === false) return false;
+
+          const slotTime = slot.slotTime as string;
+          if (!slotTime) return false;
+
+          const timeStr = slotTime.substring(0, 5);
+          const selectedTimeStr = this.selectedBookingTime;
+          const slotDate = slot.slotDate;
+
+          let dateMatch = true;
+          if (this.selectedBookingDate) {
+            const year = this.selectedBookingDate.getFullYear();
+            const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
+            const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
+            const selectedDateStr = `${year}-${month}-${day}`;
+            dateMatch = slotDate === selectedDateStr;
+          }
+
+          let timeMatch = true;
+          if (this.selectedBookingTime) {
+            timeMatch = timeStr === selectedTimeStr;
+          }
+
+          const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
+
+          return dateMatch && timeMatch && guestsMatch;
+        });
       });
     }
 
@@ -1339,10 +1359,7 @@ export class Restaurants implements OnInit {
   getAvailableTimeSlots(restaurant: RestaurantItem): TimeSlot[] {
     if (!restaurant.timeSlots) return [];
 
-    const selectedDate = this.selectedBookingDate;
-    const guests = this.selectedBookingGuests || 2;
-
-    let targetDate = selectedDate;
+    let targetDate = this.selectedBookingDate;
     if (!targetDate) {
       targetDate = new Date();
     }
@@ -1352,27 +1369,48 @@ export class Restaurants implements OnInit {
     const day = String(targetDate.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
-    const slotsForDate = restaurant.timeSlots.filter(slot => {
+    const guests = this.selectedBookingGuests || 2;
+
+    let slotsForDate = restaurant.timeSlots.filter(slot => {
       if (slot.isActive === false) return false;
       if (slot.slotDate !== dateStr) return false;
       if (slot.maxCapacity && guests > slot.maxCapacity) return false;
       return true;
     });
 
-    let filteredSlots = slotsForDate;
+    const today = new Date();
+    const isToday = targetDate.toDateString() === today.toDateString();
+
+    if (isToday) {
+      const currentTime = today.getHours() * 60 + today.getMinutes();
+
+      slotsForDate = slotsForDate.filter(slot => {
+        const slotTime = (slot.slotTime as string).substring(0, 5);
+        const [hours, minutes] = slotTime.split(':').map(Number);
+        const slotMinutes = hours * 60 + minutes;
+
+        return slotMinutes >= currentTime + 30;
+      });
+    }
+
+    if (this.selectedBookingTime) {
+      slotsForDate = slotsForDate.filter(slot => {
+        const slotTime = (slot.slotTime as string).substring(0, 5);
+        return slotTime === this.selectedBookingTime;
+      });
+    }
+
     if (this.bookingModalOpen && this.modalSelectedTime) {
-      filteredSlots = filteredSlots.filter(slot => {
+      slotsForDate = slotsForDate.filter(slot => {
         const slotTime = (slot.slotTime as string).substring(0, 5);
         return slotTime === this.modalSelectedTime;
       });
     }
 
     const seenTimes = new Set<string>();
-    const uniqueSlots = filteredSlots.filter(slot => {
+    const uniqueSlots = slotsForDate.filter(slot => {
       const time = (slot.slotTime as string).substring(0, 5);
-      if (seenTimes.has(time)) {
-        return false;
-      }
+      if (seenTimes.has(time)) return false;
       seenTimes.add(time);
       return true;
     });

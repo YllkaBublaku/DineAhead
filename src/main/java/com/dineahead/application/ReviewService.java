@@ -3,7 +3,9 @@ package com.dineahead.application;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.Review;
 import com.dineahead.domain.ReviewDTO;
+import com.dineahead.domain.ReviewHelpful;
 import com.dineahead.infrastructure.RestaurantRepository;
+import com.dineahead.infrastructure.ReviewHelpfulRepository;
 import com.dineahead.infrastructure.ReviewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,17 +13,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final RestaurantRepository restaurantRepository;
+    private final ReviewHelpfulRepository reviewHelpfulRepository;
 
-    public ReviewService(ReviewRepository reviewRepository, RestaurantRepository restaurantRepository) {
+    public ReviewService(ReviewRepository reviewRepository, RestaurantRepository restaurantRepository, ReviewHelpfulRepository reviewHelpfulRepository) {
         this.reviewRepository = reviewRepository;
         this.restaurantRepository = restaurantRepository;
+        this.reviewHelpfulRepository = reviewHelpfulRepository;
     }
 
     @Transactional
@@ -57,5 +63,59 @@ public class ReviewService {
         return reviews.stream()
                 .map(review -> new ReviewDTO(review))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Map<String, Object> toggleHelpful(Long reviewId, Long userId) {
+        Map<String, Object> response = new HashMap<>();
+
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found with id: " + reviewId));
+
+        if (review.getHelpfulCount() == null) {
+            review.setHelpfulCount(0);
+        }
+
+        boolean isHelpful = reviewHelpfulRepository.existsByReviewIdAndUserId(reviewId, userId);
+
+        if (isHelpful) {
+            reviewHelpfulRepository.deleteByReviewIdAndUserId(reviewId, userId);
+            review.setHelpfulCount(review.getHelpfulCount() - 1);
+            response.put("helpful", false);
+        } else {
+            ReviewHelpful helpful = new ReviewHelpful();
+            helpful.setReview(review);
+            helpful.setUserId(userId);
+            reviewHelpfulRepository.save(helpful);
+            review.setHelpfulCount(review.getHelpfulCount() + 1);
+            response.put("helpful", true);
+        }
+
+        reviewRepository.save(review);
+        response.put("reviewId", reviewId);
+        response.put("helpfulCount", review.getHelpfulCount());
+
+        return response;
+    }
+
+    public Map<String, Object> getHelpfulStatus(Long reviewId, Long userId) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (userId == null) {
+            response.put("helpful", false);
+            response.put("reviewId", reviewId);
+            return response;
+        }
+
+        boolean isHelpful = reviewHelpfulRepository.existsByReviewIdAndUserId(reviewId, userId);
+        response.put("helpful", isHelpful);
+        response.put("reviewId", reviewId);
+
+        Review review = reviewRepository.findById(reviewId).orElse(null);
+        if (review != null && review.getHelpfulCount() != null) {
+            response.put("helpfulCount", review.getHelpfulCount());
+        }
+
+        return response;
     }
 }

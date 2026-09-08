@@ -72,6 +72,7 @@ export interface ReviewItem {
   text?: string;
   memberSince?: string;
   isHelpful?: boolean;
+  helpfulCount?: number;
 }
 
 @Component({
@@ -136,6 +137,10 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     paymentMethod: 'card'
   };
 
+  private mapInitialized = false;
+  private mapInitAttempts = 0;
+  private maxMapRetries = 5;
+
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
   private map: any;
   private marker: any;
@@ -196,6 +201,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   loadRestaurant(id: number): void {
     this.loading = true;
     this.error = false;
+    this.mapInitialized = false;
 
     this.api.getRestaurantById(id)
       .then((data) => {
@@ -205,6 +211,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         console.log('TimeSlots in response:', data.timeSlots);
         console.log('TimeSlots type:', typeof data.timeSlots);
         console.log('TimeSlots is array?', Array.isArray(data.timeSlots));
+        this.initializeMapWithRetry();
 
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
@@ -234,6 +241,38 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       });
 
     this.loadAllRestaurants()
+  }
+
+  private initializeMapWithRetry(): void {
+    this.mapInitAttempts = 0;
+    this.tryInitMap();
+  }
+
+
+  private tryInitMap(): void {
+    if (this.mapInitialized) return;
+
+    this.mapInitAttempts++;
+
+    if (this.mapInitAttempts > this.maxMapRetries) {
+      console.log('Max map retries reached, giving up');
+      return;
+    }
+
+    if (!this.mapContainer || !this.restaurant) {
+      console.log('Map container or restaurant not ready, retry ' + this.mapInitAttempts);
+      setTimeout(() => this.tryInitMap(), 300);
+      return;
+    }
+
+    const container = this.mapContainer.nativeElement;
+    if (container.offsetWidth === 0 || container.offsetHeight === 0) {
+      console.log('Map container not visible, retry ' + this.mapInitAttempts);
+      setTimeout(() => this.tryInitMap(), 400);
+      return;
+    }
+
+    this.initMap();
   }
 
   loadAllRestaurants(): void {
@@ -316,8 +355,21 @@ export class RestaurantDetail implements OnInit, OnDestroy {
             text: review.comment || 'No comment provided.',
             date: review.createdAt ? this.formatDate(review.createdAt) : 'Recently',
             memberSince: 'Member',
-            isHelpful: false
+            isHelpful: false,
+            helpfulCount: review.helpfulCount || 0
           }));
+
+          if (this.isLoggedIn) {
+            this.reviews.forEach(review => {
+              this.api.getReviewHelpfulStatus(review.id)
+                .then((status: any) => {
+                  review.isHelpful = status?.helpful || false;
+                  this.cdr.detectChanges();
+                })
+                .catch(() => {});
+            });
+          }
+
           console.log('Mapped reviews:', this.reviews);
         } else {
           this.reviews = [];
@@ -352,12 +404,12 @@ export class RestaurantDetail implements OnInit, OnDestroy {
             this.similarRestaurants = [
               ...similarCuisine.map((r: any) => this.mapToRestaurantItem(r)),
               ...differentCuisine.map((r: any) => this.mapToRestaurantItem(r))
-            ].slice(0, 4);
+            ].slice(0, 8);
 
             const usedIds = new Set(this.similarRestaurants.map(r => r.id));
             this.otherRecommendations = filtered
               .filter((r: any) => !usedIds.has(r.id))
-              .slice(0, 4)
+              .slice(0, 8)
               .map((r: any) => this.mapToRestaurantItem(r));
 
             console.log('Similar restaurants:', this.similarRestaurants.length);
@@ -791,7 +843,33 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     return slot?.maxCapacity || null;
   }
 
-  toggleReviewHelpful(review: ReviewItem): void {
+  async toggleReviewHelpful(review: ReviewItem): Promise<void> {
+    if (!this.isLoggedIn) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: this.router.url }
+      });
+      return;
+    }
+
+    try {
+      const result = await this.api.markReviewHelpful(review.id);
+
+      if (result && result.helpful !== undefined) {
+        review.isHelpful = result.helpful;
+        review.helpfulCount = (review.helpfulCount || 0) + (result.helpful ? 1 : -1);
+
+        const index = this.reviews.findIndex(r => r.id === review.id);
+        if (index !== -1) {
+          this.reviews[index] = { ...review };
+        }
+
+        this.cdr.detectChanges();
+        console.log('Helpful status updated:', review.isHelpful);
+      }
+    } catch (error) {
+      console.error('Error marking review as helpful:', error);
+      this.bookingError = 'Could not update helpful status. Please try again.';
+    }
   }
 
   toggleDarkMode(): void {
@@ -959,10 +1037,17 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   private initMap(): void {
-    if (!this.mapContainer || !this.restaurant) return;
+    if (this.mapInitialized || !this.mapContainer || !this.restaurant) return;
 
-    const lat = this.restaurant.latitude || 48.8566;
-    const lng = this.restaurant.longitude || 2.3522;
+    try {
+      const container = this.mapContainer.nativeElement;
+      const lat = this.restaurant.latitude || 48.8566;
+      const lng = this.restaurant.longitude || 2.3522;
+
+      if (this.map) {
+        this.map.remove();
+        this.map = null;
+      }
 
     this.map = L.map(this.mapContainer.nativeElement, {
       center: [lat, lng],
@@ -998,11 +1083,21 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       </div>
     `);
 
-    setTimeout(() => {
-      if (this.map) {
-        this.map.invalidateSize();
+      this.mapInitialized = true;
+
+      setTimeout(() => {
+        if (this.map) {
+          this.map.invalidateSize();
+          console.log('Map successfully initialized');
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      if (this.mapInitAttempts < this.maxMapRetries) {
+        setTimeout(() => this.tryInitMap(), 500);
       }
-    }, 300);
+    }
   }
 
   generateTimeSlots(): void {
@@ -1113,6 +1208,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     if (this.map) {
       this.map.remove();
       this.map = null;
+      this.mapInitialized = false;
     }
   }
 

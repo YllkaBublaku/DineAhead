@@ -424,5 +424,74 @@ export class ApiService {
     }
   }
 
+  async markReviewHelpful(reviewId: number): Promise<any> {
+    try {
+      const currentUser = this.getCurrentUser();
+      const userId = currentUser?.id || currentUser?.userId || null;
+
+      const token = this.getToken();
+      const headers: any = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = userId
+        ? `${this.apiUrl}/reviews/${reviewId}/helpful?userId=${userId}`
+        : `${this.apiUrl}/reviews/${reviewId}/helpful`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Helpful API error:', errorText);
+        throw new Error(`Failed to mark review as helpful: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error marking review as helpful:', error);
+      throw error;
+    }
+  }
+
+  async getReviewHelpfulStatus(reviewId: number): Promise<any> {
+    try {
+      const currentUser = this.getCurrentUser();
+      const userId = currentUser?.id || currentUser?.userId || null;
+
+      const token = this.getToken();
+      const headers: any = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = userId
+        ? `${this.apiUrl}/reviews/${reviewId}/helpful-status?userId=${userId}`
+        : `${this.apiUrl}/reviews/${reviewId}/helpful-status`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { helpful: false };
+        }
+        throw new Error(`Failed to get helpful status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting helpful status:', error);
+      return { helpful: false };
+    }
+  }
+
 
 }

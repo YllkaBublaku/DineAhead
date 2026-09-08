@@ -9,6 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
@@ -50,6 +52,14 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(name = "helpful_count")
+    @Builder.Default
+    private Integer helpfulCount = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ReviewHelpful> helpfulVotes = new ArrayList<>();
 }

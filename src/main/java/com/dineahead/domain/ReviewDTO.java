@@ -18,6 +18,9 @@ public class ReviewDTO {
     private Integer ambianceRating;
     private String comment;
     private LocalDateTime createdAt;
+    private Integer helpfulCount;
+    private Long restaurantId;
+    private String restaurantName;
 
     public ReviewDTO(Review review) {
         this.id = review.getId();
@@ -39,5 +42,11 @@ public class ReviewDTO {
         this.ambianceRating = review.getAmbianceRating();
         this.comment = review.getComment();
         this.createdAt = review.getCreatedAt();
+        this.helpfulCount = review.getHelpfulCount() != null ? review.getHelpfulCount() : 0;
+
+        if (review.getRestaurant() != null) {
+            this.restaurantId = review.getRestaurant().getId();
+            this.restaurantName = review.getRestaurant().getName();
+        }
     }
 }
