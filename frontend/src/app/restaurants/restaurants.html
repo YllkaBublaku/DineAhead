@@ -969,8 +969,14 @@
             </div>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Booking Confirmed!</h3>
             <p class="text-gray-500 dark:text-gray-400 text-sm">{{ bookingMessage || 'Your reservation has been confirmed. Check your email for details.' }}</p>
-            @if (isPaymentRequired) {
-              <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Deposit of €{{ bookingDepositAmount }} has been charged.</p>
+            @if (isPaymentRequired && bookingDepositAmount > 0) {
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                @if (bookingForm.paymentMethod === 'card') {
+                  Deposit of €{{ bookingDepositAmount }} has been charged.
+                } @else {
+                  Please pay the deposit of €{{ bookingDepositAmount }} at the restaurant.
+                }
+              </p>
             }
           </div>
         }

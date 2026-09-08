@@ -282,7 +282,8 @@ export class ApiService {
         reservationTime: reservationData.time,
         partySize: reservationData.guests,
         specialRequests: reservationData.specialRequests || '',
-        status: 'PENDING'
+        status: 'PENDING',
+        paymentMethod: reservationData.paymentMethod || 'card'
       };
 
       if (userId) {
@@ -313,7 +314,10 @@ export class ApiService {
       }
 
       const result = await response.json();
-      console.log('Reservation created:', result);
+      console.log('Reservation created - FULL RESPONSE:', JSON.stringify(result, null, 2));
+      console.log('Result keys:', Object.keys(result));
+      console.log('Result id:', result.id);
+      console.log('Result id from _embedded?', result._embedded);
       return result;
     } catch (error) {
       console.error('Reservation error:', error);
@@ -321,7 +325,7 @@ export class ApiService {
     }
   }
 
-  async createPaymentIntent(reservationId: number, userId: number | null, paymentMethod: string): Promise<any> {
+  async createPaymentIntent(reservationId: number, userId: number | null): Promise<any> {
     try {
       const token = this.getToken();
       const headers: any = {
@@ -331,13 +335,14 @@ export class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      console.log(`Creating payment intent for reservation: ${reservationId}, user: ${userId}`);
+
       const response = await fetch(`${this.apiUrl}/payments/create-payment-intent`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
           reservationId: reservationId,
-          userId: userId,
-          paymentMethod: paymentMethod
+          userId: userId
         })
       });
 

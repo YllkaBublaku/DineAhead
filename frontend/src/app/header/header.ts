@@ -43,33 +43,27 @@ export class Header implements OnInit, OnDestroy {
   }
 
   checkLoginStatus(): void {
-    const localUser = JSON.parse(localStorage.getItem('user') || '{}');
-    if (localUser.id) {
-      this.isLoggedIn = true;
-      this.user = localUser;
-      this.userRole = localUser.role;
-      this.userAvatar = null;
-      return;
-    }
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        this.user = JSON.parse(storedUser);
+        this.isLoggedIn = true;
+        this.userRole = this.user?.role || null;
 
-    this.api.getCurrentUser().subscribe({
-      next: (user: any) => {
-        if (user) {
-          this.isLoggedIn = true;
-          this.user = user;
-          this.userRole = user.role;
-          this.userAvatar = null;
-
-          localStorage.setItem('user', JSON.stringify(user));
-          localStorage.setItem('isLoggedIn', 'true');
-        }
-      },
-      error: (err: any) => {
+        const first = this.user?.firstName?.charAt(0) || '';
+        const last = this.user?.lastName?.charAt(0) || '';
+        this.user.initials = (first + last).toUpperCase() || 'U';
+      } else {
         this.isLoggedIn = false;
         this.user = null;
-        this.userAvatar = null;
+        this.userRole = null;
       }
-    });
+    } catch (error) {
+      console.error('Error checking login status:', error);
+      this.isLoggedIn = false;
+      this.user = null;
+      this.userRole = null;
+    }
   }
 
   private clearUserState(): void {

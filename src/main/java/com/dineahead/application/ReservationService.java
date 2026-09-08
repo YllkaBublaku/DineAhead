@@ -3,9 +3,14 @@ package com.dineahead.application;
 import com.dineahead.domain.Reservation;
 import com.dineahead.domain.ReservationDTO;
 import com.dineahead.domain.RestaurantDepositSettings;
+import com.dineahead.domain.User;
+import com.dineahead.domain.enums.PaymentMethod;
 import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.infrastructure.ReservationRepository;
 import com.dineahead.infrastructure.RestaurantDepositSettingsRepository;
+import com.dineahead.infrastructure.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +22,17 @@ import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
+    private static final Logger log = LoggerFactory.getLogger(ReservationService.class);
     private final ReservationRepository reservationRepository;
     private final RestaurantDepositSettingsRepository depositSettingsRepository;
+    private final UserRepository userRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
-                              RestaurantDepositSettingsRepository depositSettingsRepository) {
+                              RestaurantDepositSettingsRepository depositSettingsRepository,
+                              UserRepository userRepository) {
         this.reservationRepository = reservationRepository;
         this.depositSettingsRepository = depositSettingsRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -42,7 +51,28 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.PENDING);
         reservation.setCreatedAt(LocalDateTime.now());
-        return reservationRepository.save(reservation);
+
+        if (reservation.getPaymentMethod() == null) {
+            reservation.setPaymentMethod(PaymentMethod.CARD);
+        }
+
+        if (reservation.getUser() != null && reservation.getUser().getId() != null) {
+            User user = userRepository.findById(reservation.getUser().getId())
+                    .orElse(null);
+            if (user != null) {
+                reservation.setUser(user);
+                log.info("User loaded: {} with email: {}", user.getId(), user.getEmail());
+            }
+        }
+
+        Reservation saved = reservationRepository.save(reservation);
+        log.info("Reservation created with ID: {}", saved.getId());
+
+        if (saved.getUser() != null) {
+            log.info("Reservation user email: {}", saved.getUser().getEmail());
+        }
+
+        return saved;
     }
 
     @Transactional(readOnly = true)

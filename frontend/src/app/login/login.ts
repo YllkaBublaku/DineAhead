@@ -68,6 +68,8 @@ export class Login implements OnInit {
       next: (response: any) => {
         this.isLoading.set(false);
 
+        console.log('Login response:', response);
+
         const user = {
           id: response.id || response.userId || response.user?.id || null,
           firstName: response.firstName || response.user?.firstName || '',

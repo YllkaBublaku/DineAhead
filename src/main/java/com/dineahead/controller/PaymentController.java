@@ -24,21 +24,31 @@ public class PaymentController {
     @PostMapping("/create-payment-intent")
     public ResponseEntity<?> createPaymentIntent(@RequestBody Map<String, Object> request) {
         try {
-            Long reservationId = Long.valueOf(request.get("reservationId").toString());
-            Long userId = request.get("userId") != null ?
-                    Long.valueOf(request.get("userId").toString()) : null;
-            String paymentMethodType = request.get("paymentMethod") != null ?
-                    request.get("paymentMethod").toString() : "card";
+            System.out.println("=== Create Payment Intent Request ===");
+            System.out.println("Request: " + request);
 
-            String stripePaymentMethod;
-            if ("paypal".equals(paymentMethodType)) {
-                stripePaymentMethod = "paypal";
-            } else {
-                stripePaymentMethod = "card";
+            Object reservationIdObj = request.get("reservationId");
+            if (reservationIdObj == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "reservationId is required");
+                return ResponseEntity.status(400).body(errorResponse);
             }
 
-            Map<String, Object> result = paymentService.createPaymentIntent(reservationId, userId, stripePaymentMethod);
+            Long reservationId = Long.valueOf(reservationIdObj.toString());
+            System.out.println("reservationId: " + reservationId);
+
+            Long userId = request.get("userId") != null ?
+                    Long.valueOf(request.get("userId").toString()) : null;
+
+            String paymentMethodType = "card";
+
+            Map<String, Object> result = paymentService.createPaymentIntent(reservationId, userId);
             return ResponseEntity.ok(result);
+
+        } catch (NumberFormatException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Invalid reservationId format: " + e.getMessage());
+            return ResponseEntity.status(400).body(errorResponse);
         } catch (StripeException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());

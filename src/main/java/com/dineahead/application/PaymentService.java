@@ -40,9 +40,13 @@ public class PaymentService {
     }
 
     @Transactional
-    public Map<String, Object> createPaymentIntent(Long reservationId, Long userId, String paymentMethodType) throws StripeException {
+    public Map<String, Object> createPaymentIntent(Long reservationId, Long userId) throws StripeException {
+        if (reservationId == null) {
+            throw new IllegalArgumentException("Reservation ID cannot be null");
+        }
+
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+                .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + reservationId));
 
         User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
 
@@ -51,7 +55,7 @@ public class PaymentService {
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(depositAmount.multiply(BigDecimal.valueOf(100)).longValue())
                 .setCurrency("eur")
-                .addPaymentMethodType(paymentMethodType)
+                .addPaymentMethodType("card")
                 .setDescription("Deposit for " + reservation.getRestaurant().getName())
                 .putMetadata("reservationId", reservationId.toString())
                 .putMetadata("restaurantName", reservation.getRestaurant().getName())
@@ -64,7 +68,7 @@ public class PaymentService {
         payment.setUser(user);
         payment.setAmount(depositAmount);
         payment.setDepositAmount(depositAmount);
-        payment.setPaymentMethod(PaymentMethod.valueOf(paymentMethodType.toUpperCase()));
+        payment.setPaymentMethod(PaymentMethod.CARD);
         payment.setStatus(PaymentStatus.PENDING);
         payment.setStripePaymentIntentId(paymentIntent.getId());
         payment.setCreatedAt(LocalDateTime.now());

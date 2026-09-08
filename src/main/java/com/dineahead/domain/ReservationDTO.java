@@ -28,6 +28,7 @@ public class ReservationDTO {
     private Boolean depositPaid;
     private BigDecimal depositAmount;
     private LocalDateTime createdAt;
+    private String paymentMethod;
 
     public static ReservationDTO fromEntity(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();
@@ -51,6 +52,11 @@ public class ReservationDTO {
         dto.setDepositPaid(reservation.getDepositPaid());
         dto.setDepositAmount(reservation.getDepositAmount());
         dto.setCreatedAt(reservation.getCreatedAt());
+
+        if (reservation.getPaymentMethod() != null) {
+            dto.setPaymentMethod(reservation.getPaymentMethod().toString());
+        }
+
         return dto;
     }
 }

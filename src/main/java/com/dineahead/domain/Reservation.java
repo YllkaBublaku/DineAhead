@@ -1,6 +1,7 @@
 package com.dineahead.domain;
 
 import com.dineahead.domain.enums.DepositStatus;
+import com.dineahead.domain.enums.PaymentMethod;
 import com.dineahead.domain.enums.ReservationStatus;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -65,6 +66,10 @@ public class Reservation {
     @Column(name = "deposit_amount", precision = 10, scale = 2)
     private BigDecimal depositAmount = BigDecimal.ZERO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    private PaymentMethod paymentMethod;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -85,6 +90,9 @@ public class Reservation {
         }
         if (depositAmount == null) {
             depositAmount = BigDecimal.ZERO;
+        }
+        if (paymentMethod == null) {
+            paymentMethod = PaymentMethod.CARD;
         }
     }
 }

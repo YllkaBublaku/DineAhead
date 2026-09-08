@@ -33,7 +33,13 @@ public class ReservationController {
     @PostMapping
     public ResponseEntity<ReservationDTO> createReservation(@RequestBody Reservation reservation) {
         Reservation created = reservationService.createReservation(reservation);
-        return ResponseEntity.ok(ReservationDTO.fromEntity(created));
+        System.out.println("Reservation created with ID: " + created.getId());
+
+        ReservationDTO dto = ReservationDTO.fromEntity(created);
+        System.out.println("DTO: " + dto);
+        System.out.println("DTO ID: " + dto.getId());
+
+        return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/user/{userId}")

@@ -1081,6 +1081,8 @@ export class Restaurants implements OnInit {
       event.preventDefault();
       event.stopPropagation();
     }
+    this.bookingMessage = '';
+    this.bookingError = '';
 
     const slotTime = (slot.slotTime as string).substring(0, 5);
 
@@ -1151,6 +1153,7 @@ export class Restaurants implements OnInit {
 
     this.bookingLoading = true;
     this.bookingError = '';
+    this.bookingMessage = '';
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(this.selectedRestaurant.id);
@@ -1166,13 +1169,16 @@ export class Restaurants implements OnInit {
       }
 
       await this.createBooking();
+
+      this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
       this.bookingSuccess = true;
       this.bookingLoading = false;
-      this.cdr.detectChanges(); // Force UI update
+      this.cdr.detectChanges();
 
       setTimeout(() => {
         this.bookingModalOpen = false;
         this.bookingSuccess = false;
+        this.bookingMessage = '';
         this.resetBookingState();
         this.cdr.detectChanges();
       }, 2500);
@@ -1190,18 +1196,28 @@ export class Restaurants implements OnInit {
 
     this.bookingLoading = true;
     this.bookingError = '';
+    this.bookingMessage = '';
 
     try {
+      const paymentMethodUpper = this.bookingForm.paymentMethod.toUpperCase();
+
       const reservation = await this.api.createReservation({
         restaurantId: this.selectedRestaurant.id,
         date: this.selectedTimeslot.slotDate,
         time: this.selectedTimeslot.slotTime,
         guests: this.selectedBookingGuests,
         specialRequests: this.bookingForm.specialRequests || '',
-        status: 'PENDING'
+        status: 'PENDING',
+        paymentMethod: paymentMethodUpper
       });
 
       console.log('Reservation created:', reservation);
+      console.log('Reservation ID:', reservation?.id);
+
+      if (!reservation || !reservation.id) {
+        console.error('Reservation has no ID:', reservation);
+        throw new Error('Reservation was created but no ID was returned');
+      }
 
       if (this.bookingForm.paymentMethod === 'card') {
         const userJson = localStorage.getItem('user');
@@ -1210,8 +1226,7 @@ export class Restaurants implements OnInit {
 
         const paymentIntentData = await this.api.createPaymentIntent(
           reservation.id,
-          userId,
-          'card'
+          userId
         );
 
         console.log('Payment intent created:', paymentIntentData);
@@ -1228,6 +1243,12 @@ export class Restaurants implements OnInit {
 
           console.log('Update result received:', updateResult);
 
+          if (this.bookingDepositAmount > 0) {
+            this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
+          } else {
+            this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
+          }
+
           this.bookingSuccess = true;
           this.paymentModalOpen = false;
           this.bookingLoading = false;
@@ -1236,6 +1257,7 @@ export class Restaurants implements OnInit {
           setTimeout(() => {
             this.bookingModalOpen = false;
             this.bookingSuccess = false;
+            this.bookingMessage = '';
             this.resetBookingState();
             this.cdr.detectChanges();
           }, 2500);
@@ -1254,7 +1276,12 @@ export class Restaurants implements OnInit {
 
         console.log('Cash reservation updated:', updateResult);
 
-        this.bookingMessage = 'Your reservation is confirmed! Please pay the deposit when you arrive at the restaurant.';
+        if (this.bookingDepositAmount > 0) {
+          this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;
+        } else {
+          this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
+        }
+
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
         this.bookingLoading = false;
@@ -1263,6 +1290,7 @@ export class Restaurants implements OnInit {
         setTimeout(() => {
           this.bookingModalOpen = false;
           this.bookingSuccess = false;
+          this.bookingMessage = '';
           this.resetBookingState();
           this.cdr.detectChanges();
         }, 2500);
