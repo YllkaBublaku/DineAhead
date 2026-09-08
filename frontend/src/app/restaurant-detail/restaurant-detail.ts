@@ -6,6 +6,8 @@ import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import * as L from 'leaflet';
 import {FavoritesService} from '../services/favorites.service';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
+import {environment} from '../../environments/environment';
 
 export interface MenuItem {
   id: number;
@@ -120,6 +122,19 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   selectedGuests: number = 2;
   availableTimes: string[] = [];
   guestOptions: number[] = Array.from({length: 30}, (_, i) => i + 1);
+
+  stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
+  bookingMessage: string = '';
+  bookingLoading: boolean = false;
+  bookingError: string = '';
+  isPaymentRequired: boolean = false;
+  bookingDepositAmount: number = 0;
+
+  paymentModalOpen: boolean = false;
+  bookingForm = {
+    specialRequests: '',
+    paymentMethod: 'card'
+  };
 
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
   private map: any;
@@ -454,27 +469,196 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  openBookingModal(slot: string): void {
-    this.bookingModalOpen = true;
-    this.bookingStep = 'date';
-    this.selectedTime = null;
-    this.selectedGuests = 2;
+  openBookingModal(): void {
+    if (!this.selectedDate || !this.selectedTime || !this.selectedGuests) {
+      this.bookingError = 'Please select date, time and guests.';
+      return;
+    }
+
     this.bookingSuccess = false;
-    this.cdr.detectChanges();
+    this.bookingMessage = '';
+    this.bookingError = '';
+    this.bookingLoading = false;
+    this.bookingForm.paymentMethod = 'card';
+    this.bookingForm.specialRequests = '';
+    this.paymentModalOpen = false;
+
+    if (this.restaurant) {
+      this.api.getRestaurantDeposit(this.restaurant.id)
+        .then((depositInfo) => {
+          console.log('Deposit info:', depositInfo);
+          if (depositInfo && depositInfo.requiresDeposit) {
+            this.isPaymentRequired = true;
+            this.bookingDepositAmount = depositInfo.amount || 0;
+          } else {
+            this.isPaymentRequired = false;
+            this.bookingDepositAmount = 0;
+          }
+          this.bookingModalOpen = true;
+          this.cdr.detectChanges();
+        })
+        .catch((error) => {
+          console.error('Error fetching deposit info:', error);
+          this.isPaymentRequired = false;
+          this.bookingDepositAmount = 0;
+          this.bookingModalOpen = true;
+          this.cdr.detectChanges();
+        });
+    } else {
+      this.bookingModalOpen = true;
+    }
   }
 
-  confirmBooking(): void {
-    this.bookingSuccess = true;
-    setTimeout(() => {
-      this.bookingSuccess = false;
-      this.resetBooking();
+  async confirmBooking(): Promise<void> {
+    if (!this.selectedDate || !this.selectedTime || !this.selectedGuests || !this.restaurant) {
+      this.bookingError = 'Please select date, time and guests.';
+      return;
+    }
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+    this.bookingMessage = '';
+
+    try {
+      if (this.isPaymentRequired && this.bookingForm.paymentMethod === 'card') {
+        this.paymentModalOpen = true;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      const year = this.selectedDate.getFullYear();
+      const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(this.selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      const timeStr = `${this.selectedTime}:00`;
+      const paymentMethodUpper = this.bookingForm.paymentMethod.toUpperCase();
+
+      const reservation = await this.api.createReservation({
+        restaurantId: this.restaurant.id,
+        date: dateStr,
+        time: timeStr,
+        guests: this.selectedGuests,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'PENDING',
+        paymentMethod: paymentMethodUpper
+      });
+
+      console.log('Reservation created:', reservation);
+
+      if (!reservation || !reservation.id) {
+        throw new Error('Reservation was created but no ID was returned');
+      }
+
+      await this.api.updateReservation(reservation.id, {
+        depositPaid: false,
+        depositAmount: this.bookingDepositAmount,
+        status: this.isPaymentRequired && this.bookingForm.paymentMethod === 'cash' ? 'PENDING' : 'CONFIRMED'
+      });
+
+      this.bookingMessage = this.isPaymentRequired && this.bookingForm.paymentMethod === 'cash'
+        ? `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`
+        : 'Your reservation has been confirmed.';
+
+      this.bookingSuccess = true;
+      this.bookingLoading = false;
       this.cdr.detectChanges();
-    }, 2500);
+
+      setTimeout(() => {
+        this.closeBookingModal();
+      }, 3500);
+
+    } catch (error) {
+      console.error('Booking failed:', error);
+      this.bookingError = error instanceof Error ? error.message : 'Failed to book reservation. Please try again.';
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async processPayment(): Promise<void> {
+    if (!this.restaurant || !this.selectedDate || !this.selectedTime) return;
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+    this.bookingMessage = '';
+
+    try {
+      const year = this.selectedDate.getFullYear();
+      const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(this.selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      const timeStr = `${this.selectedTime}:00`;
+      const paymentMethodUpper = this.bookingForm.paymentMethod.toUpperCase();
+
+      const reservation = await this.api.createReservation({
+        restaurantId: this.restaurant.id,
+        date: dateStr,
+        time: timeStr,
+        guests: this.selectedGuests,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'PENDING',
+        paymentMethod: paymentMethodUpper
+      });
+
+      console.log('Reservation created:', reservation);
+
+      if (!reservation || !reservation.id) {
+        throw new Error('Reservation was created but no ID was returned');
+      }
+
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const paymentIntentData = await this.api.createPaymentIntent(
+        reservation.id,
+        userId
+      );
+
+      console.log('Payment intent created:', paymentIntentData);
+
+      const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
+      console.log('Payment confirmation result:', result);
+
+      if (result.success || result.status === 'SUCCEEDED') {
+        await this.api.updateReservation(reservation.id, {
+          depositPaid: true,
+          depositAmount: this.bookingDepositAmount,
+          status: 'CONFIRMED'
+        });
+
+        this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
+        this.bookingSuccess = true;
+        this.paymentModalOpen = false;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.closeBookingModal();
+        }, 3500);
+      } else {
+        throw new Error('Payment confirmation failed');
+      }
+
+    } catch (error) {
+      console.error('Payment failed:', error);
+      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
+    }
   }
 
   closeBookingModal(): void {
     this.bookingModalOpen = false;
+    this.paymentModalOpen = false;
     this.bookingSuccess = false;
+    this.bookingMessage = '';
+    this.bookingError = '';
+    this.bookingLoading = false;
+    this.bookingForm.specialRequests = '';
+    this.bookingForm.paymentMethod = 'card';
+    this.resetBooking();
     this.cdr.detectChanges();
   }
 
@@ -912,7 +1096,6 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.selectedDate = null;
     this.selectedTime = null;
     this.selectedGuests = 2;
-    this.bookingModalOpen = false;
     this.cdr.detectChanges();
   }
 

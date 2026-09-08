@@ -82,9 +82,11 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   sortBy = 'averageRating';
   infoMessage: string = '';
 
+  paymentModalOpen = false;
   bookingModalOpen = false;
   bookingSuccess = false;
   bookingLoading = false;
+  bookingMessage: string = '';
   bookingError = '';
   isPaymentRequired = false;
   bookingDepositAmount = 0;
@@ -529,21 +531,42 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
 
     this.selectedRestaurantForBooking = rest;
     this.selectedTimeslotForBooking = slot;
+
+    if (slot.slotDate) {
+      const dateParts = slot.slotDate.split('-');
+      if (dateParts.length === 3) {
+        this.selectedBookingDate = new Date(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        );
+      }
+    }
+
+    if (slot.slotTime) {
+      this.selectedBookingTime = (slot.slotTime as string).substring(0, 5);
+    }
+
     this.bookingModalOpen = true;
     this.bookingSuccess = false;
     this.bookingError = '';
     this.bookingLoading = false;
+    this.bookingForm = {
+      specialRequests: '',
+      paymentMethod: 'card'
+    };
+    this.isPaymentRequired = false;
+    this.bookingDepositAmount = 0;
+    this.paymentModalOpen = false;
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(rest.id);
       if (depositInfo && depositInfo.requiresDeposit) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount || 0;
-      } else {
-        this.isPaymentRequired = false;
-        this.bookingDepositAmount = 0;
       }
     } catch (error) {
+      console.error('Error fetching deposit info:', error);
       this.isPaymentRequired = false;
       this.bookingDepositAmount = 0;
     }
@@ -553,22 +576,31 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
 
   closeBookingModal(): void {
     this.bookingModalOpen = false;
+    this.paymentModalOpen = false;
     this.bookingSuccess = false;
     this.selectedRestaurantForBooking = null;
     this.selectedTimeslotForBooking = null;
     this.bookingError = '';
+    this.bookingMessage = '';
+    this.bookingLoading = false;
     this.bookingForm = {
       specialRequests: '',
       paymentMethod: 'card'
     };
+    this.isPaymentRequired = false;
+    this.bookingDepositAmount = 0;
     this.cdr.detectChanges();
   }
 
   async confirmBooking(): Promise<void> {
-    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) return;
+    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) {
+      this.bookingError = 'No restaurant or time slot selected.';
+      return;
+    }
 
     this.bookingLoading = true;
     this.bookingError = '';
+    this.bookingMessage = '';
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(this.selectedRestaurantForBooking.id);
@@ -576,25 +608,33 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
       if (depositInfo && depositInfo.requiresDeposit && depositInfo.amount > 0) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount;
+
+        if (this.bookingForm.paymentMethod === 'card') {
+          this.paymentModalOpen = true;
+          this.bookingLoading = false;
+          this.cdr.detectChanges();
+          return;
+        }
+
+        await this.createBookingWithDeposit();
+
+        this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
+        this.bookingSuccess = true;
         this.bookingLoading = false;
-        this.bookingError = `A deposit of €${depositInfo.amount} is required to secure your reservation.`;
-        this.bookingLoading = false;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.closeBookingModal();
+        }, 2500);
         return;
       }
 
-      await this.api.createReservation({
-        restaurantId: this.selectedRestaurantForBooking.id,
-        date: this.selectedTimeslotForBooking.slotDate,
-        time: this.selectedTimeslotForBooking.slotTime,
-        guests: this.selectedBookingGuests,
-        specialRequests: this.bookingForm.specialRequests || '',
-        status: 'confirmed',
-        depositPaid: false,
-        depositAmount: 0
-      });
+      await this.createBooking();
 
+      this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
       this.bookingSuccess = true;
       this.bookingLoading = false;
+      this.cdr.detectChanges();
 
       setTimeout(() => {
         this.closeBookingModal();
@@ -602,8 +642,131 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
 
     } catch (error) {
       console.error('Booking failed:', error);
-      this.bookingError = 'Failed to book reservation. Please try again.';
+      this.bookingError = error instanceof Error ? error.message : 'Failed to book reservation. Please try again.';
       this.bookingLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async createBooking(): Promise<void> {
+    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) {
+      throw new Error('No restaurant or time slot selected');
+    }
+
+    const year = this.selectedBookingDate?.getFullYear() || new Date().getFullYear();
+    const month = String((this.selectedBookingDate?.getMonth() || new Date().getMonth()) + 1).padStart(2, '0');
+    const day = String(this.selectedBookingDate?.getDate() || new Date().getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    await this.api.createReservation({
+      restaurantId: this.selectedRestaurantForBooking.id,
+      date: this.selectedTimeslotForBooking.slotDate || dateStr,
+      time: this.selectedTimeslotForBooking.slotTime,
+      guests: this.selectedBookingGuests || 2,
+      specialRequests: this.bookingForm.specialRequests || '',
+      status: 'CONFIRMED',
+      paymentMethod: this.bookingForm.paymentMethod.toUpperCase(),
+      depositPaid: false,
+      depositAmount: 0
+    });
+  }
+
+  async createBookingWithDeposit(): Promise<void> {
+    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) {
+      throw new Error('No restaurant or time slot selected');
+    }
+
+    const year = this.selectedBookingDate?.getFullYear() || new Date().getFullYear();
+    const month = String((this.selectedBookingDate?.getMonth() || new Date().getMonth()) + 1).padStart(2, '0');
+    const day = String(this.selectedBookingDate?.getDate() || new Date().getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    await this.api.createReservation({
+      restaurantId: this.selectedRestaurantForBooking.id,
+      date: this.selectedTimeslotForBooking.slotDate || dateStr,
+      time: this.selectedTimeslotForBooking.slotTime,
+      guests: this.selectedBookingGuests || 2,
+      specialRequests: this.bookingForm.specialRequests || '',
+      status: 'PENDING',
+      paymentMethod: this.bookingForm.paymentMethod.toUpperCase(),
+      depositPaid: false,
+      depositAmount: this.bookingDepositAmount
+    });
+  }
+
+  async processPayment(): Promise<void> {
+    if (!this.selectedRestaurantForBooking || !this.selectedTimeslotForBooking) {
+      this.bookingError = 'No restaurant or time slot selected.';
+      this.bookingLoading = false;
+      return;
+    }
+
+    this.bookingLoading = true;
+    this.bookingError = '';
+    this.bookingMessage = '';
+
+    try {
+      const year = this.selectedBookingDate?.getFullYear() || new Date().getFullYear();
+      const month = String((this.selectedBookingDate?.getMonth() || new Date().getMonth()) + 1).padStart(2, '0');
+      const day = String(this.selectedBookingDate?.getDate() || new Date().getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      // Create reservation first
+      const reservation = await this.api.createReservation({
+        restaurantId: this.selectedRestaurantForBooking.id,
+        date: this.selectedTimeslotForBooking.slotDate || dateStr,
+        time: this.selectedTimeslotForBooking.slotTime,
+        guests: this.selectedBookingGuests || 2,
+        specialRequests: this.bookingForm.specialRequests || '',
+        status: 'PENDING',
+        paymentMethod: this.bookingForm.paymentMethod.toUpperCase()
+      });
+
+      console.log('Reservation created:', reservation);
+
+      if (!reservation || !reservation.id) {
+        throw new Error('Reservation was created but no ID was returned');
+      }
+
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const paymentIntentData = await this.api.createPaymentIntent(
+        reservation.id,
+        userId
+      );
+
+      console.log('Payment intent created:', paymentIntentData);
+
+      const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
+      console.log('Payment confirmation result:', result);
+
+      if (result.success || result.status === 'SUCCEEDED') {
+        await this.api.updateReservation(reservation.id, {
+          depositPaid: true,
+          depositAmount: this.bookingDepositAmount,
+          status: 'CONFIRMED'
+        });
+
+        this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
+        this.bookingSuccess = true;
+        this.paymentModalOpen = false;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.closeBookingModal();
+        }, 2500);
+      } else {
+        throw new Error('Payment confirmation failed');
+      }
+
+    } catch (error) {
+      console.error('Payment failed:', error);
+      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
     }
   }
 }

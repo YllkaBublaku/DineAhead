@@ -592,9 +592,9 @@
                       <p class="font-bold text-gray-900 text-xs">{{ selectedGuests }}</p>
                     </div>
                   </div>
-                  <button (click)="confirmBooking()"
+                  <button (click)="openBookingModal()"
                           class="w-full py-3 bg-[#005943] hover:bg-[#004735] text-white font-extrabold text-sm rounded-xl transition shadow-lg active:scale-95 uppercase tracking-wider">
-                    Confirm Booking
+                    Continue to Booking
                   </button>
                 </div>
               }
@@ -727,5 +727,224 @@
     </div>
   </div>
 }
+
+@if (bookingModalOpen) {
+  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeBookingModal()">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="closeBookingModal()"></div>
+
+      <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
+           (click)="$event.stopPropagation()">
+
+        @if (!bookingSuccess) {
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">Confirm Booking</h3>
+              <button (click)="closeBookingModal()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            @if (restaurant) {
+              <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <img [src]="restaurant.coverPhotoUrl || 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&h=600&q=80'"
+                     [alt]="restaurant.name"
+                     class="w-14 h-14 rounded-lg object-cover">
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-bold text-gray-900 dark:text-white">{{ restaurant.name }}</h4>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ restaurant.cuisineType }} • {{ restaurant.priceRange }}</p>
+                </div>
+              </div>
+            }
+
+            <div class="grid grid-cols-3 gap-2 mb-4 text-sm">
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                <span class="text-gray-500 dark:text-gray-400 block text-xs">Date</span>
+                <span class="font-semibold">{{ getFormattedDate() }}</span>
+              </div>
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                <span class="text-gray-500 dark:text-gray-400 block text-xs">Time</span>
+                <span class="font-semibold">{{ getFormattedTime() }}</span>
+              </div>
+              <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                <span class="text-gray-500 dark:text-gray-400 block text-xs">Guests</span>
+                <span class="font-semibold">{{ selectedGuests }}</span>
+              </div>
+            </div>
+
+            @if (isPaymentRequired && bookingDepositAmount > 0) {
+              <div class="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <p class="text-sm font-bold text-amber-700 dark:text-amber-400">
+                      Deposit Required: €{{ bookingDepositAmount }}
+                    </p>
+                    <p class="text-xs text-amber-600 dark:text-amber-300">
+                      This amount will be deducted from your final bill
+                    </p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (bookingError) {
+              <div class="mb-4 p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-lg">
+                {{ bookingError }}
+              </div>
+            }
+
+            <div class="mb-4">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Special Requests</label>
+              <textarea [(ngModel)]="bookingForm.specialRequests"
+                        rows="2"
+                        placeholder="Any special requests or dietary requirements..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent resize-none"></textarea>
+            </div>
+
+            @if (isPaymentRequired) {
+              <div class="mb-4">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Payment Method</label>
+                <select [(ngModel)]="bookingForm.paymentMethod"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                  <option value="card">Credit/Debit Card</option>
+                  <option value="cash">Pay at Restaurant</option>
+                </select>
+              </div>
+
+              @if (bookingForm.paymentMethod === 'card') {
+                <div class="space-y-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div>
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">Card Number</label>
+                    <input type="text" placeholder="1234 5678 9012 3456"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">Expiry</label>
+                      <input type="text" placeholder="MM/YY"
+                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">CVV</label>
+                      <input type="text" placeholder="123"
+                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                    </div>
+                  </div>
+                </div>
+              }
+
+              @if (bookingForm.paymentMethod === 'cash') {
+                <div class="mb-4 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-sm text-green-700 dark:text-green-300">
+                      You will pay the deposit in person at the restaurant.
+                    </span>
+                  </div>
+                </div>
+              }
+            }
+
+            <div class="flex items-center gap-3">
+              <button (click)="closeBookingModal()"
+                      class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                Cancel
+              </button>
+              <button (click)="isPaymentRequired ? processPayment() : confirmBooking()"
+                      [disabled]="bookingLoading"
+                      class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (bookingLoading) {
+                  <span>Processing...</span>
+                } @else {
+                  <span>{{ isPaymentRequired ? 'Pay Deposit & Book' : 'Confirm Booking' }}</span>
+                }
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="p-8 text-center">
+            <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Booking Confirmed!</h3>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">{{ bookingMessage || 'Your reservation has been confirmed. Check your email for details.' }}</p>
+            @if (isPaymentRequired && bookingDepositAmount > 0) {
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                @if (bookingForm.paymentMethod === 'card') {
+                  Deposit of €{{ bookingDepositAmount }} has been charged.
+                } @else {
+                  Please pay the deposit of €{{ bookingDepositAmount }} at the restaurant.
+                }
+              </p>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (paymentModalOpen) {
+  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="paymentModalOpen = false">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="paymentModalOpen = false"></div>
+
+      <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
+           (click)="$event.stopPropagation()">
+
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Deposit Payment</h3>
+            <button (click)="paymentModalOpen = false" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="text-center py-4">
+            <div class="text-4xl font-bold text-gray-900 dark:text-white mb-2">€{{ bookingDepositAmount }}</div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Deposit for {{ restaurant?.name }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">This amount will be deducted from your final bill</p>
+          </div>
+
+          @if (bookingError) {
+            <div class="mb-4 p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-lg">
+              {{ bookingError }}
+            </div>
+          }
+
+          <div class="flex items-center gap-3">
+            <button (click)="paymentModalOpen = false"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              Cancel
+            </button>
+            <button (click)="processPayment()"
+                    [disabled]="bookingLoading"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+              @if (bookingLoading) {
+                <span>Processing...</span>
+              } @else {
+                <span>Pay Deposit</span>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<app-footer></app-footer>
+
 <app-footer></app-footer>
 
