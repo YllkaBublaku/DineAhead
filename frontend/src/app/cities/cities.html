@@ -12,59 +12,67 @@
       </p>
     </div>
 
-    <div class="space-y-16">
-      @for (country of countries; track country.name) {
-
-        <div class="flex items-center gap-4 mb-2">
-          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            {{ country.flag }}
-          </div>
+    @if (loading) {
+      <div class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-[#005943] border-t-transparent"></div>
+      </div>
+    } @else if (cities.length === 0) {
+      <div class="text-center py-12">
+        <p class="text-gray-500 dark:text-gray-400">No cities available.</p>
+      </div>
+    } @else {
+      <div class="space-y-16">
+        @for (country of getCountryKeys(); track country) {
           <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-              {{ country.name }}
-            </h2>
+            <div class="flex items-center gap-3 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-xl sm:text-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                {{ groupedCities[country][0]?.countryFlag || '🌍' }}
+              </div>
+              <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
+                {{ country }}
+              </h2>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                Most popular cities
+              </h3>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                @for (city of getPopularCities(country); track city.name) {
+                  <div (click)="goToCity(city.name)"
+                       class="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-gray-200 cursor-pointer">
+                    <div class="aspect-[4/3]">
+                      <img [src]="city.imageUrl" [alt]="city.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-start justify-end p-4">
+                      <span class="text-lg font-extrabold text-white drop-shadow-md">{{ city.name }}</span>
+                      <span class="text-xs text-white/80">{{ city.restaurantCount }} {{ city.restaurantCount === 1 ? 'restaurant' : 'restaurants' }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="mb-12">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                All cities
+              </h3>
+
+              <div class="flex flex-wrap gap-3">
+                @for (city of groupedCities[country]; track city.name) {
+                  <div (click)="goToCity(city.name)"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-[#005943] hover:text-[#005943] dark:hover:border-emerald-400 dark:hover:text-emerald-400 transition-colors cursor-pointer">
+                    {{ city.name }}
+                    <span class="text-xs text-gray-400 dark:text-gray-500">({{ city.restaurantCount }})</span>
+                  </div>
+                }
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div class="mb-6">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-            Most popular cities
-          </h3>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            @for (city of country.popularCities; track city.name) {
-              <a [routerLink]="['/restaurants']" [queryParams]="{ city: city.name }"
-                 class="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-gray-200 cursor-pointer">
-
-                <div class="aspect-[4/3]">
-                  <img [src]="city.image" [alt]="city.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                </div>
-
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-                  <span class="text-lg font-extrabold text-white drop-shadow-md">{{ city.name }}</span>
-                </div>
-              </a>
-            }
-          </div>
-        </div>
-
-        <div class="mb-12">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-            All cities
-          </h3>
-
-          <div class="flex flex-wrap gap-3">
-            @for (city of country.allCities; track city) {
-              <a [routerLink]="['/restaurants']" [queryParams]="{ city: city }"
-                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-[#005943] hover:text-[#005943] dark:hover:border-emerald-400 dark:hover:text-emerald-400 transition-colors">
-                {{ city }}
-              </a>
-            }
-          </div>
-        </div>
-
-      }
-    </div>
+        }
+      </div>
+    }
 
   </div>
 </div>

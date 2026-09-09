@@ -27,9 +27,12 @@ export interface RestaurantItem {
 }
 
 export interface CityItem {
+  id: number;
   name: string;
-  image: string;
-  count: number;
+  imageUrl: string;
+  country: string;
+  countryFlag: string;
+  restaurantCount: number;
 }
 
 export interface CuisineItem {
@@ -67,6 +70,27 @@ export class Home implements OnInit {
 
   ngOnInit(): void {
     this.loadRestaurants();
+    this.loadCities();
+  }
+
+  loadCities(): void {
+    this.api.getCities()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          this.cities = data.map((city: any) => ({
+            id: city.id,
+            name: city.name,
+            imageUrl: city.imageUrl,
+            country: city.country,
+            countryFlag: city.countryFlag,
+            restaurantCount: city.restaurantCount || 0
+          }));
+          this.cdr.detectChanges();
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading cities:', error);
+      });
   }
 
   loadRestaurants(): void {
@@ -93,7 +117,6 @@ export class Home implements OnInit {
           console.log('New restaurants:', this.newRestaurants.length);
           console.log('Most booked restaurants:', this.mostBookedRestaurants.length);
 
-          this.cities = this.extractCities();
           this.cuisines = this.extractCuisines();
 
           console.log('Cities:', this.cities.length);
@@ -143,31 +166,6 @@ export class Home implements OnInit {
       cityImageUrl: data.cityImageUrl || null,
       cuisineImageUrl: data.cuisineImageUrl || null
     };
-  }
-
-  extractCities(): CityItem[] {
-    const cityMap = new Map<string, { count: number; image: string }>();
-
-    this.allRestaurants.forEach(rest => {
-      const city = rest.city || 'Paris';
-      const image = rest.cityImageUrl || 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&h=300&q=80';
-
-      if (cityMap.has(city)) {
-        const existing = cityMap.get(city)!;
-        cityMap.set(city, { count: existing.count + 1, image: existing.image });
-      } else {
-        cityMap.set(city, { count: 1, image: image });
-      }
-    });
-
-    return Array.from(cityMap.entries())
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 10)
-      .map(([name, data]) => ({
-        name,
-        count: data.count,
-        image: data.image
-      }));
   }
 
   extractCuisines(): CuisineItem[] {

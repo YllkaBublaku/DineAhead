@@ -44,7 +44,7 @@ public class Restaurant {
     private String address;
 
     @Column(nullable = true)
-    private String city;
+    private String cityName;
 
     private String state;
     private String zip;
@@ -136,6 +136,10 @@ public class Restaurant {
     @JsonIgnore
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MenuItem> menuItems = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
 
     @Transient
     public boolean isRequiresDeposit() {

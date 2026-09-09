@@ -21,15 +21,20 @@ public class RestaurantService {
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final TimeSlotRepository timeSlotRepository;
+    private final CityService cityService;
 
-    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository) {
+    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository, CityService cityService) {
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.timeSlotRepository = timeSlotRepository;
+        this.cityService = cityService;
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
-        return restaurantRepository.save(restaurant);
+        Restaurant saved = restaurantRepository.save(restaurant);
+        cityService.updateCityRestaurantCounts();
+
+        return saved;
     }
 
     @Transactional(readOnly = true)

@@ -507,4 +507,17 @@ export class ApiService {
     );
   }
 
+  getCities(): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/cities`)
+        .pipe(
+          map(response => {
+            if (Array.isArray(response)) {
+              return response;
+            }
+            return [];
+          })
+        )
+    );
+  }
 }

@@ -48,8 +48,8 @@ public class RestaurantController {
         List<Restaurant> restaurants = restaurantService.getRestaurantsByCity(city);
 
         restaurants.forEach(restaurant -> {
-            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
-                restaurant.setCityImageUrl(com.dineahead.config.ImageConfig.getCityImage(restaurant.getCity()));
+            if (restaurant.getCity() != null && restaurant.getCity().getName() != null && !restaurant.getCity().getName().isEmpty()) {
+                restaurant.setCityImageUrl(restaurant.getCity().getImageUrl());
             }
             if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
                 restaurant.setCuisineImageUrl(com.dineahead.config.ImageConfig.getCuisineImage(restaurant.getCuisineType()));
@@ -72,8 +72,8 @@ public class RestaurantController {
         List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner(ownerId);
 
         restaurants.forEach(restaurant -> {
-            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
-                restaurant.setCityImageUrl(com.dineahead.config.ImageConfig.getCityImage(restaurant.getCity()));
+            if (restaurant.getCity() != null && restaurant.getCity().getName() != null && !restaurant.getCity().getName().isEmpty()) {
+                restaurant.setCityImageUrl(restaurant.getCity().getImageUrl());
             }
             if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
                 restaurant.setCuisineImageUrl(com.dineahead.config.ImageConfig.getCuisineImage(restaurant.getCuisineType()));
@@ -83,6 +83,7 @@ public class RestaurantController {
         return ResponseEntity.ok(restaurants.stream()
                 .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList()));
+
     }
 
     @GetMapping("/features")

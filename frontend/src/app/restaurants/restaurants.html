@@ -289,6 +289,8 @@
         }
       </button>
 
+
+
       <button (click)="scrollFilters(-200)"
               class="w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-xs flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 shrink-0">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -416,22 +418,36 @@
         </svg>
       </a>
       <span>›</span>
-      <span class="font-medium text-gray-800 dark:text-gray-200">
-      {{ getPageTitle() }}
-    </span>
+      @if (isOffersPage()) {
+        <span class="font-medium text-gray-800 dark:text-gray-200">Special Offers</span>
+      } @else {
+        <span class="font-medium text-gray-800 dark:text-gray-200">{{ getPageTitle() }}</span>
+      }
     </div>
 
     <div class="flex flex-wrap items-baseline gap-3">
       <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-        {{ getPageTitle() }}
+        @if (isOffersPage()) {
+          Special Offers
+        } @else {
+          {{ getPageTitle() }}
+        }
       </h1>
       <span class="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
-      {{ totalElements }} {{ totalElements === 1 ? 'restaurant' : 'restaurants' }}
+      @if (isOffersPage()) {
+        {{ totalElements }} {{ totalElements === 1 ? 'offer' : 'offers' }}
+      } @else {
+        {{ totalElements }} {{ totalElements === 1 ? 'restaurant' : 'restaurants' }}
+      }
     </span>
     </div>
 
     <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2 max-w-4xl leading-relaxed">
-      {{ getPageDescription() }}
+      @if (isOffersPage()) {
+        Discover exclusive dining offers and special deals. Save up to 50% at the best restaurants.
+      } @else {
+        {{ getPageDescription() }}
+      }
     </p>
   </div>
 

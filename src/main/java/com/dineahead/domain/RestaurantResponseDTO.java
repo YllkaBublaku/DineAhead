@@ -42,7 +42,7 @@ public class RestaurantResponseDTO {
         this.name = restaurant.getName();
         this.slug = restaurant.getSlug();
         this.address = restaurant.getAddress();
-        this.city = restaurant.getCity();
+        this.city = restaurant.getCity() != null ? restaurant.getCity().getName() : null;
         this.cuisineType = restaurant.getCuisineType();
         this.priceRange = restaurant.getPriceRange();
         this.coverPhotoUrl = restaurant.getCoverPhotoUrl();

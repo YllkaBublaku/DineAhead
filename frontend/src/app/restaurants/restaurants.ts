@@ -174,9 +174,21 @@ export class Restaurants implements OnInit {
 
     this.favoritesService.favorites$.subscribe(() => {
       this.cdr.detectChanges();
-    })
+    });
 
     this.route.queryParams.subscribe(params => {
+      if (params['offers'] === 'true') {
+        this.activeQuickFilters.add('Special offers');
+        this.filters.specialOffers = true;
+      }
+
+      if (params['cuisine']) {
+        this.selectedCuisine = params['cuisine'];
+        if (!this.filters.cuisine.includes(params['cuisine'])) {
+          this.filters.cuisine.push(params['cuisine']);
+        }
+      }
+
       if (params['q']) {
         this.searchQuery = params['q'];
       }
@@ -450,6 +462,10 @@ export class Restaurants implements OnInit {
     setTimeout(() => {
       this.renderMapMarkers();
     }, 50);
+  }
+
+  isOffersPage(): boolean {
+    return this.route.snapshot.queryParams['offers'] === 'true';
   }
 
   formatDate(date: Date): string {
@@ -1523,7 +1539,7 @@ export class Restaurants implements OnInit {
       return `The Best Restaurants in Paris`;
     }
 
-    return 'The 10 Best Restaurants in Paris';
+    return 'The Best Restaurants in Paris';
   }
 
   getPageDescription(): string {

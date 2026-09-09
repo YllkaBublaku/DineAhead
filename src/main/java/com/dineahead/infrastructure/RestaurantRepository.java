@@ -1,5 +1,6 @@
 package com.dineahead.infrastructure;
 
+import com.dineahead.domain.City;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.User;
 import com.dineahead.domain.enums.PriceRange;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Optional<Restaurant> findBySlug(String slug);
     List<Restaurant> findByCity(String city);
+    long countByCity(City city);
     List<Restaurant> findByOwnerId(Long ownerId);
     Long owner(User owner);
 

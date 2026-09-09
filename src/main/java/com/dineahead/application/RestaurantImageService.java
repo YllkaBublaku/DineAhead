@@ -40,8 +40,8 @@ public class RestaurantImageService {
                 restaurant.getGallery().size();
             }
 
-            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
-                restaurant.setCityImageUrl(ImageConfig.getCityImage(restaurant.getCity()));
+            if (restaurant.getCity() != null && restaurant.getCity().getImageUrl() != null) {
+                restaurant.setCityImageUrl(restaurant.getCity().getImageUrl());
             }
 
             if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
@@ -61,8 +61,8 @@ public class RestaurantImageService {
             restaurant.getGallery().size();
         }
 
-        if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
-            restaurant.setCityImageUrl(ImageConfig.getCityImage(restaurant.getCity()));
+        if (restaurant.getCity() != null && restaurant.getCity().getImageUrl() != null) {
+            restaurant.setCityImageUrl(restaurant.getCity().getImageUrl());
         }
 
         if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
@@ -75,9 +75,9 @@ public class RestaurantImageService {
     @Transactional(readOnly = true)
     public java.util.Map<String, Long> getCityCounts() {
         return restaurantRepository.findAll().stream()
-                .filter(r -> r.getCity() != null && !r.getCity().isEmpty())
+                .filter(r -> r.getCity() != null && r.getCity().getName() != null && !r.getCity().getName().isEmpty())
                 .collect(java.util.stream.Collectors.groupingBy(
-                        Restaurant::getCity,
+                        r -> r.getCity().getName(),
                         java.util.stream.Collectors.counting()
                 ));
     }
