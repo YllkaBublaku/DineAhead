@@ -34,6 +34,8 @@ public class RestaurantResponseDTO {
     private List<TimeSlotDTO> timeSlots = new ArrayList<>();
     private boolean requiresDeposit;
     private BigDecimal depositAmount;
+    private String cityImageUrl;
+    private String cuisineImageUrl;
 
     public RestaurantResponseDTO(Restaurant restaurant) {
         this.id = restaurant.getId();
@@ -48,44 +50,60 @@ public class RestaurantResponseDTO {
         this.phone = restaurant.getPhone();
         this.description = restaurant.getDescription();
 
-        if (restaurant.getGallery() != null) {
-            this.gallery = new ArrayList<>(restaurant.getGallery());
-        } else {
+        try {
+            if (restaurant.getGallery() != null) {
+                this.gallery = new ArrayList<>(restaurant.getGallery());
+            } else {
+                this.gallery = new ArrayList<>();
+            }
+        } catch (Exception e) {
             this.gallery = new ArrayList<>();
         }
-
         this.averageRating = restaurant.getAverageRating() != null ? restaurant.getAverageRating() : BigDecimal.ZERO;
         this.reviewCount = restaurant.getReviewCount() != null ? restaurant.getReviewCount() : 0;
         this.latitude = restaurant.getLatitude();
         this.longitude = restaurant.getLongitude();
 
-        if (restaurant.getRestaurantFeatures() != null && !restaurant.getRestaurantFeatures().isEmpty()) {
-            this.features = restaurant.getRestaurantFeatures().stream()
-                    .filter(rf -> rf.getFeature() != null)
-                    .map(rf -> rf.getFeature().getName())
-                    .collect(Collectors.toList());
-        } else {
+        try {
+            if (restaurant.getRestaurantFeatures() != null && !restaurant.getRestaurantFeatures().isEmpty()) {
+                this.features = restaurant.getRestaurantFeatures().stream()
+                        .filter(rf -> rf.getFeature() != null)
+                        .map(rf -> rf.getFeature().getName())
+                        .collect(Collectors.toList());
+            } else {
+                this.features = new ArrayList<>();
+            }
+        } catch (Exception e) {
             this.features = new ArrayList<>();
         }
 
-        if (restaurant.getMenuItems() != null && !restaurant.getMenuItems().isEmpty()) {
-            this.menuItems = restaurant.getMenuItems().stream()
-                    .map(menuItem -> new MenuItemDTO(menuItem))
-                    .collect(Collectors.toList());
-        } else {
+        try {
+            if (restaurant.getMenuItems() != null && !restaurant.getMenuItems().isEmpty()) {
+                this.menuItems = restaurant.getMenuItems().stream()
+                        .map(menuItem -> new MenuItemDTO(menuItem))
+                        .collect(Collectors.toList());
+            } else {
+                this.menuItems = new ArrayList<>();
+            }
+        } catch (Exception e) {
             this.menuItems = new ArrayList<>();
         }
 
-        if (restaurant.getTimeSlots() != null && !restaurant.getTimeSlots().isEmpty()) {
-            this.timeSlots = restaurant.getTimeSlots().stream()
-                    .filter(TimeSlot::isActive)
-                    .map(TimeSlotDTO::new)
-                    .collect(Collectors.toList());
-        } else {
+        try {
+            if (restaurant.getTimeSlots() != null && !restaurant.getTimeSlots().isEmpty()) {
+                this.timeSlots = restaurant.getTimeSlots().stream()
+                        .filter(TimeSlot::isActive)
+                        .map(TimeSlotDTO::new)
+                        .collect(Collectors.toList());
+            } else {
+                this.timeSlots = new ArrayList<>();
+            }
+        } catch (Exception e) {
             this.timeSlots = new ArrayList<>();
         }
-
         this.requiresDeposit = restaurant.isRequiresDeposit();
         this.depositAmount = restaurant.getDepositAmount();
+        this.cityImageUrl = restaurant.getCityImageUrl();
+        this.cuisineImageUrl = restaurant.getCuisineImageUrl();
     }
 }

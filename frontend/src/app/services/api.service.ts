@@ -493,5 +493,18 @@ export class ApiService {
     }
   }
 
+  getHomeData(): Promise<any> {
+    return firstValueFrom(
+      this.http.get<any>(`${this.apiUrl}/home/data`)
+        .pipe(
+          map(response => {
+            if (response && response.restaurants) {
+              return response;
+            }
+            return { restaurants: [], cityCounts: {}, cuisineCounts: {} };
+          })
+        )
+    );
+  }
 
 }

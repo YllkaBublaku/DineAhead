@@ -84,6 +84,12 @@ public class Restaurant {
     @Column(name = "review_count")
     private Integer reviewCount;
 
+    @Transient
+    private String cityImageUrl;
+
+    @Transient
+    private String cuisineImageUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

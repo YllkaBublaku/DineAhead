@@ -1,10 +1,12 @@
 package com.dineahead.application;
 
+import com.dineahead.config.ImageConfig;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.RestaurantImage;
 import com.dineahead.infrastructure.RestaurantImageRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -27,5 +29,66 @@ public class RestaurantImageService {
 
     public List<RestaurantImage> getImagesByRestaurant(Long restaurantId) {
         return restaurantImageRepository.findByRestaurantId(restaurantId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Restaurant> getAllRestaurantsWithImages() {
+        List<Restaurant> restaurants = restaurantRepository.findAll();
+
+        restaurants.forEach(restaurant -> {
+            if (restaurant.getGallery() != null) {
+                restaurant.getGallery().size();
+            }
+
+            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
+                restaurant.setCityImageUrl(ImageConfig.getCityImage(restaurant.getCity()));
+            }
+
+            if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
+                restaurant.setCuisineImageUrl(ImageConfig.getCuisineImage(restaurant.getCuisineType()));
+            }
+        });
+
+        return restaurants;
+    }
+
+    @Transactional(readOnly = true)
+    public Restaurant getRestaurantWithImages(Long id) {
+        Restaurant restaurant = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (restaurant.getGallery() != null) {
+            restaurant.getGallery().size();
+        }
+
+        if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
+            restaurant.setCityImageUrl(ImageConfig.getCityImage(restaurant.getCity()));
+        }
+
+        if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
+            restaurant.setCuisineImageUrl(ImageConfig.getCuisineImage(restaurant.getCuisineType()));
+        }
+
+        return restaurant;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getCityCounts() {
+        return restaurantRepository.findAll().stream()
+                .filter(r -> r.getCity() != null && !r.getCity().isEmpty())
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Restaurant::getCity,
+                        java.util.stream.Collectors.counting()
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> getCuisineCounts() {
+        return restaurantRepository.findAll().stream()
+                .filter(r -> r.getCuisineType() != null && !r.getCuisineType().isEmpty())
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Restaurant::getCuisineType,
+                        java.util.stream.Collectors.counting()
+                ));
     }
 }

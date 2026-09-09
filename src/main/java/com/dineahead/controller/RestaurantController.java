@@ -1,6 +1,7 @@
 package com.dineahead.controller;
 
 import com.dineahead.application.FeatureService;
+import com.dineahead.application.RestaurantImageService;
 import com.dineahead.application.RestaurantService;
 import com.dineahead.application.ReviewService;
 import com.dineahead.domain.Restaurant;
@@ -20,11 +21,13 @@ public class RestaurantController {
     private final RestaurantService restaurantService;
     private final FeatureService featureService;
     private final ReviewService reviewService;
+    private final RestaurantImageService restaurantImageService;
 
-    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService) {
         this.restaurantService = restaurantService;
         this.featureService = featureService;
         this.reviewService = reviewService;
+        this.restaurantImageService = restaurantImageService;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
@@ -33,7 +36,7 @@ public class RestaurantController {
 
     @GetMapping
     public ResponseEntity<List<RestaurantResponseDTO>> getAllRestaurants() {
-        List<Restaurant> restaurants = restaurantService.getAllRestaurants();
+        List<Restaurant> restaurants = restaurantImageService.getAllRestaurantsWithImages();
         List<RestaurantResponseDTO> dtos = restaurants.stream()
                 .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList());
@@ -42,21 +45,43 @@ public class RestaurantController {
 
     @GetMapping("/city/{city}")
     public ResponseEntity<List<RestaurantResponseDTO>> getRestaurantsByCity(@PathVariable String city) {
-        return ResponseEntity.ok(restaurantService.getRestaurantsByCity(city).stream()
-                .map(this::mapToDTO)
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByCity(city);
+
+        restaurants.forEach(restaurant -> {
+            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
+                restaurant.setCityImageUrl(com.dineahead.config.ImageConfig.getCityImage(restaurant.getCity()));
+            }
+            if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
+                restaurant.setCuisineImageUrl(com.dineahead.config.ImageConfig.getCuisineImage(restaurant.getCuisineType()));
+            }
+        });
+
+        return ResponseEntity.ok(restaurants.stream()
+                .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantResponseDTO> getRestaurantById(@PathVariable Long id) {
-        Restaurant restaurant = restaurantService.getRestaurantById(id);
+        Restaurant restaurant = restaurantImageService.getRestaurantWithImages(id);
         return ResponseEntity.ok(new RestaurantResponseDTO(restaurant));
     }
 
     @GetMapping("/owner/{ownerId}")
     public ResponseEntity<List<RestaurantResponseDTO>> getRestaurantsByOwner(@PathVariable Long ownerId) {
-        return ResponseEntity.ok(restaurantService.getRestaurantsByOwner(ownerId).stream()
-                .map(this::mapToDTO)
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner(ownerId);
+
+        restaurants.forEach(restaurant -> {
+            if (restaurant.getCity() != null && !restaurant.getCity().isEmpty()) {
+                restaurant.setCityImageUrl(com.dineahead.config.ImageConfig.getCityImage(restaurant.getCity()));
+            }
+            if (restaurant.getCuisineType() != null && !restaurant.getCuisineType().isEmpty()) {
+                restaurant.setCuisineImageUrl(com.dineahead.config.ImageConfig.getCuisineImage(restaurant.getCuisineType()));
+            }
+        });
+
+        return ResponseEntity.ok(restaurants.stream()
+                .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList()));
     }
 

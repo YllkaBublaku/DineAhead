@@ -68,7 +68,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('offers-carousel', -350)"
               aria-label="Previous offers"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -81,203 +80,68 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="offers-carousel"
-           class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-[#bbf7d0] dark:bg-emerald-950 rounded-2xl overflow-hidden flex flex-col justify-between shadow-sm border border-emerald-200/70 dark:border-emerald-800/80 group">
-          <div class="h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Friends dining"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+      <div id="offers-carousel" class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[200px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-          <div class="p-5 sm:p-6 flex flex-col justify-between flex-1">
-            <div>
-              <h3 class="text-2xl font-extrabold text-[#004735] dark:text-emerald-200 leading-tight">
-                Up to 50% off
-              </h3>
-              <p class="text-xs sm:text-sm text-emerald-950/80 dark:text-emerald-300/90 mt-1.5 font-medium leading-relaxed">
-                Browse by deals and special offers
-              </p>
-            </div>
-            <a routerLink="/offers"
-               class="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#005943] dark:text-emerald-300 uppercase tracking-wider mt-6 group-hover:translate-x-1 transition-transform">
-              <span>SEE FULL LIST</span>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+        } @else if (offerRestaurants.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No special offers available at the moment.</p>
+          </div>
+        } @else {
+          @for (rest of offerRestaurants; track rest.id) {
+            <a [routerLink]="['/restaurant', rest.id]"
+               class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
+              <div class="relative h-44 sm:h-48 overflow-hidden">
+                <img [src]="rest.coverPhotoUrl"
+                     [alt]="rest.name"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                @if (rest.specialOffer) {
+                  <div class="absolute top-3 left-3 bg-[#005943] text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clip-rule="evenodd"/>
+                      <path d="M9 11h3v5a1 1 0 01-1 1H6a1 1 0 01-1-1v-5h4z"/>
+                    </svg>
+                    <span>Special Offer</span>
+                  </div>
+                }
+                <button (click)="toggleFavorite(rest.id, $event)"
+                        aria-label="Add to favorites"
+                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
+                  <svg class="w-4 h-4 transition-colors"
+                       [class.text-red-500]="isFavorite(rest.id)"
+                       [class.fill-red-500]="isFavorite(rest.id)"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                      {{ rest.name }}
+                    </h3>
+                    <div class="text-right shrink-0">
+                      <span class="text-base font-extrabold text-[#00875a]">{{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
+                      <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">({{ rest.reviewCount || 0 }})</p>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ rest.city }}</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">{{ rest.cuisineType }} • {{ rest.priceRange }}</p>
+                </div>
+                <div class="mt-4">
+                  @if (rest.specialOffer) {
+                    <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
+                    {{ rest.specialOffer }}
+                  </span>
+                  }
+                </div>
+              </div>
             </a>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Artisan de la Truffe Montmartre"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-[#541246] text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-              <span>Insider</span>
-            </div>
-            <button (click)="toggleFavorite('offer-1', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('offer-1')"
-                   [class.fill-red-500]="isFavorite('offer-1')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Artisan de la Truffe Montmartre
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.4</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(3640)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75009, Paris</p>
-              <p class="text-xs text-gray-600 dark:text-gray-400">French • ~€39</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Le Comptoir Foch"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('offer-2', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('offer-2')"
-                   [class.fill-red-500]="isFavorite('offer-2')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Le Comptoir Foch
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.5</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(842)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75016, Paris</p>
-              <p class="text-xs text-gray-600 dark:text-gray-400">French • ~€23</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="La Reine du Kashmir"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('offer-3', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('offer-3')"
-                   [class.fill-red-500]="isFavorite('offer-3')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  La Reine du Kashmir
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.5</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(2908)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75010, Paris</p>
-              <p class="text-xs text-gray-600 dark:text-gray-400">Indian • ~€25</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Batistou"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('offer-4', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('offer-4')"
-                   [class.fill-red-500]="isFavorite('offer-4')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Batistou
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.1</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(1840)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75011, Paris</p>
-              <p class="text-xs text-gray-600 dark:text-gray-400">French • ~€22</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -40% · TheFork Summer
-              </span>
-            </div>
-          </div>
-        </div>
-
+          }
+        }
       </div>
     </div>
   </section>
@@ -290,7 +154,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('chosen-carousel', -350)"
               aria-label="Previous recommended restaurants"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -303,217 +166,62 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="chosen-carousel"
-           class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <div class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Trattoria Dalloste Bistecca Toscana"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('chosen-1', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('chosen-1')"
-                   [class.fill-red-500]="isFavorite('chosen-1')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
+      <div id="chosen-carousel" class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[200px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Trattoria Dalloste Bistecca Toscana
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">8.9</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">(6401)</p>
+        } @else if (recommendedRestaurants.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No restaurants available.</p>
+          </div>
+        } @else {
+          @for (rest of recommendedRestaurants; track rest.id) {
+            <a [routerLink]="['/restaurant', rest.id]"
+               class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
+              <div class="relative h-44 sm:h-48 overflow-hidden">
+                <img [src]="rest.coverPhotoUrl"
+                     [alt]="rest.name"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <button (click)="toggleFavorite(rest.id, $event)"
+                        aria-label="Add to favorites"
+                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
+                  <svg class="w-4 h-4 transition-colors"
+                       [class.text-red-500]="isFavorite(rest.id)"
+                       [class.fill-red-500]="isFavorite(rest.id)"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="p-4 flex flex-col justify-between flex-1">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                      {{ rest.name }}
+                    </h3>
+                    <div class="text-right shrink-0">
+                      <span class="text-sm sm:text-base font-extrabold text-[#00875a]">{{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
+                      <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">({{ rest.reviewCount || 0 }})</p>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ rest.city }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ rest.cuisineType }} • {{ rest.priceRange }}</p>
                 </div>
+                @if (rest.specialOffer) {
+                  <div class="mt-3">
+                  <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
+                    {{ rest.specialOffer }}
+                  </span>
+                  </div>
+                }
               </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Firenze</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Toscano • ~€35</p>
-            </div>
-            <div class="mt-3">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
-                Up to -50% · DineAhead Summer
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Hostaria ago e lillo Carbonara"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('chosen-2', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('chosen-2')"
-                   [class.fill-red-500]="isFavorite('chosen-2')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Hostaria ago e lillo
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-sm sm:text-base font-extrabold text-[#00875a]">9.2</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">(9255)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Roma</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Romano • ~€18</p>
-            </div>
-            <div class="mt-3">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
-                Up to -50% · DineAhead Summer
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Trattoria da Nuti Parmesan Wheel"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-
-            <div class="absolute top-3 left-3 bg-white/95 text-[#005943] text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md border border-gray-100">
-              <span>🌿</span>
-              <span>81 Top100</span>
-            </div>
-            <button (click)="toggleFavorite('chosen-3', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('chosen-3')"
-                   [class.fill-red-500]="isFavorite('chosen-3')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Trattoria da Nuti
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-sm sm:text-base font-extrabold text-[#00875a]">9.1</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">(3447)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Florence</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Steakhouse • ~€30</p>
-            </div>
-            <div class="mt-3">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
-                Up to -50% · DineAhead Summer
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1525610553991-2bede1a236e2?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Terry's Café"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('chosen-4', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('chosen-4')"
-                   [class.fill-red-500]="isFavorite('chosen-4')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Terry's Café
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-sm sm:text-base font-extrabold text-[#00875a]">9.0</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">(12708)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">75015, Paris</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">French • ~€19</p>
-            </div>
-            <div class="mt-3 space-y-1">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[275px] sm:min-w-[295px] max-w-[295px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group cursor-pointer">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Artisan de la Truffe"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-[#541246] text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-              <span>Insider</span>
-            </div>
-            <button (click)="toggleFavorite('chosen-5', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('chosen-5')"
-                   [class.fill-red-500]="isFavorite('chosen-5')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Artisan de la Truffe
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-sm sm:text-base font-extrabold text-[#00875a]">9.4</span>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">(3640)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">75009, Paris</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">French • ~€39</p>
-            </div>
-            <div class="mt-3">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full truncate max-w-full">
-                Up to -50% · DineAhead Summer
-              </span>
-            </div>
-          </div>
-        </div>
-
+            </a>
+          }
+        }
       </div>
     </div>
   </section>
-
 
   <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="mb-6">
@@ -523,7 +231,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('cuisine-carousel', -280)"
               aria-label="Previous cuisines"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -536,79 +243,29 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="cuisine-carousel"
-           class="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'European'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="European cuisine"
-                 class="w-full h-full object-cover">
+      <div id="cuisine-carousel" class="flex items-center gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[150px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">European</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'French'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="French cuisine"
-                 class="w-full h-full object-cover">
+        } @else if (cuisines.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No cuisines available.</p>
           </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">French</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'Asian'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="Asian cuisine"
-                 class="w-full h-full object-cover">
-          </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">Asian</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'Italian'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="Italian cuisine pasta"
-                 class="w-full h-full object-cover">
-          </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">Italian</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'Traditional'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="Traditional cuisine"
-                 class="w-full h-full object-cover">
-          </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">Traditional</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'Japanese'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="Japanese sushi cuisine"
-                 class="w-full h-full object-cover">
-          </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">Japanese</span>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{cuisine: 'Mediterranean'}"
-           class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
-          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
-            <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&h=400&q=80"
-                 alt="Mediterranean cuisine"
-                 class="w-full h-full object-cover">
-          </div>
-          <span class="text-sm font-bold text-gray-900 dark:text-white text-center">Mediterranean</span>
-        </a>
-
+        } @else {
+          @for (cuisine of cuisines; track cuisine.name) {
+            <a [routerLink]="['/restaurants']" [queryParams]="{cuisine: cuisine.name}"
+               class="flex flex-col items-center justify-center p-4 bg-[#f8fafc] dark:bg-gray-900 hover:bg-white dark:hover:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 min-w-[130px] sm:min-w-[150px] shrink-0 group">
+              <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform">
+                <img [src]="cuisine.image"
+                     [alt]="cuisine.name"
+                     class="w-full h-full object-cover">
+              </div>
+              <span class="text-sm font-bold text-gray-900 dark:text-white text-center">{{ cuisine.name }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ cuisine.count }} restaurants</span>
+            </a>
+          }
+        }
       </div>
     </div>
   </section>
@@ -624,7 +281,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('new-carousel', -350)"
               aria-label="Previous new restaurants"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -637,165 +293,61 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="new-carousel"
-           class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Elysées Istanbul"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
-              New
-            </div>
-            <button (click)="toggleFavorite('new-1', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('new-1')"
-                   [class.fill-red-500]="isFavorite('new-1')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
+      <div id="new-carousel" class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[200px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Elysées Istanbul
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.3</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(677)</p>
+        } @else if (newRestaurants.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No new restaurants available.</p>
+          </div>
+        } @else {
+          @for (rest of newRestaurants; track rest.id) {
+            <a [routerLink]="['/restaurant', rest.id]"
+               class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
+              <div class="relative h-44 sm:h-48 overflow-hidden">
+                <img [src]="rest.coverPhotoUrl"
+                     [alt]="rest.name"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <div class="absolute top-3 left-3 bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
+                  New
                 </div>
+                <button (click)="toggleFavorite(rest.id, $event)"
+                        aria-label="Add to favorites"
+                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
+                  <svg class="w-4 h-4 transition-colors"
+                       [class.text-red-500]="isFavorite(rest.id)"
+                       [class.fill-red-500]="isFavorite(rest.id)"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </button>
               </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75008, Paris • Turkish • ~€30</p>
-            </div>
-            <div class="mt-4">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -30%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="K'si"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
-              New
-            </div>
-            <button (click)="toggleFavorite('new-2', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('new-2')"
-                   [class.fill-red-500]="isFavorite('new-2')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  K'si
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.3</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(235)</p>
+              <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                      {{ rest.name }}
+                    </h3>
+                    <div class="text-right shrink-0">
+                      <span class="text-base font-extrabold text-[#00875a]">{{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
+                      <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">({{ rest.reviewCount || 0 }})</p>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ rest.city }} • {{ rest.cuisineType }} • {{ rest.priceRange }}</p>
                 </div>
+                @if (rest.specialOffer) {
+                  <div class="mt-4">
+                  <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
+                    {{ rest.specialOffer }}
+                  </span>
+                  </div>
+                }
               </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75009, Paris • Indian • ~€20</p>
-            </div>
-            <div class="mt-4">
-              <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                Yums x2
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1578474846511-04ba529f0b88?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Restaurant Kei"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-white/95 dark:bg-gray-900/95 text-[#e21b23] border border-red-200 dark:border-red-900/50 text-[10px] sm:text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-              <span class="text-red-600">🌸🌸🌸</span>
-              <span>MICHELIN GUIDE</span>
-            </div>
-            <button (click)="toggleFavorite('new-3', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('new-3')"
-                   [class.fill-red-500]="isFavorite('new-3')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Restaurant Kei
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">10</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(6)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75001, Paris • French • ~€380</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="La Squadra"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-white/95 dark:bg-gray-900/95 text-gray-900 dark:text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
-              New
-            </div>
-            <button (click)="toggleFavorite('new-4', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('new-4')"
-                   [class.fill-red-500]="isFavorite('new-4')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  La Squadra
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.8</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(14)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75017, Paris • Italian • ~€26</p>
-            </div>
-            <div class="mt-4">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -20%
-              </span>
-            </div>
-          </div>
-        </div>
-
+            </a>
+          }
+        }
       </div>
     </div>
   </section>
@@ -811,7 +363,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('booked-carousel', -350)"
               aria-label="Previous most booked restaurants"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -824,161 +375,58 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="booked-carousel"
-           class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Le Train Bleu"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('booked-1', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('booked-1')"
-                   [class.fill-red-500]="isFavorite('booked-1')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
+      <div id="booked-carousel" class="flex items-stretch gap-5 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[200px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Le Train Bleu
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">8.9</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(12194)</p>
+        } @else if (mostBookedRestaurants.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No most booked restaurants available.</p>
+          </div>
+        } @else {
+          @for (rest of mostBookedRestaurants; track rest.id) {
+            <a [routerLink]="['/restaurant', rest.id]"
+               class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
+              <div class="relative h-44 sm:h-48 overflow-hidden">
+                <img [src]="rest.coverPhotoUrl"
+                     [alt]="rest.name"
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <button (click)="toggleFavorite(rest.id, $event)"
+                        aria-label="Add to favorites"
+                        class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
+                  <svg class="w-4 h-4 transition-colors"
+                       [class.text-red-500]="isFavorite(rest.id)"
+                       [class.fill-red-500]="isFavorite(rest.id)"
+                       fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                      {{ rest.name }}
+                    </h3>
+                    <div class="text-right shrink-0">
+                      <span class="text-base font-extrabold text-[#00875a]">{{ rest.averageRating?.toFixed(1) || 'N/A' }}</span>
+                      <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">({{ rest.reviewCount || 0 }})</p>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ rest.city }} • {{ rest.cuisineType }} • {{ rest.priceRange }}</p>
                 </div>
+                @if (rest.specialOffer) {
+                  <div class="mt-4">
+                  <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
+                    {{ rest.specialOffer }}
+                  </span>
+                  </div>
+                }
               </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75012, Paris • French • ~€87</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Au Bourguignon du Marais"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <div class="absolute top-3 left-3 bg-[#541246] text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-              <span>Insider</span>
-            </div>
-            <button (click)="toggleFavorite('booked-2', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('booked-2')"
-                   [class.fill-red-500]="isFavorite('booked-2')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Au Bourguignon du Marais
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.4</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(6987)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75004, Paris • French • ~€49</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1525610553991-2bede1a236e2?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="Terry's Café"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('booked-3', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('booked-3')"
-                   [class.fill-red-500]="isFavorite('booked-3')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  Terry's Café
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.0</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(12708)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75015, Paris • French • ~€19</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="min-w-[280px] sm:min-w-[320px] max-w-[320px] shrink-0 bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 flex flex-col group">
-          <div class="relative h-44 sm:h-48 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?auto=format&fit=crop&w=600&h=400&q=80"
-                 alt="L'Osteria Paris Chatelet"
-                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-            <button (click)="toggleFavorite('booked-4', $event)"
-                    aria-label="Add to favorites"
-                    class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-              <svg class="w-4 h-4 transition-colors"
-                   [class.text-red-500]="isFavorite('booked-4')"
-                   [class.fill-red-500]="isFavorite('booked-4')"
-                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="p-4 sm:p-5 flex flex-col justify-between flex-1">
-            <div>
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-snug group-hover:text-[#005943] dark:group-hover:text-emerald-400 transition-colors">
-                  L'Osteria Paris Chatelet
-                </h3>
-                <div class="text-right shrink-0">
-                  <span class="text-base font-extrabold text-[#00875a]">9.2</span>
-                  <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">(4588)</p>
-                </div>
-              </div>
-              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">75004, Paris • Italian • ~€22</p>
-            </div>
-            <div class="mt-4 space-y-1.5">
-              <span class="inline-block text-[11px] font-semibold text-[#15803d] bg-[#dcfce7] dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-1 rounded-full">
-                Up to -50% · TheFork Summer
-              </span>
-              <div>
-                <span class="inline-block text-[11px] font-bold text-[#b45309] bg-[#fef3c7] dark:bg-amber-950/70 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Yums x2
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+            </a>
+          }
+        }
       </div>
     </div>
   </section>
@@ -1044,7 +492,7 @@
   <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-        Other cities in United Kingdom
+        Other cities
       </h2>
       <a routerLink="/cities" class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white underline hover:text-[#005943] dark:hover:text-emerald-400 transition">
         See more
@@ -1052,7 +500,6 @@
     </div>
 
     <div class="relative group">
-
       <button (click)="scrollCarousel('city-carousel', -280)"
               aria-label="Previous cities"
               class="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all">
@@ -1065,69 +512,29 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
       </button>
 
-      <div id="city-carousel"
-           class="flex items-center gap-4 sm:gap-5 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Paris'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Paris"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Paris</span>
+      <div id="city-carousel" class="flex items-center gap-4 sm:gap-5 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1">
+        @if (loading) {
+          <div class="flex justify-center items-center w-full py-8 min-h-[150px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-[#005943] border-t-transparent"></div>
           </div>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Amsterdam'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1534351590666-13e3e96b5017?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Amsterdam"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Amsterdam</span>
+        } @else if (cities.length === 0) {
+          <div class="w-full py-8 text-center text-gray-500">
+            <p>No cities available.</p>
           </div>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Barcelona'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Barcelona"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Barcelona</span>
-          </div>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Lisbon'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1513326738677-b964603b136d?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Lisbon"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Lisbon</span>
-          </div>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Madrid'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Madrid"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Madrid</span>
-          </div>
-        </a>
-
-        <a routerLink="/restaurants" [queryParams]="{city: 'Milan'}"
-           class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
-          <img src="https://images.unsplash.com/photo-1513581166391-887a96ddeafd?auto=format&fit=crop&w=400&h=300&q=80"
-               alt="Milan"
-               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-4">
-            <span class="text-base sm:text-lg font-extrabold text-white">Milan</span>
-          </div>
-        </a>
-
+        } @else {
+          @for (city of cities; track city.name) {
+            <a [routerLink]="['/restaurants']" [queryParams]="{city: city.name}"
+               class="relative rounded-2xl overflow-hidden min-w-[170px] sm:min-w-[195px] flex-1 aspect-[4/3] shrink-0 group shadow-sm hover:shadow-lg transition">
+              <img [src]="city.image"
+                   [alt]="city.name"
+                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-start justify-end p-4">
+                <span class="text-base sm:text-lg font-extrabold text-white">{{ city.name }}</span>
+                <span class="text-xs text-white/80">{{ city.count }} restaurants</span>
+              </div>
+            </a>
+          }
+        }
       </div>
     </div>
   </section>
