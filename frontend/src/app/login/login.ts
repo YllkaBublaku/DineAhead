@@ -68,17 +68,23 @@ export class Login implements OnInit {
       next: (response: any) => {
         this.isLoading.set(false);
 
-        console.log('Login response:', response);
+        const id = response?.id ?? response?.userId ?? response?.user?.id;
+        if (!id) {
+          this.errorMessage.set(response?.message || 'Invalid email or password.');
+          return;
+        }
 
-        const user = {
+        const user: any = {
           id: response.id || response.userId || response.user?.id || null,
           firstName: response.firstName || response.user?.firstName || '',
           lastName: response.lastName || response.user?.lastName || '',
           email: response.email || response.user?.email || this.email,
           role: response.role || response.user?.role || 'USER',
           token: response.token || response.accessToken || response.jwt || null,
-          initials: this.getInitials(response.firstName || response.user?.firstName || '',
-            response.lastName || response.user?.lastName || '')
+          initials: this.getInitials(
+            response.firstName || response.user?.firstName || '',
+            response.lastName || response.user?.lastName || ''
+          )
         };
 
         localStorage.setItem('user', JSON.stringify(user));
@@ -91,14 +97,30 @@ export class Login implements OnInit {
         }
 
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
-        if (returnUrl === '/') {
-          if (response.role === 'ADMIN') {
-            this.router.navigate(['/']);
-          } else {
-            this.router.navigate(['/']);
-          }
+
+        const role = (user.role || '').toUpperCase();
+        const isOwner =
+          role === 'ADMIN' ||
+          role === 'RESTAURANT_OWNER' ||
+          role === 'OWNER' ||
+          role === 'RESTAURANT';
+
+        if (isOwner && user.id) {
+          this.api.getRestaurantsByOwner(user.id).subscribe({
+            next: (restaurants: any[]) => {
+              const restaurant = restaurants && restaurants.length ? restaurants[0] : null;
+              if (restaurant?.name) {
+                user.restaurantName = restaurant.name;
+                localStorage.setItem('user', JSON.stringify(user));
+              }
+              this.navigateAfterLogin(returnUrl);
+            },
+            error: () => {
+              this.navigateAfterLogin(returnUrl);
+            }
+          });
         } else {
-          this.router.navigate([returnUrl]);
+          this.navigateAfterLogin(returnUrl);
         }
       },
       error: (error) => {
@@ -112,6 +134,18 @@ export class Login implements OnInit {
     const first = firstName?.charAt(0) || '';
     const last = lastName?.charAt(0) || '';
     return (first + last).toUpperCase() || 'U';
+  }
+
+  private navigateAfterLogin(returnUrl: string) {
+    const isSafeInternal = returnUrl
+      && returnUrl.startsWith('/')
+      && !returnUrl.startsWith('//');
+
+    if (isSafeInternal && returnUrl !== '/login' && returnUrl !== '/signup') {
+      void this.router.navigateByUrl(returnUrl);
+    } else {
+      void this.router.navigate(['/']);
+    }
   }
 
   openForgotModal() {

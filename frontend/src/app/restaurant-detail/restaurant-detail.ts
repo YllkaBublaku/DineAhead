@@ -181,14 +181,33 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       this.isLoggedIn = true;
       this.userRole = this.user.role;
 
-      const first = this.user.firstName?.charAt(0) || '';
-      const last = this.user.lastName?.charAt(0) || '';
-      this.user.initials = (first + last).toUpperCase() || 'U';
+      if (this.isRestaurantOwner && this.user.restaurantName) {
+        this.user.initials = this.getInitialsFromName(this.user.restaurantName);
+      } else {
+        const first = this.user.firstName?.charAt(0) || '';
+        const last = this.user.lastName?.charAt(0) || '';
+        this.user.initials = (first + last).toUpperCase() || 'U';
+      }
     } else {
       this.isLoggedIn = false;
       this.user = null;
       this.userRole = null;
     }
+  }
+
+  private get isRestaurantOwner(): boolean {
+    const role = (this.userRole || '').toUpperCase();
+    return role === 'ADMIN'
+      || role === 'RESTAURANT_OWNER'
+      || role === 'OWNER'
+      || role === 'RESTAURANT';
+  }
+
+  private getInitialsFromName(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'R';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
 
   logout(): void {

@@ -34,8 +34,14 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserResponseDTO> login(@RequestBody User user) {
-        return ResponseEntity.ok(mapToDTO(userService.loginUser(user.getEmail(), user.getPasswordHash())));
+    public ResponseEntity<?> login(@RequestBody User user) {
+        try {
+            UserResponseDTO dto = mapToDTO(userService.loginUser(user.getEmail(), user.getPasswordHash()));
+            return ResponseEntity.ok(dto);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid email or password"));
+        }
     }
 
     @GetMapping

@@ -93,6 +93,13 @@ export class Header implements OnInit, OnDestroy {
     this.mobileMenuOpen = false;
   }
 
+  get isRestaurantOwner(): boolean {
+    return this.userRole === 'ADMIN'
+      || this.userRole === 'RESTAURANT_OWNER'
+      || this.userRole === 'OWNER'
+      || this.userRole === 'RESTAURANT';
+  }
+
   onSearch(): void {
     this.search.emit({ city: this.searchCity, query: this.searchQuery });
     if (!this.showSearch) {
@@ -103,5 +110,32 @@ export class Header implements OnInit, OnDestroy {
         },
       });
     }
+  }
+
+  get avatarInitials(): string {
+    if (!this.user) return 'U';
+
+    if (this.isRestaurantOwner && this.user.restaurantName) {
+      return this.getInitialsFromName(this.user.restaurantName);
+    }
+
+    const first = this.user.firstName?.charAt(0) || '';
+    const last = this.user.lastName?.charAt(0) || '';
+    return (first + last).toUpperCase() || 'U';
+  }
+
+  private getInitialsFromName(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'R';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  get currentUrl(): string {
+    const url = this.router.url;
+    if (url === '/login' || url === '/signup' || url === '/' || url.startsWith('/oauth2')) {
+      return '/';
+    }
+    return url;
   }
 }

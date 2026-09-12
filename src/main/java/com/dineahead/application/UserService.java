@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +55,11 @@ public class UserService {
         restaurant.setName(restaurantName);
         restaurant.setSlug(restaurantName.toLowerCase().replace(" ", "-"));
         restaurant.setOwner(savedUser);
+        restaurant.setCreatedAt(LocalDateTime.now());
+        restaurant.setAverageRating(BigDecimal.ZERO);
+        restaurant.setReviewCount(0);
 
         restaurantService.createRestaurant(restaurant);
-
         return savedUser;
     }
 

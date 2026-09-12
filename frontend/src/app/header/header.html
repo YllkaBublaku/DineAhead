@@ -73,6 +73,7 @@
 
       @if (!isLoggedIn) {
         <a routerLink="/login"
+           [queryParams]="{ returnUrl: currentUrl }"
            class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#005943] hover:bg-[#004735] text-white rounded-lg transition shadow-xs active:scale-95">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -83,7 +84,7 @@
         <div class="relative group">
           <button class="flex items-center gap-2">
             <div class="w-9 h-9 rounded-full bg-[#005943] text-white flex items-center justify-center font-bold text-sm uppercase">
-              {{ user?.firstName?.charAt(0) || 'U' }}{{ user?.lastName?.charAt(0) || '' }}
+              {{ avatarInitials }}
             </div>
             <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
@@ -99,9 +100,11 @@
               My Profile & Bookings
             </a>
 
-            @if (userRole === 'ADMIN') {
+            @if (isRestaurantOwner) {
               <a routerLink="/restaurant-dashboard" class="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/>
+                </svg>
                 Manage My Restaurant
               </a>
             }
@@ -134,7 +137,7 @@
       <div class="pt-2 border-t border-gray-200 dark:border-gray-800 flex gap-3">
         @if (!isLoggedIn) {
           <a routerLink="/signup" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold border border-gray-300 dark:border-gray-700 rounded-md">Sign Up</a>
-          <a routerLink="/login" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold bg-[#005943] text-white rounded-md">Log In</a>
+          <a routerLink="/login" [queryParams]="{ returnUrl: currentUrl }" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold bg-[#005943] text-white rounded-md">Log In</a>
         } @else {
           <a routerLink="/dashboard" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold bg-[#005943] text-white rounded-md">My Dashboard</a>
           <button (click)="logout()" class="flex-1 text-center py-2 text-sm font-bold border border-red-300 text-red-600 rounded-md">Log Out</button>

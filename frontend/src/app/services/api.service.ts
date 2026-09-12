@@ -134,17 +134,9 @@ export class ApiService {
     );
   }
 
-  getRestaurantsByOwner(ownerId: number): Promise<any[]> {
-    return firstValueFrom(
-      this.http.get<any[]>(`${this.apiUrl}/restaurants/owner/${ownerId}`)
-        .pipe(
-          map(response => {
-            if (Array.isArray(response)) {
-              return response;
-            }
-            return [];
-          })
-        )
+  getRestaurantsByOwner(ownerId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/restaurants/owner/${ownerId}`).pipe(
+      map(response => Array.isArray(response) ? response : [])
     );
   }
 
@@ -526,21 +518,21 @@ export class ApiService {
       const response = await fetch(`${this.apiUrl}/contacts`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify(contactData)
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Contact API error:', errorText);
         throw new Error(`Failed to submit contact: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data;
+
     } catch (error) {
-      console.error('Error submitting contact:', error);
       throw error;
     }
   }

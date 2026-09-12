@@ -19,7 +19,9 @@ public class ContactController {
 
     @PostMapping
     public ResponseEntity<Contact> submitContact(@RequestBody Contact contact) {
+        System.out.println("⏱️ Controller start: " + System.currentTimeMillis());
         Contact saved = contactService.saveContact(contact);
+        System.out.println("⏱️ Controller end: " + System.currentTimeMillis());
         return ResponseEntity.ok(saved);
     }
 

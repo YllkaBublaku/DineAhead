@@ -96,7 +96,9 @@ export class Signup {
         next: (response) => {
           this.isLoading.set(false);
 
-          localStorage.setItem('user', JSON.stringify(response));
+          const user: any = { ...response, restaurantName: this.restaurantName };
+
+          localStorage.setItem('user', JSON.stringify(user));
           localStorage.setItem('isLoggedIn', 'true');
 
           this.router.navigate(['/']);

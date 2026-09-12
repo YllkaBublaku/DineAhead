@@ -3,21 +3,21 @@ package com.dineahead.application;
 import com.dineahead.domain.MenuItem;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.TimeSlot;
-import com.dineahead.domain.enums.PriceRange;
 import com.dineahead.infrastructure.MenuItemRepository;
-import com.dineahead.infrastructure.RestaurantFeatureRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import com.dineahead.infrastructure.TimeSlotRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class RestaurantService {
+    private static final Logger log = LoggerFactory.getLogger(RestaurantService.class);
+
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -31,9 +31,15 @@ public class RestaurantService {
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
+        if (restaurant.getCreatedAt() == null) {
+            restaurant.setCreatedAt(LocalDateTime.now());
+        }
         Restaurant saved = restaurantRepository.save(restaurant);
-        cityService.updateCityRestaurantCounts();
-
+        try {
+            cityService.updateCityRestaurantCounts();
+        } catch (Exception e) {
+            log.warn("City count update failed after restaurant {} creation", saved.getId(), e);
+        }
         return saved;
     }
 

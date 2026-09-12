@@ -6,6 +6,7 @@ import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import { FavoritesService } from '../services/favorites.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
+import {Header} from '../header/header';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -43,7 +44,7 @@ export interface RestaurantItem {
 @Component({
   selector: 'app-similar-restaurants',
   standalone: true,
-  imports: [RouterLink, CommonModule, FormsModule, Footer, TimeFormatPipe],
+  imports: [RouterLink, CommonModule, FormsModule, Footer, TimeFormatPipe, Header],
   templateUrl: './similar-restaurants.html',
   styleUrl: './similar-restaurants.css'
 })
