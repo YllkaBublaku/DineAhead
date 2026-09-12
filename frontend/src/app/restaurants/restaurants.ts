@@ -94,6 +94,10 @@ export class Restaurants implements OnInit {
   currentYear = new Date().getFullYear();
   selectedDay = new Date().getDate();
 
+  availabilityCache: Record<number, any> = {};
+  availabilityLoading = false;
+  timeFilterActive = false;
+
   stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
 
   bookingMessage: string = '';
@@ -147,6 +151,8 @@ export class Restaurants implements OnInit {
   showSuggestions = false;
   searchSuggestions: RestaurantItem[] = [];
 
+  bookingSlotTime: string | null = null;
+  bookingSlotDate: Date | null = null;
   bookingLoading = false;
   bookingError = '';
   paymentModalOpen = false;
@@ -353,43 +359,6 @@ export class Restaurants implements OnInit {
     let filtered = [...this.allRestaurants];
     console.log('Initial restaurants count:', filtered.length);
 
-    if (this.selectedBookingDate || this.selectedBookingTime) {
-      filtered = filtered.filter(rest => {
-        if (!rest.timeSlots || rest.timeSlots.length === 0) {
-          return true;
-        }
-
-        return rest.timeSlots.some(slot => {
-          if (slot.isActive === false) return false;
-
-          const slotTime = slot.slotTime as string;
-          if (!slotTime) return false;
-
-          const timeStr = slotTime.substring(0, 5);
-          const selectedTimeStr = this.selectedBookingTime;
-          const slotDate = slot.slotDate;
-
-          let dateMatch = true;
-          if (this.selectedBookingDate) {
-            const year = this.selectedBookingDate.getFullYear();
-            const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
-            const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
-            const selectedDateStr = `${year}-${month}-${day}`;
-            dateMatch = slotDate === selectedDateStr;
-          }
-
-          let timeMatch = true;
-          if (this.selectedBookingTime) {
-            timeMatch = timeStr === selectedTimeStr;
-          }
-
-          const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
-
-          return dateMatch && timeMatch && guestsMatch;
-        });
-      });
-    }
-
     if (this.searchQuery && this.searchQuery.trim()) {
       const query = this.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(rest =>
@@ -454,10 +423,6 @@ export class Restaurants implements OnInit {
       filtered = filtered.filter(rest => rest.specialOffer);
     }
 
-    if (this.activeQuickFilters.has('Available now')) {
-      filtered = filtered.filter(rest => this.isRestaurantAvailable(rest));
-    }
-
     if (this.activeQuickFilters.has('Best rated')) {
       filtered = filtered.filter(rest => (rest.averageRating || 0) >= 4.5);
     }
@@ -466,21 +431,86 @@ export class Restaurants implements OnInit {
 
     this.filteredRestaurants = filtered;
     this.totalElements = filtered.length;
-    this.totalPages = Math.ceil(this.totalElements / this.itemsPerPage);
 
-    if (this.currentPage > this.totalPages) {
-      this.currentPage = Math.max(1, this.totalPages);
+    if (!this.selectedBookingDate && !this.activeQuickFilters.has('Available now')) {
+      this.paginateAndSetPage();
+      this.refreshAvailabilityForVisible();
+      return;
     }
 
-    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-    const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalElements);
-    this.restaurants = filtered.slice(startIndex, endIndex);
+    this.refreshAvailabilityThenPaginate(filtered);
+  }
+
+  private paginateAndSetPage(): void {
+    this.totalElements = this.filteredRestaurants.length;
+    this.totalPages = Math.max(1, Math.ceil(this.totalElements / this.itemsPerPage));
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    const end = Math.min(start + this.itemsPerPage, this.totalElements);
+    this.restaurants = this.filteredRestaurants.slice(start, end);
 
     this.cdr.detectChanges();
+    setTimeout(() => this.renderMapMarkers(), 50);
+  }
 
-    setTimeout(() => {
-      this.renderMapMarkers();
-    }, 50);
+  private refreshAvailabilityThenPaginate(filtered: RestaurantItem[]): void {
+    const targetDate = this.selectedBookingDate || new Date();
+    const dateStr = this.formatDateToYYYYMMDD(targetDate);
+    const guests = this.selectedBookingGuests || 2;
+    const ids = filtered.map(r => r.id);
+
+    if (ids.length === 0) {
+      this.filteredRestaurants = [];
+      this.totalElements = 0;
+      this.totalPages = 1;
+      this.restaurants = [];
+      return;
+    }
+
+    this.availabilityLoading = true;
+
+    this.api.getBatchAvailability(ids, dateStr, guests).subscribe({
+      next: (map) => {
+        this.availabilityLoading = false;
+        this.availabilityCache = { ...this.availabilityCache, ...(map || {}) };
+
+        let available = filtered.filter(r => {
+          const av = this.availabilityCache[r.id];
+          if (this.selectedBookingDate) {
+            if (!av?.open) return false;
+            if ((av.slots || []).length === 0) return false;
+          }
+          if (this.activeQuickFilters.has('Available now')) {
+            if (!av?.open) return false;
+            if ((av.slots || []).length === 0) return false;
+          }
+          return true;
+        });
+
+        this.filteredRestaurants = available;
+        this.totalElements = available.length;
+        this.totalPages = Math.max(1, Math.ceil(this.totalElements / this.itemsPerPage));
+
+        if (this.currentPage > this.totalPages) this.currentPage = 1;
+
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = Math.min(start + this.itemsPerPage, this.totalElements);
+        this.restaurants = available.slice(start, end);
+
+        this.cdr.detectChanges();
+        setTimeout(() => this.renderMapMarkers(), 50);
+      },
+      error: (err) => {
+        this.availabilityLoading = false;
+        console.error('[restaurants] availability batch failed', err);
+        this.filteredRestaurants = filtered;
+        this.totalElements = filtered.length;
+        this.totalPages = Math.max(1, Math.ceil(this.totalElements / this.itemsPerPage));
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        this.restaurants = filtered.slice(start, start + this.itemsPerPage);
+      }
+    });
   }
 
   isOffersPage(): boolean {
@@ -580,8 +610,8 @@ export class Restaurants implements OnInit {
   selectTime(time: string): void {
     this.selectedTime = time;
     this.timeModalOpen = false;
-
     this.selectedBookingTime = time;
+    this.timeFilterActive = true;
     this.applyFilters();
   }
 
@@ -591,6 +621,38 @@ export class Restaurants implements OnInit {
 
     this.selectedBookingGuests = count;
     this.applyFilters();
+  }
+
+  private refreshAvailabilityForVisible(): void {
+    if (!this.restaurants || this.restaurants.length === 0) return;
+
+    const targetDate = this.selectedBookingDate || new Date();
+    const dateStr = this.formatDateToYYYYMMDD(targetDate);
+    const guests = this.selectedBookingGuests || 2;
+    const ids = this.restaurants.map(r => r.id);
+
+    if (ids.length === 0) return;
+
+    this.availabilityLoading = true;
+
+    this.api.getBatchAvailability(ids, dateStr, guests).subscribe({
+      next: (map) => {
+        this.availabilityLoading = false;
+        this.availabilityCache = { ...this.availabilityCache, ...(map || {}) };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.availabilityLoading = false;
+        console.error('[restaurants] availability batch failed', err);
+      }
+    });
+  }
+
+  private formatDateToYYYYMMDD(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   resetBookingFilters(): void {
@@ -605,6 +667,7 @@ export class Restaurants implements OnInit {
     this.selectedDay = new Date().getDate();
     this.currentMonth = new Date().getMonth();
     this.currentYear = new Date().getFullYear();
+    this.timeFilterActive = false;
 
     this.applyFilters();
     this.cdr.detectChanges();
@@ -621,37 +684,9 @@ export class Restaurants implements OnInit {
   }
 
   isRestaurantAvailable(restaurant: RestaurantItem): boolean {
-    if (this.selectedBookingDate && this.selectedBookingTime) {
-      const year = this.selectedBookingDate.getFullYear();
-      const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
-      const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
-      const selectedDateStr = `${year}-${month}-${day}`;
-
-      if (restaurant.timeSlots && restaurant.timeSlots.length > 0) {
-        return restaurant.timeSlots.some(slot => {
-          const slotTime = slot.slotTime as string;
-          if (!slotTime) return false;
-
-          const timeStr = slotTime.substring(0, 5);
-          const selectedTimeStr = this.selectedBookingTime;
-
-          const timeMatch = timeStr === selectedTimeStr;
-          const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
-          const isActive = slot.isActive !== false;
-          const dateMatch = slot.slotDate === selectedDateStr;
-
-          return timeMatch && guestsMatch && isActive && dateMatch;
-        });
-      }
-      return true;
-    }
-
-    if (restaurant.timeSlots && restaurant.timeSlots.length > 0) {
-      return restaurant.timeSlots.some(slot => {
-        return slot.isActive !== false;
-      });
-    }
-    return true;
+    const availability = this.availabilityCache[restaurant.id];
+    if (!availability) return false;
+    return availability.open && (availability.slots || []).length > 0;
   }
 
   applySorting(restaurants: RestaurantItem[]): void {
@@ -698,6 +733,7 @@ export class Restaurants implements OnInit {
     this.searchCity = 'Paris';
     this.currentPage = 1;
 
+    this.timeFilterActive = false;
     this.selectedBookingDate = null;
     this.selectedBookingTime = null;
     this.selectedBookingGuests = 2;
@@ -1141,35 +1177,19 @@ export class Restaurants implements OnInit {
 
     const slotTime = (slot.slotTime as string).substring(0, 5);
 
-    this.modalSelectedTime = slotTime;
+    this.bookingSlotTime = slotTime;
 
     if (slot.slotDate) {
       const dateParts = slot.slotDate.split('-');
       if (dateParts.length === 3) {
-        this.modalSelectedDate = new Date(
+        this.bookingSlotDate = new Date(
           parseInt(dateParts[0]),
           parseInt(dateParts[1]) - 1,
           parseInt(dateParts[2])
         );
       }
-    } else if (!this.selectedBookingDate) {
-      this.modalSelectedDate = new Date();
-    }
-
-    this.selectedBookingTime = slotTime;
-    this.selectedTime = slotTime;
-
-    if (this.modalSelectedDate) {
-      this.selectedBookingDate = this.modalSelectedDate;
-      this.selectedDate = this.formatDate(this.modalSelectedDate);
-      this.selectedDay = this.modalSelectedDate.getDate();
-      this.currentMonth = this.modalSelectedDate.getMonth();
-      this.currentYear = this.modalSelectedDate.getFullYear();
-    }
-
-    if (!this.selectedBookingGuests) {
-      this.selectedBookingGuests = 2;
-      this.selectedGuests = 2;
+    } else {
+      this.bookingSlotDate = this.selectedBookingDate || new Date();
     }
 
     this.selectedRestaurant = rest;
@@ -1182,16 +1202,9 @@ export class Restaurants implements OnInit {
 
     try {
       const depositInfo = await this.api.getRestaurantDeposit(rest.id);
-      console.log('Deposit info:', depositInfo);
-
       if (depositInfo && depositInfo.requiresDeposit === true) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount || 0;
-        console.log('Deposit required! Amount:', this.bookingDepositAmount);
-      } else {
-        this.isPaymentRequired = false;
-        this.bookingDepositAmount = 0;
-        console.log('No deposit required');
       }
     } catch (error) {
       console.error('Error fetching deposit info:', error);
@@ -1199,7 +1212,6 @@ export class Restaurants implements OnInit {
       this.bookingDepositAmount = 0;
     }
 
-    this.applyFilters();
     this.cdr.detectChanges();
   }
 
@@ -1258,8 +1270,8 @@ export class Restaurants implements OnInit {
 
       const reservation = await this.api.createReservation({
         restaurantId: this.selectedRestaurant.id,
-        date: this.selectedTimeslot.slotDate,
-        time: this.selectedTimeslot.slotTime,
+        date: this.formatDateToYYYYMMDD(this.bookingSlotDate!),
+        time: this.bookingSlotTime + ':00',
         guests: this.selectedBookingGuests,
         specialRequests: this.bookingForm.specialRequests || '',
         status: 'PENDING',
@@ -1365,8 +1377,8 @@ export class Restaurants implements OnInit {
     try {
       await this.api.createReservation({
         restaurantId: this.selectedRestaurant.id,
-        date: this.selectedTimeslot.slotDate,
-        time: this.selectedTimeslot.slotTime,
+        date: this.formatDateToYYYYMMDD(this.bookingSlotDate!),
+        time: this.bookingSlotTime + ':00',
         guests: this.selectedBookingGuests,
         specialRequests: this.bookingForm.specialRequests || '',
         status: 'confirmed',
@@ -1391,70 +1403,23 @@ export class Restaurants implements OnInit {
     this.bookingError = '';
   }
 
-  getAvailableTimeSlots(restaurant: RestaurantItem): TimeSlot[] {
-    if (!restaurant.timeSlots) return [];
+  getAvailableTimeSlots(rest: RestaurantItem): any[] {
+    const availability = this.availabilityCache[rest.id];
+    if (!availability || !availability.open) return [];
 
-    let targetDate = this.selectedBookingDate;
-    if (!targetDate) {
-      targetDate = new Date();
-    }
+    const allSlots: string[] = availability.slots || [];
 
-    const year = targetDate.getFullYear();
-    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const day = String(targetDate.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    const selectedTime = this.selectedBookingTime;
+    const filtered = selectedTime
+      ? allSlots.filter(t => t >= selectedTime)
+      : allSlots;
 
-    const guests = this.selectedBookingGuests || 2;
-
-    let slotsForDate = restaurant.timeSlots.filter(slot => {
-      if (slot.isActive === false) return false;
-      if (slot.slotDate !== dateStr) return false;
-      if (slot.maxCapacity && guests > slot.maxCapacity) return false;
-      return true;
-    });
-
-    const today = new Date();
-    const isToday = targetDate.toDateString() === today.toDateString();
-
-    if (isToday) {
-      const currentTime = today.getHours() * 60 + today.getMinutes();
-
-      slotsForDate = slotsForDate.filter(slot => {
-        const slotTime = (slot.slotTime as string).substring(0, 5);
-        const [hours, minutes] = slotTime.split(':').map(Number);
-        const slotMinutes = hours * 60 + minutes;
-
-        return slotMinutes >= currentTime + 30;
-      });
-    }
-
-    if (this.selectedBookingTime) {
-      slotsForDate = slotsForDate.filter(slot => {
-        const slotTime = (slot.slotTime as string).substring(0, 5);
-        return slotTime === this.selectedBookingTime;
-      });
-    }
-
-    if (this.bookingModalOpen && this.modalSelectedTime) {
-      slotsForDate = slotsForDate.filter(slot => {
-        const slotTime = (slot.slotTime as string).substring(0, 5);
-        return slotTime === this.modalSelectedTime;
-      });
-    }
-
-    const seenTimes = new Set<string>();
-    const uniqueSlots = slotsForDate.filter(slot => {
-      const time = (slot.slotTime as string).substring(0, 5);
-      if (seenTimes.has(time)) return false;
-      seenTimes.add(time);
-      return true;
-    });
-
-    return uniqueSlots.sort((a, b) => {
-      const timeA = (a.slotTime as string).substring(0, 5);
-      const timeB = (b.slotTime as string).substring(0, 5);
-      return timeA.localeCompare(timeB);
-    });
+    return filtered.map((time: string) => ({
+      slotTime: time,
+      slotDate: availability.date,
+      maxCapacity: null,
+      isActive: true
+    }));
   }
 
   async isRestaurantRequiresDeposit(restaurant: RestaurantItem): Promise<boolean> {
@@ -1484,15 +1449,10 @@ export class Restaurants implements OnInit {
   closeBookingModal(): void {
     this.bookingModalOpen = false;
     this.selectedTimeslot = null;
+    this.bookingSlotTime = null;
+    this.bookingSlotDate = null;
 
-    this.modalSelectedTime = null;
-    this.modalSelectedDate = null;
-    this.selectedBookingTime = null;
-    this.selectedTime = '19:00';
-
-    if (this.selectedBookingDate) {}
-
-    this.applyFilters();
+    this.cdr.detectChanges();
   }
 
   scrollFilters(offset: number): void {

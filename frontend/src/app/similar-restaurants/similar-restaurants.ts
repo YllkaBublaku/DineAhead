@@ -80,6 +80,16 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   timeSlots: string[] = [];
   private searchTimeout: any;
 
+  totalPages = 0;
+  currentPage = 1;
+
+  availabilityCache: Record<number, any> = {};
+  availabilityLoading = false;
+  timeFilterActive = false;
+
+  bookingSlotTime: string | null = null;
+  bookingSlotDate: Date | null = null;
+
   sortBy = 'averageRating';
   infoMessage: string = '';
 
@@ -192,41 +202,104 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
       );
     }
 
-    if (this.selectedBookingDate && this.selectedBookingTime) {
-      const year = this.selectedBookingDate.getFullYear();
-      const month = String(this.selectedBookingDate.getMonth() + 1).padStart(2, '0');
-      const day = String(this.selectedBookingDate.getDate()).padStart(2, '0');
-      const selectedDateStr = `${year}-${month}-${day}`;
-
-      filtered = filtered.filter(rest => {
-        if (rest.timeSlots && rest.timeSlots.length > 0) {
-          const hasMatch = rest.timeSlots.some(slot => {
-            if (slot.isActive === false) return false;
-            const slotTime = slot.slotTime as string;
-            if (!slotTime) return false;
-
-            const timeStr = slotTime.substring(0, 5);
-            const selectedTimeStr = this.selectedBookingTime;
-
-            const timeMatch = timeStr === selectedTimeStr;
-            const guestsMatch = !slot.maxCapacity || (this.selectedBookingGuests || 2) <= slot.maxCapacity;
-            const dateMatch = slot.slotDate === selectedDateStr;
-
-            return timeMatch && guestsMatch && dateMatch;
-          });
-          return hasMatch;
-        }
-        return true;
-      });
-    }
-
     this.applySorting(filtered);
 
     this.filteredRestaurants = filtered;
     this.totalElements = filtered.length;
-    this.restaurants = filtered.slice(0, 20); // Show up to 20 similar restaurants
 
+    if (!this.selectedBookingDate && !this.selectedBookingTime) {
+      this.paginateAndSetPage();
+      this.refreshAvailabilityForVisible();
+      return;
+    }
+
+    this.refreshAvailabilityThenPaginate(filtered);
+  }
+
+  private paginateAndSetPage(): void {
+    this.totalPages = Math.max(1, Math.ceil(this.totalElements / 20));
+    if (this.currentPage && this.currentPage > this.totalPages) this.currentPage = 1;
+
+    this.restaurants = this.filteredRestaurants.slice(0, 20);
     this.cdr.detectChanges();
+  }
+
+  private refreshAvailabilityThenPaginate(filtered: RestaurantItem[]): void {
+    const targetDate = this.selectedBookingDate || new Date();
+    const dateStr = this.formatDateToYYYYMMDD(targetDate);
+    const guests = this.selectedBookingGuests || 2;
+    const ids = filtered.map(r => r.id);
+
+    if (ids.length === 0) {
+      this.filteredRestaurants = [];
+      this.totalElements = 0;
+      this.restaurants = [];
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.availabilityLoading = true;
+
+    this.api.getBatchAvailability(ids, dateStr, guests).subscribe({
+      next: (map) => {
+        this.availabilityLoading = false;
+        this.availabilityCache = { ...this.availabilityCache, ...(map || {}) };
+
+        let available = filtered.filter(r => {
+          const av = this.availabilityCache[r.id];
+          if (!av?.open) return false;
+          if ((av.slots || []).length === 0) return false;
+
+          if (this.selectedBookingTime) {
+            const hasMatching = (av.slots || []).some((t: string) => t >= this.selectedBookingTime!);
+            if (!hasMatching) return false;
+          }
+          return true;
+        });
+
+        this.filteredRestaurants = available;
+        this.totalElements = available.length;
+        this.restaurants = available.slice(0, 20);
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.availabilityLoading = false;
+        console.error('[similar] availability batch failed', err);
+        this.filteredRestaurants = filtered;
+        this.totalElements = filtered.length;
+        this.restaurants = filtered.slice(0, 20);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private refreshAvailabilityForVisible(): void {
+    if (!this.restaurants || this.restaurants.length === 0) {
+      this.availabilityCache = {};
+      return;
+    }
+
+    const targetDate = this.selectedBookingDate || new Date();
+    const dateStr = this.formatDateToYYYYMMDD(targetDate);
+    const guests = this.selectedBookingGuests || 2;
+    const ids = this.restaurants.map(r => r.id);
+
+    if (ids.length === 0) return;
+
+    this.availabilityLoading = true;
+
+    this.api.getBatchAvailability(ids, dateStr, guests).subscribe({
+      next: (map) => {
+        this.availabilityLoading = false;
+        this.availabilityCache = { ...this.availabilityCache, ...(map || {}) };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.availabilityLoading = false;
+        console.error('[similar] availability batch failed', err);
+      }
+    });
   }
 
   applySorting(restaurants: RestaurantItem[]): void {
@@ -336,6 +409,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     this.selectedTime = time;
     this.timeModalOpen = false;
     this.selectedBookingTime = time;
+    this.timeFilterActive = true;
     this.applyFilters();
   }
 
@@ -350,6 +424,9 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     this.selectedBookingDate = null;
     this.selectedBookingTime = null;
     this.selectedBookingGuests = 2;
+    this.timeFilterActive = false;
+    this.bookingSlotTime = null;
+    this.bookingSlotDate = null;
 
     const today = new Date();
     this.selectedDate = this.formatDate(today);
@@ -362,75 +439,22 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     this.applyFilters();
   }
 
-  getAvailableTimeSlots(restaurant: RestaurantItem): TimeSlot[] {
-    if (!restaurant.timeSlots || restaurant.timeSlots.length === 0) {
-      return [];
-    }
+  getAvailableTimeSlots(restaurant: RestaurantItem): any[] {
+    const availability = this.availabilityCache[restaurant.id];
+    if (!availability || !availability.open) return [];
 
-    let targetDate = this.selectedBookingDate;
-    if (!targetDate) {
-      targetDate = new Date();
+    const allSlots: string[] = availability.slots || [];
 
-      const todayStr = this.formatDateToYYYYMMDD(targetDate);
-      const hasTodaySlots = restaurant.timeSlots.some(slot =>
-        slot.slotDate === todayStr && slot.isActive !== false
-      );
+    const filtered = (this.timeFilterActive && this.selectedBookingTime)
+      ? allSlots.filter(t => t >= this.selectedBookingTime!)
+      : allSlots;
 
-      if (!hasTodaySlots) {
-        const availableDates = restaurant.timeSlots
-          .filter(slot => slot.isActive !== false && slot.slotDate)
-          .map(slot => slot.slotDate)
-          .filter((date): date is string => date !== undefined && date !== null && date !== '')
-          .sort();
-
-        if (availableDates.length > 0) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          for (const dateStr of availableDates) {
-            const [year, month, day] = dateStr.split('-').map(Number);
-            const slotDate = new Date(year, month - 1, day);
-            slotDate.setHours(0, 0, 0, 0);
-
-            if (slotDate >= today) {
-              targetDate = slotDate;
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!targetDate) {
-      return [];
-    }
-
-    const guests = this.selectedBookingGuests || 2;
-    const year = targetDate.getFullYear();
-    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const day = String(targetDate.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-
-    const slotsForDate = restaurant.timeSlots.filter(slot => {
-      if (slot.isActive === false) return false;
-      if (slot.slotDate !== dateStr) return false;
-      if (slot.maxCapacity && guests > slot.maxCapacity) return false;
-      return true;
-    });
-
-    const seenTimes = new Set<string>();
-    const uniqueSlots = slotsForDate.filter(slot => {
-      const time = (slot.slotTime as string).substring(0, 5);
-      if (seenTimes.has(time)) return false;
-      seenTimes.add(time);
-      return true;
-    });
-
-    return uniqueSlots.sort((a, b) => {
-      const timeA = (a.slotTime as string).substring(0, 5);
-      const timeB = (b.slotTime as string).substring(0, 5);
-      return timeA.localeCompare(timeB);
-    });
+    return filtered.map((time: string) => ({
+      slotTime: time,
+      slotDate: availability.date,
+      maxCapacity: null,
+      isActive: true
+    }));
   }
 
   private formatDateToYYYYMMDD(date: Date): string {
@@ -530,24 +554,25 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
       event.stopPropagation();
     }
 
-    this.selectedRestaurantForBooking = rest;
-    this.selectedTimeslotForBooking = slot;
+    const slotTime = (slot.slotTime as string).substring(0, 5);
+
+    this.bookingSlotTime = slotTime;
 
     if (slot.slotDate) {
       const dateParts = slot.slotDate.split('-');
       if (dateParts.length === 3) {
-        this.selectedBookingDate = new Date(
+        this.bookingSlotDate = new Date(
           parseInt(dateParts[0]),
           parseInt(dateParts[1]) - 1,
           parseInt(dateParts[2])
         );
       }
+    } else {
+      this.bookingSlotDate = this.selectedBookingDate || new Date();
     }
 
-    if (slot.slotTime) {
-      this.selectedBookingTime = (slot.slotTime as string).substring(0, 5);
-    }
-
+    this.selectedRestaurantForBooking = rest;
+    this.selectedTimeslotForBooking = slot;
     this.bookingModalOpen = true;
     this.bookingSuccess = false;
     this.bookingError = '';

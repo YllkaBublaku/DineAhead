@@ -613,4 +613,17 @@ export class ApiService {
   updateRestaurant(id: number, updates: any): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/restaurants/${id}`, updates);
   }
+
+  getAvailability(restaurantId: number, date: string, guests: number): Observable<any> {
+    return this.http.get<any>(
+      `${this.apiUrl}/restaurants/${restaurantId}/availability?date=${date}&guests=${guests}`
+    );
+  }
+
+  getBatchAvailability(restaurantIds: number[], date: string, guests: number): Observable<Record<number, any>> {
+    return this.http.post<Record<number, any>>(
+      `${this.apiUrl}/restaurants/availability/batch`,
+      { restaurantIds, date, guests }
+    );
+  }
 }

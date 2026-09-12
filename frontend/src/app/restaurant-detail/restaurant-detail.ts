@@ -8,6 +8,7 @@ import * as L from 'leaflet';
 import {FavoritesService} from '../services/favorites.service';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 export interface MenuItem {
   id: number;
@@ -121,6 +122,17 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   selectedDate: Date | null = null;
   selectedTime: string | null = null;
   selectedGuests: number = 2;
+
+  guestAvailability: Record<number, boolean> = {};
+  guestsLoading = false;
+
+
+  availableSlots: string[] = [];
+  slotsLoading = false;
+  slotsError = '';
+  availabilityOpen = true;
+  availabilityReason = '';
+
   availableTimes: string[] = [];
   guestOptions: number[] = Array.from({length: 30}, (_, i) => i + 1);
 
@@ -140,6 +152,9 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   private mapInitialized = false;
   private mapInitAttempts = 0;
   private maxMapRetries = 5;
+
+  weeklyHours: { dayOfWeek: number, isClosed: boolean }[] = [];
+  overrides: { date: string, isClosed: boolean }[] = [];
 
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
   private map: any;
@@ -334,8 +349,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       offer: data.specialOffer || null,
       requiresDeposit: data.requiresDeposit || false,
       depositAmount: data.depositAmount || 0,
-      menuItems: data.menuItems || [],
-      timeSlots: data.timeSlots || []
+      menuItems: data.menuItems || []
     };
   }
 
@@ -499,6 +513,37 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     return `${months[this.currentMonth]} ${this.currentYear}`;
   }
 
+  private formatDateToYYYYMMDD(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private loadWeeklyHoursAndOverrides(): void {
+    if (!this.restaurant) return;
+
+    const id = this.restaurant.id;
+
+    Promise.all([
+      firstValueFrom(this.api.getHoursByRestaurant(id)).catch(() => []),
+      firstValueFrom(this.api.getOverridesByRestaurant(id)).catch(() => [])
+    ]).then(([hours, overrides]) => {
+      this.weeklyHours = (hours || []).map((h: any) => ({
+        dayOfWeek: h.dayOfWeek,
+        isClosed: h.isClosed === true
+      }));
+
+      this.overrides = (overrides || []).map((o: any) => ({
+        date: o.overrideDate,
+        isClosed: o.isClosed === true
+      }));
+
+      this.generateCalendar();
+      this.cdr.detectChanges();
+    });
+  }
+
   generateTags(): void {
     const tags = new Set<string>();
     if (this.restaurant) {
@@ -591,6 +636,25 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.bookingMessage = '';
 
     try {
+      const availabilityDateStr = this.formatDateToYYYYMMDD(this.selectedDate);
+      const avail: any = await firstValueFrom(
+        this.api.getAvailability(this.restaurant.id, availabilityDateStr, this.selectedGuests)
+      );
+
+      if (!avail?.open) {
+        this.bookingError = 'The restaurant is closed on this date.';
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      if (!(avail.slots || []).includes(this.selectedTime)) {
+        this.bookingError = `This slot is no longer available for ${this.selectedGuests} guests. Please pick a different time or party size.`;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+        return;
+      }
+
       if (this.isPaymentRequired && this.bookingForm.paymentMethod === 'card') {
         this.paymentModalOpen = true;
         this.bookingLoading = false;
@@ -727,63 +791,97 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.bookingMessage = '';
     this.bookingError = '';
     this.bookingLoading = false;
+    this.availableSlots = [];
+    this.availabilityOpen = true;
+    this.availabilityReason = '';
     this.bookingForm.specialRequests = '';
     this.bookingForm.paymentMethod = 'card';
     this.resetBooking();
     this.cdr.detectChanges();
   }
 
-  hasAvailableSlotsForDate(day: number): boolean {
-    console.log('Checking slots for day:', day);
-    console.log('Restaurant:', this.restaurant?.name);
-    console.log('TimeSlots:', this.restaurant?.timeSlots);
-
-    if (!this.restaurant?.timeSlots || this.restaurant.timeSlots.length === 0) {
-      console.log('No time slots available for this restaurant');
-      return false;
+  private fetchAvailability(): void {
+    if (!this.restaurant || !this.selectedDate) {
+      this.availableSlots = [];
+      return;
     }
 
-    const date = new Date(this.currentYear, this.currentMonth, day);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const dayStr = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${dayStr}`;
+    const dateStr = this.formatDateToYYYYMMDD(this.selectedDate);
+    const guests = this.selectedGuests || 2;
 
-    console.log('Looking for date:', dateStr);
-    console.log('Available slot dates:', this.restaurant.timeSlots.map(s => s.slotDate));
+    this.slotsLoading = true;
+    this.slotsError = '';
 
-    const hasSlots = this.restaurant.timeSlots.some(slot =>
-      slot.slotDate === dateStr &&
-      slot.isActive !== false
-    );
-
-    console.log('Has slots for date', dateStr, '?', hasSlots);
-    return hasSlots;
+    this.api.getAvailability(this.restaurant.id, dateStr, guests).subscribe({
+      next: (res: any) => {
+        this.slotsLoading = false;
+        this.availabilityOpen = res?.open ?? true;
+        this.availabilityReason = res?.reason || '';
+        this.availableSlots = res?.slots || [];
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.slotsLoading = false;
+        this.slotsError = 'Could not load available times.';
+        this.availableSlots = [];
+        console.error('[detail] availability failed', err);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  getAvailableTimesForDate(): string[] {
-    if (!this.restaurant?.timeSlots || !this.selectedDate) {
-      return [];
-    }
+  hasAvailableSlotsForDate(day: number): boolean {
+    const date = new Date(this.currentYear, this.currentMonth, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
 
-    const year = this.selectedDate.getFullYear();
-    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(this.selectedDate.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    if (date < today) return false;
 
-    const slots = this.restaurant.timeSlots
-      .filter(slot =>
-        slot.slotDate === dateStr &&
-        slot.isActive !== false
-      )
-      .map(slot => {
-        const time = slot.slotTime as string;
-        return time.substring(0, 5);
-      })
-      .filter((time, index, self) => self.indexOf(time) === index)
-      .sort();
+    const dateStr = this.formatDateToYYYYMMDD(date);
+    const override = this.overrides.find(o => o.date === dateStr);
+    if (override) return !override.isClosed;
 
-    return slots;
+    const dow = date.getDay() === 0 ? 7 : date.getDay();
+    const hours = this.weeklyHours.find(h => h.dayOfWeek === dow);
+
+    if (!hours) return this.weeklyHours.length === 0;
+
+    return !hours.isClosed;
+  }
+
+  private checkAllGuestCounts(): void {
+    if (!this.restaurant || !this.selectedDate || !this.selectedTime) return;
+
+    const dateStr = this.formatDateToYYYYMMDD(this.selectedDate);
+    const counts = this.guestOptions;
+
+    this.guestsLoading = true;
+
+    let pending = counts.length;
+    counts.forEach(count => {
+      this.api.getAvailability(this.restaurant!.id, dateStr, count).subscribe({
+        next: (res: any) => {
+          this.guestAvailability[count] =
+            res?.open === true
+            && Array.isArray(res.slots)
+            && res.slots.includes(this.selectedTime);
+          pending--;
+          if (pending === 0) {
+            this.guestsLoading = false;
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.guestAvailability[count] = false;
+          pending--;
+          if (pending === 0) {
+            this.guestsLoading = false;
+            this.cdr.detectChanges();
+          }
+        }
+      });
+    });
   }
 
   isTimeSlotAvailable(time: string): boolean {
@@ -1143,6 +1241,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.selectedDate = selectedDate;
     this.selectedTime = null;
     this.bookingStep = 'time';
+    this.fetchAvailability();
     this.cdr.detectChanges();
   }
 
@@ -1153,18 +1252,48 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
     this.selectedTime = time;
     this.bookingStep = 'guests';
+    this.checkAllGuestCounts();
     this.cdr.detectChanges();
   }
 
 
-  selectGuests(count: number): void {
-    if (!this.isGuestCountAvailable(count)) {
+  async selectGuests(count: number): Promise<void> {
+    if (!this.restaurant || !this.selectedDate || !this.selectedTime) {
+
+      this.selectedGuests = count;
+      this.bookingStep = 'guests';
+      this.cdr.detectChanges();
       return;
     }
 
-    this.selectedGuests = count;
-    this.bookingStep = 'guests';
-    this.cdr.detectChanges();
+    const dateStr = this.formatDateToYYYYMMDD(this.selectedDate);
+
+    try {
+      const avail: any = await firstValueFrom(
+        this.api.getAvailability(this.restaurant.id, dateStr, count)
+      );
+
+      const fits =
+        avail?.open === true
+        && Array.isArray(avail.slots)
+        && avail.slots.includes(this.selectedTime);
+
+      if (!fits) {
+        this.bookingError =
+          `Sorry, we can't seat ${count} guests at ${this.selectedTime}. Please try fewer guests or pick a different time.`;
+        this.cdr.detectChanges();
+        return;
+      }
+
+      this.bookingError = '';
+      this.selectedGuests = count;
+      this.bookingStep = 'guests';
+      this.cdr.detectChanges();
+    } catch (err) {
+      console.error('[detail] guest availability check failed', err);
+      this.bookingError = 'Could not verify availability. Please try again.';
+      this.cdr.detectChanges();
+    }
   }
 
   goBackToDate(): void {
@@ -1175,6 +1304,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   goBackToTime(): void {
     this.bookingStep = 'time';
+    this.fetchAvailability();
     this.cdr.detectChanges();
   }
 
@@ -1210,12 +1340,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.selectedDate = null;
     this.selectedTime = null;
     this.selectedGuests = 2;
+    this.availableSlots = [];
+    this.availabilityOpen = true;
+    this.availabilityReason = '';
     this.cdr.detectChanges();
   }
 
   getFormattedDate(): string {
     if (!this.selectedDate) return 'Select a date';
-    const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     return this.selectedDate.toLocaleDateString('en-US', options);
   }
 

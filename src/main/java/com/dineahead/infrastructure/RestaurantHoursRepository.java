@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface RestaurantHoursRepository extends JpaRepository<RestaurantHours, Long> {
     List<RestaurantHours> findByRestaurantId(Long restaurantId);
+    List<RestaurantHours> findByRestaurantIdAndDayOfWeek(Long restaurantId, Integer dayOfWeek);
 }

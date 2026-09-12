@@ -172,7 +172,7 @@
             }
           </div>
 
-          @if (selectedBookingDate || selectedBookingTime) {
+          @if (selectedBookingDate || timeFilterActive) {
             <div class="h-3.5 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
             <button (click)="resetBookingFilters()"
                     class="flex items-center gap-1 pl-2.5 pr-2 py-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition">
@@ -383,11 +383,11 @@
             <div class="grid grid-cols-3 gap-2 mb-4 text-sm">
               <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Date</span>
-                <span class="font-semibold">{{ selectedBookingDate | date:'MMM d, yyyy' }}</span>
+                <span class="font-semibold">{{ bookingSlotDate  | date:'MMM d, yyyy' }}</span>
               </div>
               <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Time</span>
-                <span class="font-semibold">{{ selectedTimeslotForBooking?.slotTime | timeFormat }}</span>
+                <span class="font-semibold">{{ bookingSlotTime  }}</span>
               </div>
               <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                 <span class="text-gray-500 dark:text-gray-400 block text-xs">Guests</span>

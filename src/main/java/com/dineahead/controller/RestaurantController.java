@@ -1,17 +1,11 @@
 package com.dineahead.controller;
 
-import com.dineahead.application.FeatureService;
-import com.dineahead.application.RestaurantImageService;
-import com.dineahead.application.RestaurantService;
-import com.dineahead.application.ReviewService;
-import com.dineahead.domain.Restaurant;
-import com.dineahead.domain.RestaurantResponseDTO;
-import com.dineahead.domain.Review;
-import com.dineahead.domain.ReviewDTO;
+import com.dineahead.application.*;
+import com.dineahead.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,12 +17,14 @@ public class RestaurantController {
     private final FeatureService featureService;
     private final ReviewService reviewService;
     private final RestaurantImageService restaurantImageService;
+    private final AvailabilityService availabilityService;
 
-    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService, AvailabilityService availabilityService) {
         this.restaurantService = restaurantService;
         this.featureService = featureService;
         this.reviewService = reviewService;
         this.restaurantImageService = restaurantImageService;
+        this.availabilityService = availabilityService;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
@@ -102,5 +98,33 @@ public class RestaurantController {
                                                                   @RequestBody Map<String, Object> updates) {
         Restaurant updated = restaurantService.updateRestaurant(id, updates);
         return ResponseEntity.ok(new RestaurantResponseDTO(updated));
+    }
+
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<AvailabilityDTO> getAvailability(
+            @PathVariable Long id,
+            @RequestParam String date,
+            @RequestParam(defaultValue = "2") int guests) {
+        return ResponseEntity.ok(
+                availabilityService.getAvailability(id, LocalDate.parse(date), guests)
+        );
+    }
+
+    @PostMapping("/availability/batch")
+    public ResponseEntity<Map<Long, AvailabilityDTO>> getBatchAvailability(
+            @RequestBody Map<String, Object> body) {
+
+        @SuppressWarnings("unchecked")
+        List<Integer> rawIds = (List<Integer>) body.get("restaurantIds");
+        List<Long> ids = rawIds.stream().map(Long::valueOf).collect(Collectors.toList());
+
+        String dateStr = (String) body.get("date");
+        int guests = body.get("guests") != null
+                ? Integer.parseInt(body.get("guests").toString())
+                : 2;
+
+        return ResponseEntity.ok(
+                availabilityService.getBatchAvailability(ids, LocalDate.parse(dateStr), guests)
+        );
     }
 }
