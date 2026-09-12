@@ -54,23 +54,53 @@
 
         <div class="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
           <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-4">Revenue This Week</h2>
+
           <div class="flex items-end gap-2 h-24">
-            <div class="flex-1 bg-emerald-100 rounded-t-md h-[40%]"></div>
-            <div class="flex-1 bg-emerald-100 rounded-t-md h-[60%]"></div>
-            <div class="flex-1 bg-emerald-200 rounded-t-md h-[80%]"></div>
-            <div class="flex-1 bg-emerald-200 rounded-t-md h-[55%]"></div>
-            <div class="flex-1 bg-[#005943] rounded-t-md h-[90%]"></div>
-            <div class="flex-1 bg-emerald-100 rounded-t-md h-[70%]"></div>
-            <div class="flex-1 bg-emerald-100 rounded-t-md h-[45%]"></div>
+            @if (stats.weekRevenue && stats.weekRevenue.length > 0) {
+              @for (value of stats.weekRevenue; track $index) {
+                @let pct = maxWeekRevenue() > 0 ? (value / maxWeekRevenue()) * 100 : 0;
+                <div class="flex-1 rounded-t-md transition-all duration-300"
+                     [style.height.%]="pct > 0 ? pct : 2"
+                     [class.bg-[#005943]]="isTodayIndex($index)"
+                     [class.bg-emerald-100]="!isTodayIndex($index) && value === 0"
+                     [class.bg-emerald-200]="!isTodayIndex($index) && value > 0"
+                     [title]="'€' + value">
+                </div>
+              }
+            } @else {
+              <div class="w-full text-center text-xs text-gray-400 self-center">No revenue data yet</div>
+            }
           </div>
+
           <div class="flex gap-2 mt-2">
-            <span class="flex-1 text-center text-[10px] text-gray-400">Mon</span>
-            <span class="flex-1 text-center text-[10px] text-gray-400">Tue</span>
-            <span class="flex-1 text-center text-[10px] text-gray-400">Wed</span>
-            <span class="flex-1 text-center text-[10px] text-gray-400">Thu</span>
-            <span class="flex-1 text-center text-[10px] font-bold text-[#005943]">Fri</span>
-            <span class="flex-1 text-center text-[10px] text-gray-400">Sat</span>
-            <span class="flex-1 text-center text-[10px] text-gray-400">Sun</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(0)"
+                  [class.font-bold]="isTodayIndex(0)"
+                  [class.text-gray-400]="!isTodayIndex(0)">Mon</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(1)"
+                  [class.font-bold]="isTodayIndex(1)"
+                  [class.text-gray-400]="!isTodayIndex(1)">Tue</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(2)"
+                  [class.font-bold]="isTodayIndex(2)"
+                  [class.text-gray-400]="!isTodayIndex(2)">Wed</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(3)"
+                  [class.font-bold]="isTodayIndex(3)"
+                  [class.text-gray-400]="!isTodayIndex(3)">Thu</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(4)"
+                  [class.font-bold]="isTodayIndex(4)"
+                  [class.text-gray-400]="!isTodayIndex(4)">Fri</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(5)"
+                  [class.font-bold]="isTodayIndex(5)"
+                  [class.text-gray-400]="!isTodayIndex(5)">Sat</span>
+            <span class="flex-1 text-center text-[10px]"
+                  [class.text-[#005943]]="isTodayIndex(6)"
+                  [class.font-bold]="isTodayIndex(6)"
+                  [class.text-gray-400]="!isTodayIndex(6)">Sun</span>
           </div>
         </div>
 

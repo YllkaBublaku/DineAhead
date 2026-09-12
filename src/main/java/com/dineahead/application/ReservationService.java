@@ -1,9 +1,6 @@
 package com.dineahead.application;
 
-import com.dineahead.domain.Reservation;
-import com.dineahead.domain.ReservationDTO;
-import com.dineahead.domain.RestaurantDepositSettings;
-import com.dineahead.domain.User;
+import com.dineahead.domain.*;
 import com.dineahead.domain.enums.PaymentMethod;
 import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.infrastructure.ReservationRepository;
@@ -17,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -91,11 +89,6 @@ public class ReservationService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public List<Reservation> getReservationsByRestaurantAndDate(Long restaurantId, LocalDate date) {
-        return reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date);
-    }
-
     @Transactional
     public Reservation confirmReservation(Long id) {
         Reservation reservation = reservationRepository.findById(id)
@@ -122,5 +115,58 @@ public class ReservationService {
     public ReservationDTO updateReservation(Reservation reservation) {
         Reservation updated = reservationRepository.save(reservation);
         return ReservationDTO.fromEntity(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public RestaurantStatsDTO getStatsForRestaurant(Long restaurantId) {
+        LocalDate today = LocalDate.now();
+
+        long todayBookings = reservationRepository.countByRestaurantAndDate(restaurantId, today);
+        long upcoming = reservationRepository.countUpcoming(restaurantId, today);
+
+        long total = reservationRepository.countByRestaurantAndDate(restaurantId, today);
+        long noShows = reservationRepository.countByRestaurantAndStatus(restaurantId, ReservationStatus.NO_SHOW);
+
+        String noShowRate;
+        if (total == 0) {
+            noShowRate = "0%";
+        } else {
+            double rate = (noShows * 100.0) / total;
+            noShowRate = String.format("%.1f%%", rate);
+        }
+
+        BigDecimal revenue = reservationRepository.sumRevenueForDate(restaurantId, today);
+        if (revenue == null) revenue = BigDecimal.ZERO;
+
+        LocalDate monday = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate sunday = monday.plusDays(6);
+
+        List<BigDecimal> weekRevenue = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = monday.plusDays(i);
+            BigDecimal dayRev = reservationRepository.sumRevenueForDate(restaurantId, day);
+            weekRevenue.add(dayRev != null ? dayRev : BigDecimal.ZERO);
+        }
+
+        return new RestaurantStatsDTO(todayBookings, upcoming, noShowRate, revenue, weekRevenue);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReservationDTO> getReservationsByRestaurantAndDate(Long restaurantId, LocalDate date) {
+        List<Reservation> reservations = reservationRepository
+                .findByRestaurantIdAndReservationDate(restaurantId, date);
+
+        reservations.forEach(r -> {
+            if (r.getRestaurant() != null) r.getRestaurant().getName();
+            if (r.getUser() != null) {
+                r.getUser().getFirstName();
+                r.getUser().getLastName();
+                r.getUser().getEmail();
+            }
+        });
+
+        return reservations.stream()
+                .map(ReservationDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 }

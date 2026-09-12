@@ -536,4 +536,14 @@ export class ApiService {
       throw error;
     }
   }
+
+  getRestaurantStats(restaurantId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/reservations/restaurant/${restaurantId}/stats`);
+  }
+
+  getReservationsByRestaurantAndDate(restaurantId: number, date: string): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.apiUrl}/reservations/restaurant/${restaurantId}/date/${date}`
+    );
+  }
 }

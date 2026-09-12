@@ -29,6 +29,9 @@ public class ReservationDTO {
     private BigDecimal depositAmount;
     private LocalDateTime createdAt;
     private String paymentMethod;
+    private String customerFirstName;
+    private String customerLastName;
+    private Integer tableNumber;
 
     public static ReservationDTO fromEntity(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();
@@ -42,6 +45,8 @@ public class ReservationDTO {
         if (reservation.getUser() != null) {
             dto.setUserId(reservation.getUser().getId());
             dto.setUserEmail(reservation.getUser().getEmail());
+            dto.setCustomerFirstName(reservation.getUser().getFirstName());
+            dto.setCustomerLastName(reservation.getUser().getLastName());
         }
 
         dto.setReservationDate(reservation.getReservationDate());

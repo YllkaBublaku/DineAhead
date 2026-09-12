@@ -4,6 +4,7 @@ import com.dineahead.application.ReservationService;
 import com.dineahead.domain.Reservation;
 import com.dineahead.domain.ReservationDTO;
 import com.dineahead.domain.enums.ReservationStatus;
+import com.dineahead.infrastructure.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -53,18 +55,28 @@ public class ReservationController {
     }
 
     @GetMapping("/restaurant/{restaurantId}/date/{date}")
-    public ResponseEntity<List<Reservation>> getReservationsByDate(@PathVariable Long restaurantId, @PathVariable String date) {
-        return ResponseEntity.ok(reservationService.getReservationsByRestaurantAndDate(restaurantId, LocalDate.parse(date)));
+    public ResponseEntity<List<ReservationDTO>> getReservationsByDate(
+            @PathVariable Long restaurantId,
+            @PathVariable String date) {
+        return ResponseEntity.ok(
+                reservationService.getReservationsByRestaurantAndDate(restaurantId, LocalDate.parse(date))
+        );
     }
 
     @PutMapping("/{id}/confirm")
-    public ResponseEntity<Reservation> confirmReservation(@PathVariable Long id) {
-        return ResponseEntity.ok(reservationService.confirmReservation(id));
+    public ResponseEntity<ReservationDTO> confirmReservation(@PathVariable Long id) {
+        Reservation updated = reservationService.confirmReservation(id);
+        if (updated.getRestaurant() != null) updated.getRestaurant().getName();
+        if (updated.getUser() != null) updated.getUser().getFirstName();
+        return ResponseEntity.ok(ReservationDTO.fromEntity(updated));
     }
 
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<Reservation> cancelReservation(@PathVariable Long id) {
-        return ResponseEntity.ok(reservationService.cancelReservation(id));
+    public ResponseEntity<ReservationDTO> cancelReservation(@PathVariable Long id) {
+        Reservation updated = reservationService.cancelReservation(id);
+        if (updated.getRestaurant() != null) updated.getRestaurant().getName();
+        if (updated.getUser() != null) updated.getUser().getFirstName();
+        return ResponseEntity.ok(ReservationDTO.fromEntity(updated));
     }
 
     @PatchMapping("/{id}")
@@ -125,5 +137,10 @@ public class ReservationController {
             log.error("Reservation not found: {}", id);
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/restaurant/{restaurantId}/stats")
+    public ResponseEntity<com.dineahead.domain.RestaurantStatsDTO> getStats(@PathVariable Long restaurantId) {
+        return ResponseEntity.ok(reservationService.getStatsForRestaurant(restaurantId));
     }
 }

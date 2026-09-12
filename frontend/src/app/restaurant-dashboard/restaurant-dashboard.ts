@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ApiService } from '../services/api.service';
 
 @Component({
   selector: 'app-restaurant-dashboard',
@@ -10,75 +11,209 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './restaurant-dashboard.html',
   styleUrl: './restaurant-dashboard.css'
 })
-export class RestaurantDashboard {
+export class RestaurantDashboard implements OnInit {
   isSidebarOpen = signal(true);
   activeTab = signal<'overview' | 'reservations' | 'tables' | 'schedule' | 'reviews' | 'profile'>('overview');
 
-  constructor(private router: Router) {}
+  restaurantId: number | null = null;
+  restaurant = {
+    name: '',
+    first: '',
+    last: '',
+    joined: '',
+    avatar: ''
+  };
 
-  toggleSidebar() { this.isSidebarOpen.update(val => !val); }
+  loading = signal(false);
+  error = signal('');
+
+  constructor(
+    private router: Router,
+    private api: ApiService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.loadOwnerRestaurant();
+  }
+
+  loadOwnerRestaurant(): void {
+    const stored = localStorage.getItem('user');
+    if (!stored) { this.error.set('You are not logged in.'); return; }
+
+    const user = JSON.parse(stored);
+    const ownerId = user.id ?? user.userId;
+    if (!ownerId) { this.error.set('No user id found.'); return; }
+
+    this.loading.set(true);
+
+    this.api.getRestaurantsByOwner(ownerId).subscribe({
+      next: (restaurants: any[]) => {
+        this.loading.set(false);
+        const r = restaurants && restaurants.length ? restaurants[0] : null;
+        if (!r) { this.error.set('No restaurant found for this account.'); return; }
+
+        this.restaurantId = r.id;
+
+        const joinedYear = r.createdAt
+          ? new Date(r.createdAt).getFullYear().toString()
+          : '';
+
+        const nextRestaurant = {
+          name: r.name || '',
+          first: user.firstName || '',
+          last: user.lastName || '',
+          joined: joinedYear,
+          avatar: this.getRestaurantInitials(r.name || '')
+        };
+
+        console.log('[Dashboard] About to set restaurant:', nextRestaurant);
+
+        this.restaurant = { ...nextRestaurant };
+
+        this.cdr.detectChanges();
+
+        this.loadReservations();
+        this.loadReviews();
+        this.loadTables();
+        this.loadSchedule();
+        this.loadOverrides();
+        this.loadProfile();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set('Could not load restaurant: ' + (err?.error?.message || err.message));
+        console.error('[Dashboard] load error:', err);
+      }
+    });
+  }
+
+  private getRestaurantInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'R';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  loadReservations(): void {
+    if (!this.restaurantId) return;
+    this.loadTodayReservations();
+  }
+
+  private loadTodayReservations(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getRestaurantStats(this.restaurantId).subscribe({
+      next: (s: any) => {
+        this.stats = {
+          todayBookings: s.todayBookings ?? 0,
+          upcoming: s.upcoming ?? 0,
+          noShowRate: s.noShowRate ?? '0%',
+          revenue: '€' + Number(s.revenue ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 }),
+          weekRevenue: Array.isArray(s.weekRevenue)
+            ? s.weekRevenue.map((v: any) => Number(v) || 0)
+            : []
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[Dashboard] stats load failed', err);
+      }
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    this.api.getReservationsByRestaurantAndDate(this.restaurantId, today).subscribe({
+      next: (raw: any) => {
+        let list: any[] = [];
+        if (Array.isArray(raw)) {
+          list = raw;
+        } else if (raw && Array.isArray(raw.content)) {
+          list = raw.content;
+        } else if (raw && Array.isArray(raw.data)) {
+          list = raw.data;
+        } else if (raw && typeof raw === 'object') {
+          list = [raw];
+        }
+
+        this.reservations = list.map((r: any) => {
+          const first = r.customerFirstName || r.user?.firstName || '';
+          const last  = r.customerLastName  || r.user?.lastName  || '';
+          const name  = `${first} ${last}`.trim() || 'Guest';
+
+          return {
+            id: r.id,
+            name,
+            time: r.reservationTime ? String(r.reservationTime).substring(0, 5) : '',
+            guests: r.partySize ?? 0,
+            table: r.tableNumber != null ? 'T' + r.tableNumber : '-',
+            status: this.formatStatus(r.status),
+            type: r.specialRequests || 'Dinner'
+          };
+        });
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[Dashboard] today reservations load failed', err);
+        this.reservations = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private formatStatus(status: string): string {
+    if (!status) return 'Pending';
+    const map: Record<string, string> = {
+      PENDING: 'Pending',
+      CONFIRMED: 'Confirmed',
+      SEATED: 'Seated',
+      NO_SHOW: 'No Show',
+      CANCELLED: 'Cancelled'
+    };
+    return map[status.toUpperCase()] || 'Pending';
+  }
+
+  maxWeekRevenue(): number {
+    const arr = this.stats.weekRevenue || [];
+    return arr.length ? Math.max(...arr, 1) : 1;
+  }
+
+  isTodayIndex(index: number): boolean {
+    const jsDay = new Date().getDay();
+    const idx = jsDay === 0 ? 6 : jsDay - 1;
+    return index === idx;
+  }
+
+  loadReviews(): void {}
+  loadTables(): void {}
+  loadSchedule(): void {}
+  loadOverrides(): void {}
+  loadProfile(): void {}
+
+  toggleSidebar() { this.isSidebarOpen.update(v => !v); }
   setTab(tab: 'overview' | 'reservations' | 'tables' | 'schedule' | 'reviews' | 'profile') {
     this.activeTab.set(tab);
     if (window.innerWidth < 1024) this.isSidebarOpen.set(false);
   }
-  logout() { this.router.navigate(['/']); }
-
-  restaurant = {
-    name: 'Le Comptoir Foch',
-    first: 'Yllka',
-    last: 'Bublaku',
-    joined: '2022',
-    avatar: 'Y'
-  };
+  logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    this.router.navigate(['/']);
+  }
 
   stats = {
-    todayBookings: 24,
-    upcoming: 12,
-    noShowRate: '4.2%',
-    revenue: '€1,250'
+    todayBookings: 0,
+    upcoming: 0,
+    noShowRate: '0%',
+    revenue: '€0',
+    weekRevenue: [] as number[]
   };
 
-  reservations = [
-    { id: 1, name: 'John Doe', time: '19:00', guests: 2, table: 'T1', status: 'Confirmed', type: 'Dinner' },
-    { id: 2, name: 'Sarah Smith', time: '19:30', guests: 4, table: 'T2', status: 'Pending', type: 'Dinner' },
-    { id: 3, name: 'Mike Johnson', time: '20:00', guests: 2, table: 'T3', status: 'Confirmed', type: 'Dinner' },
-    { id: 4, name: 'Emma Wilson', time: '20:30', guests: 6, table: 'T4', status: 'Seated', type: 'Dinner' }
-  ];
-
-  tables = [
-    { id: 1, name: 'T1', seats: 2, status: 'Available' },
-    { id: 2, name: 'T2', seats: 4, status: 'Reserved' },
-    { id: 3, name: 'T3', seats: 4, status: 'Occupied' },
-    { id: 4, name: 'T4', seats: 6, status: 'Available' }
-  ];
-
-  schedule = [
-    { day: 'Monday', open: '11:00', close: '22:00', status: 'Open' },
-    { day: 'Tuesday', open: '11:00', close: '22:00', status: 'Open' },
-    { day: 'Wednesday', open: '11:00', close: '22:00', status: 'Open' },
-    { day: 'Thursday', open: '11:00', close: '22:00', status: 'Open' },
-    { day: 'Friday', open: '11:00', close: '23:30', status: 'Open' },
-    { day: 'Saturday', open: '11:00', close: '23:30', status: 'Open' },
-    { day: 'Sunday', open: '12:00', close: '21:00', status: 'Closed' }
-  ];
-
-  scheduleOverrides = [
-    { date: 'Dec 25, 2026', reason: 'Christmas Day', status: 'Closed', open: '', close: '' },
-    { date: 'Dec 31, 2026', reason: 'New Year\'s Eve', status: 'Open', open: '18:00', close: '02:00' },
-    { date: 'Jan 1, 2027', reason: 'New Year\'s Day', status: 'Closed', open: '', close: '' }
-  ];
-
-  reviews = [
-    { id: 1, author: 'Jennifer E.', rating: '10', date: 'Aug 2, 2026', text: 'Lovely quiet area away from everything else. Excellent service and food was wonderful.', response: '' },
-    { id: 2, author: 'Michael R.', rating: '9', date: 'Jul 15, 2026', text: 'Great food, but the waiter was a bit slow. Will go back though!', response: 'Thank you Michael! We appreciate your feedback and will work on service speed.' }
-  ];
-
-  profile = {
-    restaurantName: 'Le Comptoir Foch',
-    address: '176 Rue de la Pompe, 75016 Paris',
-    siret: '123 456 789 00012',
-    phone: '+33 1 45 00 00 00',
-    email: 'contact@lecomptoirfoch.com',
-    bankAccount: 'FR76 3000 4028 3798 7654 3210 943'
-  };
+  reservations: any[] = [];
+  tables: any[] = [];
+  schedule: any[] = [];
+  scheduleOverrides: any[] = [];
+  reviews: any[] = [];
+  profile = { restaurantName: '', address: '', siret: '', phone: '', email: '', bankAccount: '' };
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,6 +37,7 @@ public class RestaurantResponseDTO {
     private BigDecimal depositAmount;
     private String cityImageUrl;
     private String cuisineImageUrl;
+    private LocalDateTime createdAt;
 
     public RestaurantResponseDTO(Restaurant restaurant) {
         this.id = restaurant.getId();
@@ -105,5 +107,7 @@ public class RestaurantResponseDTO {
         this.depositAmount = restaurant.getDepositAmount();
         this.cityImageUrl = restaurant.getCityImageUrl();
         this.cuisineImageUrl = restaurant.getCuisineImageUrl();
+        this.createdAt = restaurant.getCreatedAt();
     }
+
 }
