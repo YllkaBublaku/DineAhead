@@ -118,4 +118,34 @@ public class ReviewService {
 
         return response;
     }
+
+    @Transactional
+    public ReviewDTO respondToReview(Long reviewId, String response) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found: " + reviewId));
+
+        review.setOwnerResponse(response);
+        review.setOwnerRespondedAt(LocalDateTime.now());
+        reviewRepository.save(review);
+
+        return toDto(review);
+    }
+
+    private ReviewDTO toDto(Review r) {
+        ReviewDTO dto = new ReviewDTO();
+        dto.setId(r.getId());
+        if (r.getUser() != null) {
+            dto.setUserName((r.getUser().getFirstName() + " " + r.getUser().getLastName()).trim());
+        }
+        dto.setRating(r.getRating());
+        dto.setFoodRating(r.getFoodRating());
+        dto.setServiceRating(r.getServiceRating());
+        dto.setAmbianceRating(r.getAmbianceRating());
+        dto.setComment(r.getComment());
+        dto.setCreatedAt(r.getCreatedAt());
+        dto.setHelpfulCount(r.getHelpfulCount());
+        dto.setOwnerResponse(r.getOwnerResponse());
+        dto.setOwnerRespondedAt(r.getOwnerRespondedAt());
+        return dto;
+    }
 }

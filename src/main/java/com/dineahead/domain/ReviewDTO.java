@@ -21,6 +21,8 @@ public class ReviewDTO {
     private Integer helpfulCount;
     private Long restaurantId;
     private String restaurantName;
+    private String ownerResponse;
+    private LocalDateTime ownerRespondedAt;
 
     public ReviewDTO(Review review) {
         this.id = review.getId();
@@ -48,5 +50,8 @@ public class ReviewDTO {
             this.restaurantId = review.getRestaurant().getId();
             this.restaurantName = review.getRestaurant().getName();
         }
+
+        this.ownerResponse = review.getOwnerResponse();
+        this.ownerRespondedAt = review.getOwnerRespondedAt();
     }
 }

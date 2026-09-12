@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -94,5 +95,12 @@ public class RestaurantController {
     @GetMapping("/{id}/reviews")
     public ResponseEntity<List<ReviewDTO>> getReviewsByRestaurant(@PathVariable Long id) {
         return ResponseEntity.ok(reviewService.getReviewsByRestaurant(id));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<RestaurantResponseDTO> updateRestaurant(@PathVariable Long id,
+                                                                  @RequestBody Map<String, Object> updates) {
+        Restaurant updated = restaurantService.updateRestaurant(id, updates);
+        return ResponseEntity.ok(new RestaurantResponseDTO(updated));
     }
 }

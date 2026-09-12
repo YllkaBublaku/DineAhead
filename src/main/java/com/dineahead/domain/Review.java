@@ -56,6 +56,12 @@ public class Review {
     @Builder.Default
     private Integer helpfulCount = 0;
 
+    @Column(name = "owner_response", columnDefinition = "TEXT")
+    private String ownerResponse;
+
+    @Column(name = "owner_responded_at")
+    private LocalDateTime ownerRespondedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -577,12 +577,15 @@ export class ApiService {
   getHoursByRestaurant(restaurantId: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/restaurant-hours/restaurant/${restaurantId}`);
   }
+
   createHours(restaurantId: number, hours: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/restaurant-hours/restaurant/${restaurantId}`, hours);
   }
+
   updateHours(id: number, hours: any): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/restaurant-hours/${id}`, hours);
   }
+
   deleteHours(id: number): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/restaurant-hours/${id}`);
   }
@@ -590,13 +593,24 @@ export class ApiService {
   getOverridesByRestaurant(restaurantId: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/restaurant-overrides/restaurant/${restaurantId}`);
   }
+
   createOverride(restaurantId: number, override: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/restaurant-overrides/restaurant/${restaurantId}`, override);
   }
+
   updateOverride(id: number, override: any): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/restaurant-overrides/${id}`, override);
   }
+
   deleteOverride(id: number): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/restaurant-overrides/${id}`);
+  }
+
+  respondToReview(reviewId: number, response: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/reviews/${reviewId}/response`, { response });
+  }
+
+  updateRestaurant(id: number, updates: any): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/restaurants/${id}`, updates);
   }
 }

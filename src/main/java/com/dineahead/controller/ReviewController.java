@@ -60,4 +60,14 @@ public class ReviewController {
             ));
         }
     }
+
+    @PostMapping("/{reviewId}/response")
+    public ResponseEntity<ReviewDTO> respondToReview(@PathVariable Long reviewId,
+                                                     @RequestBody Map<String, Object> body) {
+        String response = (String) body.get("response");
+        if (response == null || response.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(reviewService.respondToReview(reviewId, response));
+    }
 }

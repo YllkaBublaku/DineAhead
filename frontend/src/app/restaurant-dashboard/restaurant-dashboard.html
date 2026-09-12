@@ -1,5 +1,26 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
 
+  @if (toastMessage) {
+    <div class="fixed top-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border-2 text-sm font-bold"
+         [class.bg-green-50]="toastType === 'success'"
+         [class.text-green-700]="toastType === 'success'"
+         [class.border-green-300]="toastType === 'success'"
+         [class.bg-red-50]="toastType === 'error'"
+         [class.text-red-700]="toastType === 'error'"
+         [class.border-red-300]="toastType === 'error'">
+      @if (toastType === 'success') {
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      } @else {
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      }
+      {{ toastMessage }}
+    </div>
+  }
+
   <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300"
          [class.-translate-x-full]="!isSidebarOpen()"
          [class.translate-x-0]="isSidebarOpen()">
@@ -362,19 +383,6 @@
     @if (activeTab() === 'schedule') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Schedule Manager</h1>
-
-        @if (toastMessage) {
-          <div class="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg border text-sm font-bold transition-all"
-               [class.bg-green-50]="toastType === 'success'"
-               [class.text-green-700]="toastType === 'success'"
-               [class.border-green-200]="toastType === 'success'"
-               [class.bg-red-50]="toastType === 'error'"
-               [class.text-red-700]="toastType === 'error'"
-               [class.border-red-200]="toastType === 'error'">
-            {{ toastMessage }}
-          </div>
-        }
-
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Set opening hours and holiday overrides.
         </p>
@@ -559,45 +567,61 @@
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Review Manager</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Read and respond to diner reviews.</p>
 
-        <div class="mt-6 space-y-4">
-          @for (review of reviews; track review.id) {
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold">{{ review.author.charAt(0) }}</div>
-                  <div>
-                    <h3 class="font-bold text-gray-900 dark:text-white">{{ review.author }}</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ review.date }}</p>
+        @if (reviews.length === 0) {
+          <p class="text-sm text-gray-500 italic py-8 text-center">No reviews yet.</p>
+        } @else {
+          <div class="mt-6 space-y-4">
+            @for (review of reviews; track review.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold">
+                      {{ review.author.charAt(0) }}
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-gray-900 dark:text-white">{{ review.author }}</h3>
+                      <p class="text-xs text-gray-500 mt-0.5">{{ review.date }}</p>
+                    </div>
                   </div>
+                  <span class="inline-flex items-center bg-emerald-50 text-[#00875a] border border-emerald-200 text-sm font-extrabold px-2 py-0.5 rounded-lg">
+                ★ {{ review.rating }}
+              </span>
                 </div>
-                <span class="inline-flex items-center bg-emerald-50 text-[#00875a] border border-emerald-200 text-sm font-extrabold px-2 py-0.5 rounded-lg">★ {{ review.rating }}</span>
+
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">{{ review.text }}</p>
+
+                @if (review.response) {
+                  <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs text-gray-600 dark:text-gray-400 border-l-4 border-[#005943]">
+                    <span class="font-bold text-[#005943]">Your Response:</span> {{ review.response }}
+                  </div>
+                } @else {
+                  <div class="mt-3 flex gap-2">
+                    <input type="text"
+                           [(ngModel)]="reviewResponseDrafts[review.id]"
+                           placeholder="Write a public response..."
+                           class="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#005943]" />
+                    <button (click)="submitResponse(review)"
+                            [disabled]="reviewSavingId === review.id || !reviewResponseDrafts[review.id]"
+                            class="px-4 py-2 bg-[#005943] text-white text-xs font-bold rounded-lg hover:bg-[#004735] transition disabled:opacity-50">
+                      {{ reviewSavingId === review.id ? 'Saving…' : 'Respond' }}
+                    </button>
+                  </div>
+                }
               </div>
-
-              <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">{{ review.text }}</p>
-
-              @if (review.response) {
-                <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs text-gray-600 dark:text-gray-400 border-l-4 border-[#005943]">
-                  <span class="font-bold text-[#005943]">Your Response:</span> {{ review.response }}
-                </div>
-              } @else {
-                <div class="mt-3 flex gap-2">
-                  <input type="text" placeholder="Write a public response..." class="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#005943]" />
-                  <button class="px-4 py-2 bg-[#005943] text-white text-xs font-bold rounded-lg">Respond</button>
-                </div>
-              }
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
     }
 
     @if (activeTab() === 'profile') {
       <div>
-        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 shadow-sm max-w-2xl">
-          <h1 class="text-xl font-extrabold text-gray-900 dark:text-white">Restaurant Profile & Payouts</h1>
-          <p class="text-sm text-gray-500 mt-2">Manage your restaurant's public information and payment details.</p>
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-8 shadow-sm max-w-3xl">
+          <h1 class="text-xl font-extrabold text-gray-900 dark:text-white">Restaurant Profile</h1>
+          <p class="text-sm text-gray-500 mt-2">Manage your restaurant's public information.</p>
 
           <div class="mt-8 space-y-6">
+
             <div class="flex items-center gap-4 mb-4">
               <span class="text-xs font-extrabold text-[#005943] uppercase tracking-wider">Public Information</span>
               <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
@@ -605,45 +629,71 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Restaurant Name *</label>
-                <input type="text" [(ngModel)]="profile.restaurantName" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Restaurant Name *</label>
+                <input type="text" [(ngModel)]="profile.restaurantName"
+                       class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Address *</label>
-                <input type="text" [(ngModel)]="profile.address" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                <input type="text" [(ngModel)]="profile.address"
+                       class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Public Phone *</label>
-                <input type="text" [(ngModel)]="profile.phone" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                <input type="text" [(ngModel)]="profile.phone"
+                       class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Public Email *</label>
-                <input type="email" [(ngModel)]="profile.email" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input type="email" [(ngModel)]="profile.email"
+                       class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
               </div>
-            </div>
-
-            <div class="flex items-center gap-4 mb-4 pt-6">
-              <span class="text-xs font-extrabold text-[#005943] uppercase tracking-wider">Business & Payout</span>
-              <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">SIRET / Business ID *</label>
-                <input type="text" [(ngModel)]="profile.siret" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Cuisine Type</label>
+                <input type="text" [(ngModel)]="profile.cuisineType" placeholder="e.g. French, Italian"
+                       class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Bank Account (Payouts) *</label>
-                <input type="text" [(ngModel)]="profile.bankAccount" class="w-full border-b border-gray-300 py-2 text-gray-900 focus:outline-none focus:border-[#005943] bg-transparent">
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Price Range</label>
+                <select [(ngModel)]="profile.priceRange"
+                        class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
+                  <option value="">Not set</option>
+                  <option value="€">€</option>
+                  <option value="€€">€€</option>
+                  <option value="€€€">€€€</option>
+                  <option value="€€€€">€€€€</option>
+                </select>
               </div>
             </div>
 
-            <div class="pt-4">
-              <button class="px-8 py-3 bg-[#005943] text-white font-bold rounded-lg hover:bg-[#004735] transition">SAVE CHANGES</button>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <textarea [(ngModel)]="profile.description" rows="3"
+                        placeholder="Describe your restaurant..."
+                        class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent resize-none"></textarea>
             </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Special Offer</label>
+              <input type="text" [(ngModel)]="profile.specialOffer"
+                     placeholder="e.g. 20% off lunch menu"
+                     class="w-full border-b border-gray-300 dark:border-gray-700 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-[#005943] bg-transparent">
+            </div>
+
+            <div class="pt-4 flex items-center gap-3">
+              <button (click)="saveProfile()"
+                      [disabled]="profileSaving"
+                      class="px-8 py-3 bg-[#005943] text-white font-bold rounded-lg hover:bg-[#004735] transition disabled:opacity-50">
+                {{ profileSaving ? 'SAVING…' : 'SAVE CHANGES' }}
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

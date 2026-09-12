@@ -71,7 +71,24 @@ export class RestaurantDashboard implements OnInit {
   private toastTimer: any = null;
 
   reviews: any[] = [];
-  profile = { restaurantName: '', address: '', siret: '', phone: '', email: '', bankAccount: '' };
+  reviewResponseDrafts: Record<number, string> = {};
+  reviewSavingId: number | null = null;
+
+  profile = {
+    restaurantName: '',
+    address: '',
+    phone: '',
+    email: '',
+    siret: '',
+    bankAccount: '',
+    description: '',
+    cuisineType: '',
+    priceRange: '',
+    specialOffer: '',
+    coverPhotoUrl: ''
+  };
+
+  profileSaving = false;
 
   constructor(
     private router: Router,
@@ -361,8 +378,6 @@ export class RestaurantDashboard implements OnInit {
     this.updateStatus(res, 'PENDING');
   }
 
-  loadReviews(): void {}
-
   loadTables(): void {
     if (!this.restaurantId) return;
 
@@ -563,8 +578,6 @@ export class RestaurantDashboard implements OnInit {
     }, 2500);
   }
 
-  loadProfile(): void {}
-
   toggleSidebar() {
     this.isSidebarOpen.update(v => !v);
   }
@@ -662,6 +675,139 @@ export class RestaurantDashboard implements OnInit {
       error: (err) => {
         console.error('[Dashboard] delete override failed', err);
         alert('Could not delete the override.');
+      }
+    });
+  }
+
+  loadReviews(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getReviewsByRestaurant(this.restaurantId)
+      .then((raw: any) => {
+        const list = Array.isArray(raw) ? raw : (raw?.content ?? []);
+        this.reviews = list.map((r: any) => {
+          const author = (r.userName || r.author || 'Anonymous').trim();
+          return {
+            id: r.id,
+            author,
+            rating: r.rating ?? 0,
+            date: r.createdAt ? this.formatReviewDate(r.createdAt) : 'Recently',
+            text: r.comment || r.text || 'No comment provided.',
+            response: r.ownerResponse || ''
+          };
+        });
+        this.cdr.detectChanges();
+      })
+      .catch((err: any) => {
+        console.error('[Dashboard] reviews load failed', err);
+        this.reviews = [];
+      });
+  }
+
+  private formatReviewDate(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'Recently';
+    }
+  }
+
+  submitResponse(review: any): void {
+    const draft = (this.reviewResponseDrafts[review.id] || '').trim();
+    if (!draft) return;
+
+    this.reviewSavingId = review.id;
+
+    this.api.respondToReview(review.id, draft).subscribe({
+      next: (updated: any) => {
+        this.reviewSavingId = null;
+        review.response = updated?.ownerResponse || draft;
+        delete this.reviewResponseDrafts[review.id];
+        this.showToast('Response saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.reviewSavingId = null;
+        console.error('[Dashboard] save response failed', err);
+        this.showToast('Could not save response', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadProfile(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getRestaurantById(this.restaurantId).then((r: any) => {
+      if (!r) return;
+
+      const storedUser = localStorage.getItem('user');
+      const ownerEmail = storedUser ? JSON.parse(storedUser).email : '';
+
+      this.profile = {
+        restaurantName: r.name || '',
+        address: r.address || '',
+        phone: r.phone || '',
+        email: r.email || ownerEmail || '',
+        siret: this.profile.siret || '',
+        bankAccount: this.profile.bankAccount || '',
+        description: r.description || '',
+        cuisineType: r.cuisineType || '',
+        priceRange: r.priceRange || '',
+        specialOffer: r.specialOffer || '',
+        coverPhotoUrl: r.coverPhotoUrl || ''
+      };
+      this.cdr.detectChanges();
+    }).catch((err: any) => {
+      console.error('[Dashboard] profile load failed', err);
+    });
+  }
+
+  saveProfile(): void {
+    if (!this.restaurantId) {
+      this.showToast('No restaurant loaded', 'error');
+      return;
+    }
+
+    this.profileSaving = true;
+
+    const payload: any = {
+      name: this.profile.restaurantName?.trim() || '',
+      address: this.profile.address?.trim() || '',
+      phone: this.profile.phone?.trim() || '',
+      description: this.profile.description?.trim() || '',
+      cuisineType: this.profile.cuisineType?.trim() || '',
+      priceRange: this.profile.priceRange?.trim() || '',
+      specialOffer: this.profile.specialOffer?.trim() || '',
+      coverPhotoUrl: this.profile.coverPhotoUrl?.trim() || ''
+    };
+
+    Object.keys(payload).forEach(k => {
+      if (payload[k] === '') delete payload[k];
+    });
+
+    this.api.updateRestaurant(this.restaurantId, payload).subscribe({
+      next: (updated: any) => {
+        this.profileSaving = false;
+        this.profile.restaurantName = updated.name || this.profile.restaurantName;
+        this.profile.address = updated.address || this.profile.address;
+        this.profile.phone = updated.phone || this.profile.phone;
+        this.profile.description = updated.description || this.profile.description;
+        this.profile.cuisineType = updated.cuisineType || this.profile.cuisineType;
+        this.profile.priceRange = updated.priceRange || this.profile.priceRange;
+        this.profile.specialOffer = updated.specialOffer || this.profile.specialOffer;
+        this.profile.coverPhotoUrl = updated.coverPhotoUrl || this.profile.coverPhotoUrl;
+        this.restaurant.name = updated.name || this.restaurant.name;
+        this.restaurant.avatar = this.getRestaurantInitials(this.restaurant.name);
+
+        this.showToast('Profile saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.profileSaving = false;
+        console.error('[Dashboard] save profile failed', err);
+        this.showToast('Could not save profile', 'error');
       }
     });
   }

@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,4 +91,22 @@ public class RestaurantService {
     public List<Restaurant> getRestaurantsByOwner(Long ownerId) {
         return restaurantRepository.findByOwnerId(ownerId);
     }
+
+    @Transactional
+    public Restaurant updateRestaurant(Long id, Map<String, Object> updates) {
+        Restaurant restaurant = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found: " + id));
+
+        if (updates.containsKey("name")) restaurant.setName((String) updates.get("name"));
+        if (updates.containsKey("address")) restaurant.setAddress((String) updates.get("address"));
+        if (updates.containsKey("phone")) restaurant.setPhone((String) updates.get("phone"));
+        if (updates.containsKey("description")) restaurant.setDescription((String) updates.get("description"));
+        if (updates.containsKey("cuisineType")) restaurant.setCuisineType((String) updates.get("cuisineType"));
+        if (updates.containsKey("priceRange")) restaurant.setPriceRange((String) updates.get("priceRange"));
+        if (updates.containsKey("specialOffer")) restaurant.setSpecialOffer((String) updates.get("specialOffer"));
+        if (updates.containsKey("coverPhotoUrl")) restaurant.setCoverPhotoUrl((String) updates.get("coverPhotoUrl"));
+
+        return restaurantRepository.save(restaurant);
+    }
+
 }
