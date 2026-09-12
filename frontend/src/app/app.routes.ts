@@ -18,5 +18,6 @@ export const routes: Routes = [
   { path: 'search', redirectTo: 'restaurants', pathMatch: 'full' },
   { path: 'reset-password', loadComponent: () => import('./reset-password/reset-password').then(m => m.ResetPassword) },
   { path: 'oauth2/redirect', component: OauthRedirectComponent},
+  { path: 'contact', loadComponent: () => import('./contact/contact').then(m => m.Contact) },
 ];
 

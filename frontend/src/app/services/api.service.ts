@@ -520,4 +520,28 @@ export class ApiService {
         )
     );
   }
+
+  async submitContact(contactData: any): Promise<any> {
+    try {
+      const response = await fetch(`${this.apiUrl}/contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(contactData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Contact API error:', errorText);
+        throw new Error(`Failed to submit contact: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error submitting contact:', error);
+      throw error;
+    }
+  }
 }
