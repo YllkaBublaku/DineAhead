@@ -5,6 +5,7 @@ import com.dineahead.domain.RestaurantHours;
 import com.dineahead.infrastructure.RestaurantHoursRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,5 +27,25 @@ public class RestaurantHoursService {
 
     public List<RestaurantHours> getHoursByRestaurant(Long restaurantId) {
         return restaurantHoursRepository.findByRestaurantId(restaurantId);
+    }
+
+    @Transactional
+    public RestaurantHours updateHours(Long id, RestaurantHours updates) {
+        RestaurantHours existing = restaurantHoursRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Hours not found: " + id));
+
+        if (updates.getOpeningTime() != null) existing.setOpeningTime(updates.getOpeningTime());
+        if (updates.getClosingTime() != null) existing.setClosingTime(updates.getClosingTime());
+        existing.setClosed(updates.isClosed());
+
+        return restaurantHoursRepository.save(existing);
+    }
+
+    @Transactional
+    public void deleteHours(Long id) {
+        if (!restaurantHoursRepository.existsById(id)) {
+            throw new RuntimeException("Hours not found: " + id);
+        }
+        restaurantHoursRepository.deleteById(id);
     }
 }

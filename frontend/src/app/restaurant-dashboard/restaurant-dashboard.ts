@@ -23,9 +23,55 @@ export class RestaurantDashboard implements OnInit {
     joined: '',
     avatar: ''
   };
+  allReservations: any[] = [];
+  reservations: any[] = [];
 
   loading = signal(false);
   error = signal('');
+
+  stats = {
+    todayBookings: 0,
+    upcoming: 0,
+    noShowRate: '0%',
+    revenue: '€0',
+    weekRevenue: [] as number[]
+  };
+
+  tables: any[] = [];
+  tableModalOpen = false;
+  editingTable: any = null;
+  tableForm = {
+    tableNumber: '',
+    minCapacity: 2,
+    maxCapacity: 4,
+    status: 'Available'
+  };
+  tableSaving = false;
+  tableError = '';
+
+  schedule: any[] = [];
+  scheduleOverrides: any[] = [];
+  scheduleSaving = false;
+  scheduleError = '';
+
+  overrideModalOpen = false;
+  editingOverride: any = null;
+  overrideForm = {
+    overrideDate: '',
+    openingTime: '11:00',
+    closingTime: '22:00',
+    isClosed: false,
+    reason: ''
+  };
+  overrideSaving = false;
+  overrideError = '';
+
+  toastMessage = '';
+  toastType: 'success' | 'error' = 'success';
+  private toastTimer: any = null;
+
+  reviews: any[] = [];
+  profile = { restaurantName: '', address: '', siret: '', phone: '', email: '', bankAccount: '' };
 
   constructor(
     private router: Router,
@@ -59,17 +105,13 @@ export class RestaurantDashboard implements OnInit {
           ? new Date(r.createdAt).getFullYear().toString()
           : '';
 
-        const nextRestaurant = {
+        this.restaurant = {
           name: r.name || '',
           first: user.firstName || '',
           last: user.lastName || '',
           joined: joinedYear,
           avatar: this.getRestaurantInitials(r.name || '')
         };
-
-        console.log('[Dashboard] About to set restaurant:', nextRestaurant);
-
-        this.restaurant = { ...nextRestaurant };
 
         this.cdr.detectChanges();
 
@@ -95,9 +137,11 @@ export class RestaurantDashboard implements OnInit {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
 
+
   loadReservations(): void {
     if (!this.restaurantId) return;
     this.loadTodayReservations();
+    this.loadAllReservations();
   }
 
   private loadTodayReservations(): void {
@@ -116,25 +160,14 @@ export class RestaurantDashboard implements OnInit {
         };
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('[Dashboard] stats load failed', err);
-      }
+      error: (err) => console.error('[Dashboard] stats load failed', err)
     });
 
     const today = new Date().toISOString().split('T')[0];
 
     this.api.getReservationsByRestaurantAndDate(this.restaurantId, today).subscribe({
       next: (raw: any) => {
-        let list: any[] = [];
-        if (Array.isArray(raw)) {
-          list = raw;
-        } else if (raw && Array.isArray(raw.content)) {
-          list = raw.content;
-        } else if (raw && Array.isArray(raw.data)) {
-          list = raw.data;
-        } else if (raw && typeof raw === 'object') {
-          list = [raw];
-        }
+        const list = this.normalizeToList(raw);
 
         this.reservations = list.map((r: any) => {
           const first = r.customerFirstName || r.user?.firstName || '';
@@ -162,6 +195,144 @@ export class RestaurantDashboard implements OnInit {
     });
   }
 
+  private loadAllReservations(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getReservationsByRestaurant(this.restaurantId).subscribe({
+      next: (raw: any) => {
+        const list = this.normalizeToList(raw);
+        const now = new Date();
+
+        this.allReservations = list
+          .map((r: any) => {
+            const first = r.customerFirstName || r.user?.firstName || '';
+            const last  = r.customerLastName  || r.user?.lastName  || '';
+            const name  = `${first} ${last}`.trim() || 'Guest';
+
+            const dateStr = r.reservationDate;
+            const timeStr = r.reservationTime
+              ? String(r.reservationTime).substring(0, 5)
+              : '00:00';
+            const when = dateStr ? new Date(`${dateStr}T${timeStr}`) : null;
+
+            return {
+              id: r.id,
+              name,
+              date: dateStr,
+              time: timeStr,
+              when,
+              guests: r.partySize ?? 0,
+              table: r.tableNumber != null ? 'T' + r.tableNumber : '-',
+              status: this.formatStatus(r.status),
+              rawStatus: (r.status || '').toUpperCase(),
+              type: r.specialRequests || 'Dinner'
+            };
+          })
+          .sort((a: any, b: any) => {
+            const aFuture = a.when && a.when >= now ? 1 : 0;
+            const bFuture = b.when && b.when >= now ? 1 : 0;
+            if (aFuture !== bFuture) return bFuture - aFuture;
+            return (a.when?.getTime() || 0) - (b.when?.getTime() || 0);
+          });
+
+        this.syncOverviewFromAll();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[Dashboard] all reservations load failed', err);
+        this.allReservations = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private syncOverviewFromAll(): void {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    this.reservations = this.allReservations
+      .filter(r =>
+        r.when &&
+        r.when >= startOfToday &&
+        r.rawStatus !== 'CANCELLED'
+      )
+      .slice(0, 4);
+  }
+
+  private normalizeToList(raw: any): any[] {
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.content)) return raw.content;
+    if (raw && Array.isArray(raw.data)) return raw.data;
+    if (raw && typeof raw === 'object') return [raw];
+    return [];
+  }
+
+  confirmReservation(res: any): void {
+    this.updateStatus(res, 'CONFIRMED');
+  }
+
+  markSeated(res: any): void {
+    this.updateStatus(res, 'SEATED');
+  }
+
+  markNoShow(res: any): void {
+    if (!confirm(`Mark ${res.name} as No Show?`)) return;
+    this.updateStatus(res, 'NO_SHOW');
+  }
+
+  cancelReservation(res: any): void {
+    if (!confirm(`Cancel ${res.name}'s reservation?`)) return;
+    this.updateStatus(res, 'CANCELLED');
+  }
+
+  private updateStatus(res: any, status: string): void {
+    if (!res?.id) return;
+
+    const stored = localStorage.getItem('user');
+    const userId = stored ? JSON.parse(stored).id : null;
+
+    const previousStatus = res.rawStatus;
+
+    res.rawStatus = status;
+    res.status = this.formatStatus(status);
+    this.cdr.detectChanges();
+
+    this.api.changeReservationStatus(res.id, status, userId).subscribe({
+      next: (updated: any) => {
+        res.rawStatus = ((updated?.status) || status).toUpperCase();
+        res.status = this.formatStatus(res.rawStatus);
+        this.syncOverviewFromAll();
+        this.cdr.detectChanges();
+        this.refreshStats();
+      },
+      error: (err) => {
+        console.error('[Dashboard] status update failed', err);
+        res.rawStatus = previousStatus;
+        res.status = this.formatStatus(previousStatus);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private refreshStats(): void {
+    if (!this.restaurantId) return;
+    this.api.getRestaurantStats(this.restaurantId).subscribe({
+      next: (s: any) => {
+        this.stats = {
+          todayBookings: s.todayBookings ?? 0,
+          upcoming: s.upcoming ?? 0,
+          noShowRate: s.noShowRate ?? '0%',
+          revenue: '€' + Number(s.revenue ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 }),
+          weekRevenue: Array.isArray(s.weekRevenue)
+            ? s.weekRevenue.map((v: any) => Number(v) || 0)
+            : []
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('[Dashboard] stats refresh failed', err)
+    });
+  }
+
   private formatStatus(status: string): string {
     if (!status) return 'Pending';
     const map: Record<string, string> = {
@@ -185,35 +356,319 @@ export class RestaurantDashboard implements OnInit {
     return index === idx;
   }
 
+  resetToPending(res: any): void {
+    if (!confirm('Reset this reservation back to Pending?')) return;
+    this.updateStatus(res, 'PENDING');
+  }
+
   loadReviews(): void {}
-  loadTables(): void {}
-  loadSchedule(): void {}
-  loadOverrides(): void {}
+
+  loadTables(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getTablesByRestaurant(this.restaurantId).subscribe({
+      next: (raw: any) => {
+        const list = Array.isArray(raw) ? raw : (raw?.content ?? []);
+        this.tables = list.map((t: any) => ({
+          id: t.id,
+          tableNumber: t.tableNumber || '',
+          minCapacity: t.minCapacity ?? 0,
+          maxCapacity: t.maxCapacity ?? 0,
+          status: t.status || 'Available'
+        }));
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[Dashboard] tables load failed', err);
+        this.tables = [];
+      }
+    });
+  }
+
+  openAddTable(): void {
+    this.editingTable = null;
+    this.tableForm = { tableNumber: '', minCapacity: 2, maxCapacity: 4, status: 'Available' };
+    this.tableError = '';
+    this.tableModalOpen = true;
+  }
+
+  openEditTable(table: any): void {
+    this.editingTable = table;
+    this.tableForm = {
+      tableNumber: table.tableNumber,
+      minCapacity: table.minCapacity,
+      maxCapacity: table.maxCapacity,
+      status: table.status || 'Available'
+    };
+    this.tableError = '';
+    this.tableModalOpen = true;
+  }
+
+  closeTableModal(): void {
+    this.tableModalOpen = false;
+    this.editingTable = null;
+    this.tableError = '';
+  }
+
+  saveTable(): void {
+    this.tableError = '';
+
+    if (!this.tableForm.tableNumber?.trim()) {
+      this.tableError = 'Table number is required.';
+      return;
+    }
+    if (!this.tableForm.minCapacity || this.tableForm.minCapacity < 1) {
+      this.tableError = 'Minimum capacity must be at least 1.';
+      return;
+    }
+    if (!this.tableForm.maxCapacity || this.tableForm.maxCapacity < this.tableForm.minCapacity) {
+      this.tableError = 'Maximum capacity must be ≥ minimum capacity.';
+      return;
+    }
+    if (!this.restaurantId) {
+      this.tableError = 'No restaurant loaded.';
+      return;
+    }
+
+    this.tableSaving = true;
+
+    const payload = {
+      tableNumber: this.tableForm.tableNumber.trim(),
+      minCapacity: Number(this.tableForm.minCapacity),
+      maxCapacity: Number(this.tableForm.maxCapacity),
+      status: this.tableForm.status
+    };
+
+    const req = this.editingTable
+      ? this.api.updateTable(this.editingTable.id, payload)
+      : this.api.createTable(this.restaurantId, payload);
+
+    req.subscribe({
+      next: () => {
+        this.tableSaving = false;
+        this.closeTableModal();
+        this.loadTables();
+      },
+      error: (err) => {
+        this.tableSaving = false;
+        this.tableError = err?.error?.message || 'Could not save the table.';
+        console.error('[Dashboard] save table failed', err);
+      }
+    });
+  }
+
+  deleteTable(table: any): void {
+    if (!confirm(`Delete table "${table.tableNumber}"?`)) return;
+
+    this.api.deleteTable(table.id).subscribe({
+      next: () => this.loadTables(),
+      error: (err) => {
+        console.error('[Dashboard] delete table failed', err);
+        alert('Could not delete the table.');
+      }
+    });
+  }
+
+  loadSchedule(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getHoursByRestaurant(this.restaurantId).subscribe({
+      next: (raw: any) => {
+        const list = Array.isArray(raw) ? raw : (raw?.content ?? []);
+        const byDay = new Map<number, any>();
+        list.forEach((h: any) => byDay.set(h.dayOfWeek, h));
+
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        this.schedule = [1, 2, 3, 4, 5, 6, 7].map(dow => {
+          const h = byDay.get(dow);
+          return {
+            id: h?.id ?? null,
+            dayOfWeek: dow,
+            day: dayNames[dow - 1],
+            open: h?.openingTime ? String(h.openingTime).substring(0, 5) : '11:00',
+            close: h?.closingTime ? String(h.closingTime).substring(0, 5) : '22:00',
+            original: h || null
+          };
+        });
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('[Dashboard] schedule load failed', err)
+    });
+  }
+
+  loadOverrides(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getOverridesByRestaurant(this.restaurantId).subscribe({
+      next: (raw: any) => {
+        const list = Array.isArray(raw) ? raw : (raw?.content ?? []);
+        this.scheduleOverrides = list.map((o: any) => {
+          const isClosed = o.isClosed === true || o.closed === true || o.isClosed === 'true';
+          return {
+            id: o.id,
+            date: o.overrideDate,
+            open: o.openingTime ? String(o.openingTime).substring(0, 5) : '',
+            close: o.closingTime ? String(o.closingTime).substring(0, 5) : '',
+            reason: o.reason || '',
+            isClosed,
+            status: isClosed ? 'Closed' : 'Open'
+          };
+        });
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('[Dashboard] overrides load failed', err)
+    });
+  }
+
+  saveDay(day: any): void {
+    if (!this.restaurantId) return;
+
+    this.scheduleSaving = true;
+    this.scheduleError = '';
+
+    const payload = {
+      dayOfWeek: day.dayOfWeek,
+      openingTime: day.isClosed ? null : (day.open + ':00'),
+      closingTime: day.isClosed ? null : (day.close + ':00'),
+      isClosed: false
+    };
+
+    const req = day.id
+      ? this.api.updateHours(day.id, payload)
+      : this.api.createHours(this.restaurantId, payload);
+
+    req.subscribe({
+      next: () => {
+        this.scheduleSaving = false;
+        this.showToast(`${day.day} hours saved`);
+        this.loadSchedule();
+      },
+      error: (err) => {
+        this.scheduleSaving = false;
+        this.scheduleError = err?.error?.message || 'Could not save hours.';
+        this.showToast(this.scheduleError, 'error');
+        console.error('[Dashboard] save hours failed', err);
+      }
+    });
+  }
+
+  showToast(message: string, type: 'success' | 'error' = 'success'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.toastMessage = '';
+      this.cdr.detectChanges();
+    }, 2500);
+  }
+
   loadProfile(): void {}
 
-  toggleSidebar() { this.isSidebarOpen.update(v => !v); }
+  toggleSidebar() {
+    this.isSidebarOpen.update(v => !v);
+  }
+
   setTab(tab: 'overview' | 'reservations' | 'tables' | 'schedule' | 'reviews' | 'profile') {
     this.activeTab.set(tab);
-    if (window.innerWidth < 1024) this.isSidebarOpen.set(false);
+    if (window.innerWidth < 768) this.isSidebarOpen.set(false);
   }
+
+  openAddOverride(): void {
+    this.editingOverride = null;
+    this.overrideForm = {
+      overrideDate: '',
+      openingTime: '11:00',
+      closingTime: '22:00',
+      isClosed: false,
+      reason: ''
+    };
+    this.overrideError = '';
+    this.overrideModalOpen = true;
+  }
+
+  openEditOverride(o: any): void {
+    this.editingOverride = o;
+    this.overrideForm = {
+      overrideDate: o.date,
+      openingTime: o.open || '11:00',
+      closingTime: o.close || '22:00',
+      isClosed: o.isClosed,
+      reason: o.reason || ''
+    };
+    this.overrideError = '';
+    this.overrideModalOpen = true;
+  }
+
+  closeOverrideModal(): void {
+    this.overrideModalOpen = false;
+    this.editingOverride = null;
+    this.overrideError = '';
+  }
+
+  saveOverride(): void {
+    this.overrideError = '';
+
+    if (!this.overrideForm.overrideDate) {
+      this.overrideError = 'Date is required.';
+      return;
+    }
+    if (!this.overrideForm.isClosed) {
+      if (!this.overrideForm.openingTime || !this.overrideForm.closingTime) {
+        this.overrideError = 'Opening and closing times are required.';
+        return;
+      }
+    }
+    if (!this.restaurantId) {
+      this.overrideError = 'No restaurant loaded.';
+      return;
+    }
+
+    this.overrideSaving = true;
+
+    const payload: any = {
+      overrideDate: this.overrideForm.overrideDate,
+      isClosed: this.overrideForm.isClosed,
+      reason: this.overrideForm.reason
+    };
+    if (!this.overrideForm.isClosed) {
+      payload.openingTime = this.overrideForm.openingTime + ':00';
+      payload.closingTime = this.overrideForm.closingTime + ':00';
+    }
+
+    const req = this.editingOverride
+      ? this.api.updateOverride(this.editingOverride.id, payload)
+      : this.api.createOverride(this.restaurantId, payload);
+
+    req.subscribe({
+      next: () => {
+        this.overrideSaving = false;
+        this.closeOverrideModal();
+        this.loadOverrides();
+      },
+      error: (err) => {
+        this.overrideSaving = false;
+        this.overrideError = err?.error?.message || 'Could not save override.';
+        console.error('[Dashboard] save override failed', err);
+      }
+    });
+  }
+
+  deleteOverride(o: any): void {
+    if (!confirm(`Delete the override for ${o.date}?`)) return;
+
+    this.api.deleteOverride(o.id).subscribe({
+      next: () => this.loadOverrides(),
+      error: (err) => {
+        console.error('[Dashboard] delete override failed', err);
+        alert('Could not delete the override.');
+      }
+    });
+  }
+
   logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
     this.router.navigate(['/']);
   }
-
-  stats = {
-    todayBookings: 0,
-    upcoming: 0,
-    noShowRate: '0%',
-    revenue: '€0',
-    weekRevenue: [] as number[]
-  };
-
-  reservations: any[] = [];
-  tables: any[] = [];
-  schedule: any[] = [];
-  scheduleOverrides: any[] = [];
-  reviews: any[] = [];
-  profile = { restaurantName: '', address: '', siret: '', phone: '', email: '', bankAccount: '' };
 }

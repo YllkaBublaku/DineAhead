@@ -5,6 +5,7 @@ import com.dineahead.domain.RestaurantOverride;
 import com.dineahead.infrastructure.RestaurantOverrideRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -31,5 +32,27 @@ public class RestaurantOverrideService {
 
     public List<RestaurantOverride> getOverridesByDate(Long restaurantId, LocalDate date) {
         return restaurantOverrideRepository.findByRestaurantIdAndOverrideDate(restaurantId, date);
+    }
+
+    @Transactional
+    public RestaurantOverride updateOverride(Long id, RestaurantOverride updates) {
+        RestaurantOverride existing = restaurantOverrideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Override not found: " + id));
+
+        if (updates.getOverrideDate() != null) existing.setOverrideDate(updates.getOverrideDate());
+        if (updates.getOpeningTime() != null) existing.setOpeningTime(updates.getOpeningTime());
+        if (updates.getClosingTime() != null) existing.setClosingTime(updates.getClosingTime());
+        if (updates.getReason() != null) existing.setReason(updates.getReason());
+        existing.setClosed(updates.isClosed());
+
+        return restaurantOverrideRepository.save(existing);
+    }
+
+    @Transactional
+    public void deleteOverride(Long id) {
+        if (!restaurantOverrideRepository.existsById(id)) {
+            throw new RuntimeException("Override not found: " + id);
+        }
+        restaurantOverrideRepository.deleteById(id);
     }
 }

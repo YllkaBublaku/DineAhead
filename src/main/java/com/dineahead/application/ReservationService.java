@@ -2,6 +2,7 @@ package com.dineahead.application;
 
 import com.dineahead.domain.*;
 import com.dineahead.domain.enums.PaymentMethod;
+import com.dineahead.domain.enums.ReservationAction;
 import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.infrastructure.ReservationRepository;
 import com.dineahead.infrastructure.RestaurantDepositSettingsRepository;
@@ -24,13 +25,16 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RestaurantDepositSettingsRepository depositSettingsRepository;
     private final UserRepository userRepository;
+    private final ReservationLogService reservationLogService;
 
     public ReservationService(ReservationRepository reservationRepository,
                               RestaurantDepositSettingsRepository depositSettingsRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              ReservationLogService reservationLogService) {
         this.reservationRepository = reservationRepository;
         this.depositSettingsRepository = depositSettingsRepository;
         this.userRepository = userRepository;
+        this.reservationLogService = reservationLogService;
     }
 
     @Transactional
@@ -168,5 +172,32 @@ public class ReservationService {
         return reservations.stream()
                 .map(ReservationDTO::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ReservationDTO changeStatus(Long reservationId, ReservationStatus newStatus, Long changedByUserId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found: " + reservationId));
+
+        reservation.setStatus(newStatus);
+        Reservation saved = reservationRepository.save(reservation);
+
+        ReservationLog logEntry = ReservationLog.builder()
+                .action(mapStatusToAction(newStatus))
+                .timestamp(LocalDateTime.now())
+                .build();
+        reservationLogService.addLog(saved.getId(), changedByUserId, logEntry);
+
+        return ReservationDTO.fromEntity(saved);
+    }
+
+    private ReservationAction mapStatusToAction(ReservationStatus status) {
+        switch (status) {
+            case CONFIRMED: return ReservationAction.CONFIRMED;
+            case CANCELLED: return ReservationAction.CANCELLED;
+            case SEATED:    return ReservationAction.SEATED;
+            case NO_SHOW:   return ReservationAction.NO_SHOW;
+            default:        return ReservationAction.MODIFIED;
+        }
     }
 }

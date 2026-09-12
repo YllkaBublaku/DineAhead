@@ -79,6 +79,30 @@ public class ReservationController {
         return ResponseEntity.ok(ReservationDTO.fromEntity(updated));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ReservationDTO> changeStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+
+        String statusStr = (String) body.get("status");
+        Long userId = body.get("userId") != null
+                ? Long.valueOf(body.get("userId").toString())
+                : null;
+
+        if (statusStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        ReservationStatus status;
+        try {
+            status = ReservationStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return ResponseEntity.ok(reservationService.changeStatus(id, status, userId));
+    }
+
     @PatchMapping("/{id}")
     @Transactional
     public ResponseEntity<ReservationDTO> updateReservation(@PathVariable Long id, @RequestBody Map<String, Object> updates) {

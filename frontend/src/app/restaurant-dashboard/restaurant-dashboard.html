@@ -1,6 +1,9 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
 
-  <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300" [class.-translate-x-full]="!isSidebarOpen()">
+  <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300"
+         [class.-translate-x-full]="!isSidebarOpen()"
+         [class.translate-x-0]="isSidebarOpen()">
+
     <div class="p-6 text-center border-b border-gray-100 dark:border-gray-800">
       <div class="relative inline-block">
         <div class="w-20 h-20 rounded-full bg-[#005943] text-white flex items-center justify-center text-3xl font-extrabold">{{ restaurant.avatar }}</div>
@@ -24,6 +27,10 @@
       </div>
     </nav>
   </aside>
+
+  @if (isSidebarOpen()) {
+    <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" (click)="isSidebarOpen.set(false)"></div>
+  }
 
   <main class="flex-1 lg:ml-80 p-4 sm:p-8 transition-all duration-300">
     <button (click)="toggleSidebar()" class="lg:hidden mb-4 p-2 rounded-lg border border-gray-200 dark:border-gray-700"><svg class="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
@@ -122,11 +129,18 @@
                       [class.bg-amber-50]="res.status === 'Pending'"
                       [class.text-amber-700]="res.status === 'Pending'"
                       [class.bg-blue-50]="res.status === 'Seated'"
-                      [class.text-blue-700]="res.status === 'Seated'">
+                      [class.text-blue-700]="res.status === 'Seated'"
+                      [class.bg-red-50]="res.status === 'No Show' || res.status === 'Cancelled'"
+                      [class.text-red-700]="res.status === 'No Show' || res.status === 'Cancelled'">
                   {{ res.status }}
                 </span>
               </div>
             }
+          </div>
+          <div class="mt-4 text-right">
+            <button (click)="setTab('reservations')" class="text-xs font-bold text-[#005943] hover:underline">
+              View all reservations →
+            </button>
           </div>
         </div>
       </div>
@@ -135,25 +149,81 @@
     @if (activeTab() === 'reservations') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reservation Manager</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Mark guests as seated or no-show.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Confirm, seat, or mark guests as no-show.
+        </p>
 
         <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          @for (res of reservations; track res.id) {
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm flex items-center justify-between">
-              <div>
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold">{{ res.name.charAt(0) }}</div>
-                  <div>
-                    <h3 class="font-bold text-gray-900 dark:text-white text-sm">{{ res.name }}</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ res.time }} • {{ res.guests }} Guests • Table {{ res.table }} • {{ res.type }}</p>
+          @if (allReservations.length === 0) {
+            <p class="text-sm text-gray-500 col-span-full text-center py-8">No reservations yet.</p>
+          } @else {
+            @for (res of allReservations; track res.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold shrink-0">
+                      {{ res.name.charAt(0) }}
+                    </div>
+                    <div class="min-w-0">
+                      <h3 class="font-bold text-gray-900 dark:text-white text-sm truncate">{{ res.name }}</h3>
+                      <p class="text-xs text-gray-500 mt-0.5">
+                        {{ res.date }} • {{ res.time }} • {{ res.guests }} Guests
+                        @if (res.table !== '-') { • Table {{ res.table }} }
+                      </p>
+                      <p class="text-[11px] text-gray-400 italic truncate mt-0.5">{{ res.type }}</p>
+                    </div>
                   </div>
+
+                  <span class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0"
+                        [class.bg-green-50]="res.status === 'Confirmed'"
+                        [class.text-green-700]="res.status === 'Confirmed'"
+                        [class.bg-amber-50]="res.status === 'Pending'"
+                        [class.text-amber-700]="res.status === 'Pending'"
+                        [class.bg-blue-50]="res.status === 'Seated'"
+                        [class.text-blue-700]="res.status === 'Seated'"
+                        [class.bg-red-50]="res.status === 'No Show' || res.status === 'Cancelled'"
+                        [class.text-red-700]="res.status === 'No Show' || res.status === 'Cancelled'">
+                {{ res.status }}
+              </span>
+                </div>
+
+                <div class="mt-3 flex flex-wrap gap-2 justify-end">
+                  @if (res.rawStatus === 'PENDING') {
+                    <button (click)="confirmReservation(res)"
+                            class="px-3 py-1.5 text-xs font-bold bg-[#005943] text-white rounded-lg hover:bg-[#004735] transition">
+                      Confirm
+                    </button>
+                    <button (click)="cancelReservation(res)"
+                            class="px-3 py-1.5 text-xs font-bold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                      Cancel
+                    </button>
+                  }
+
+                  @if (res.rawStatus === 'CONFIRMED') {
+                    <button (click)="markSeated(res)"
+                            class="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
+                      Seated
+                    </button>
+                    <button (click)="markNoShow(res)"
+                            class="px-3 py-1.5 text-xs font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
+                      No Show
+                    </button>
+                    <button (click)="cancelReservation(res)"
+                            class="px-3 py-1.5 text-xs font-bold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                      Cancel
+                    </button>
+                  }
+
+                  @if (res.rawStatus === 'SEATED' || res.rawStatus === 'NO_SHOW' || res.rawStatus === 'CANCELLED') {
+                    <span class="text-[11px] text-gray-400 italic">No further actions</span>
+                    <button (click)="resetToPending(res)"
+                            class="text-[11px] text-gray-500 hover:text-gray-800 underline">
+                      Reset
+                    </button>
+                  }
                 </div>
               </div>
-              <div class="flex gap-2">
-                <button class="px-4 py-2 bg-[#005943] text-white text-xs font-bold rounded-lg hover:bg-[#004735] transition">Seated</button>
-                <button class="px-4 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition">No Show</button>
-              </div>
-            </div>
+            }
           }
         </div>
       </div>
@@ -165,25 +235,126 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your restaurant floor plan and table limits.</p>
 
         <div class="mt-6 flex justify-end">
-          <button class="px-4 py-2 bg-[#005943] text-white text-sm font-bold rounded-lg hover:bg-[#004735] transition">+ Add New Table</button>
+          <button (click)="openAddTable()"
+                  class="px-4 py-2 bg-[#005943] text-white text-sm font-bold rounded-lg hover:bg-[#004735] transition">
+            + Add New Table
+          </button>
         </div>
 
         <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          @for (table of tables; track table.id) {
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm text-center">
-              <div class="w-14 h-14 mx-auto rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-lg font-extrabold text-gray-700 dark:text-gray-200">{{ table.name }}</div>
-              <p class="text-sm text-gray-500 mt-2">{{ table.seats }} Seats</p>
-              <span class="mt-3 inline-block text-xs font-bold px-3 py-1.5 rounded-full"
-                    [class.bg-green-50]="table.status === 'Available'"
-                    [class.text-green-700]="table.status === 'Available'"
-                    [class.bg-amber-50]="table.status === 'Reserved'"
-                    [class.text-amber-700]="table.status === 'Reserved'"
-                    [class.bg-red-50]="table.status === 'Occupied'"
-                    [class.text-red-700]="table.status === 'Occupied'">
-                {{ table.status }}
-              </span>
-            </div>
+          @if (tables.length === 0) {
+            <p class="text-sm text-gray-500 col-span-full text-center py-8">
+              No tables yet. Click "Add New Table" to create your first one.
+            </p>
+          } @else {
+            @for (table of tables; track table.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm text-center">
+                <div class="w-14 h-14 mx-auto rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-lg font-extrabold text-gray-700 dark:text-gray-200">
+                  {{ table.tableNumber }}
+                </div>
+
+                <p class="text-sm text-gray-500 mt-2">
+                  {{ table.minCapacity }}–{{ table.maxCapacity }} Seats
+                </p>
+
+                <span class="mt-3 inline-block text-xs font-bold px-3 py-1.5 rounded-full"
+                      [class.bg-green-50]="table.status === 'Available'"
+                      [class.text-green-700]="table.status === 'Available'"
+                      [class.bg-amber-50]="table.status === 'Reserved'"
+                      [class.text-amber-700]="table.status === 'Reserved'"
+                      [class.bg-red-50]="table.status === 'Occupied'"
+                      [class.text-red-700]="table.status === 'Occupied'">
+              {{ table.status }}
+            </span>
+
+                <div class="mt-4 flex justify-center gap-2">
+                  <button (click)="openEditTable(table)"
+                          class="px-3 py-1.5 text-xs font-bold bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
+                    Edit
+                  </button>
+                  <button (click)="deleteTable(table)"
+                          class="px-3 py-1.5 text-xs font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }
           }
+        </div>
+      </div>
+    }
+
+    @if (tableModalOpen) {
+      <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeTableModal()">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" (click)="closeTableModal()"></div>
+
+          <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
+               (click)="$event.stopPropagation()">
+
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                  {{ editingTable ? 'Edit Table' : 'Add New Table' }}
+                </h3>
+                <button (click)="closeTableModal()"
+                        class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              @if (tableError) {
+                <div class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{{ tableError }}</div>
+              }
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Table Number *</label>
+                  <input type="text" [(ngModel)]="tableForm.tableNumber"
+                         placeholder="e.g. T1, Table 5, Bar 2"
+                         class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Min Capacity *</label>
+                    <input type="number" [(ngModel)]="tableForm.minCapacity" min="1" max="30"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Max Capacity *</label>
+                    <input type="number" [(ngModel)]="tableForm.maxCapacity" min="1" max="30"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                  <select [(ngModel)]="tableForm.status"
+                          class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                    <option value="Available">Available</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Occupied">Occupied</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mt-6 flex items-center gap-3">
+                <button (click)="closeTableModal()"
+                        class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+                  Cancel
+                </button>
+                <button (click)="saveTable()"
+                        [disabled]="tableSaving"
+                        class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50">
+                  @if (tableSaving) { <span>Saving...</span> }
+                  @else { <span>{{ editingTable ? 'Save Changes' : 'Create Table' }}</span> }
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     }
@@ -191,58 +362,194 @@
     @if (activeTab() === 'schedule') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Schedule Manager</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Set opening hours and holiday overrides.</p>
+
+        @if (toastMessage) {
+          <div class="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg border text-sm font-bold transition-all"
+               [class.bg-green-50]="toastType === 'success'"
+               [class.text-green-700]="toastType === 'success'"
+               [class.border-green-200]="toastType === 'success'"
+               [class.bg-red-50]="toastType === 'error'"
+               [class.text-red-700]="toastType === 'error'"
+               [class.border-red-200]="toastType === 'error'">
+            {{ toastMessage }}
+          </div>
+        }
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Set opening hours and holiday overrides.
+        </p>
+
+        @if (scheduleError) {
+          <div class="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{{ scheduleError }}</div>
+        }
 
         <div class="mt-6 flex justify-end">
-          <button class="px-4 py-2 bg-[#005943] text-white text-sm font-bold rounded-lg hover:bg-[#004735] transition">+ Add Holiday / Event</button>
+          <button (click)="openAddOverride()"
+                  class="px-4 py-2 bg-[#005943] text-white text-sm font-bold rounded-lg hover:bg-[#004735] transition">
+            + Add Holiday / Event
+          </button>
         </div>
 
         <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-          @for (day of schedule; track day.day) {
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 shadow-sm flex items-center justify-between">
-              <div>
-                <p class="font-bold text-gray-900 dark:text-white text-sm">{{ day.day }}</p>
-                <div class="mt-1 flex items-center gap-2">
-                  <input type="time" [value]="day.open" class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs" />
-                  <span class="text-gray-400 text-xs">to</span>
-                  <input type="time" [value]="day.close" class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs" />
+          @for (day of schedule; track day.dayOfWeek) {
+            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 shadow-sm">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex-1">
+                  <p class="font-bold text-gray-900 dark:text-white text-sm">{{ day.day }}</p>
+                  <div class="mt-1 flex items-center gap-2">
+                    <input type="time" [(ngModel)]="day.open"
+                           class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs" />
+                    <span class="text-gray-400 text-xs">to</span>
+                    <input type="time" [(ngModel)]="day.close"
+                           class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-xs" />
+                  </div>
                 </div>
+
+                <button (click)="saveDay(day)"
+                        [disabled]="scheduleSaving"
+                        class="text-xs font-bold px-3 py-2 rounded-lg text-white bg-[#005943] hover:bg-[#004735] transition disabled:opacity-50 shrink-0">
+                  Save
+                </button>
               </div>
-              <button class="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 transition">Override</button>
             </div>
           }
         </div>
 
-        <h3 class="font-bold text-gray-900 dark:text-white text-base mt-6 mb-4">Upcoming Overrides</h3>
-        <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3">
-          @for (override of scheduleOverrides; track override.date) {
-            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 shadow-sm flex items-center justify-between">
-              <div>
-                <p class="font-bold text-gray-900 dark:text-white text-sm">{{ override.date }}</p>
-                <div class="mt-1 flex items-center gap-2">
-                  <span class="text-xs text-gray-600 dark:text-gray-300">{{ override.reason }}</span>
-                  <span class="text-gray-400 text-xs">|</span>
-                  <span class="text-xs text-gray-500">
-                    @if (override.status === 'Closed') {
-                      Closed
-                    } @else {
-                      {{ override.open }} to {{ override.close }}
-                    }
-                  </span>
+        <h3 class="font-bold text-gray-900 dark:text-white text-base mt-8 mb-4">Upcoming Overrides</h3>
+
+        @if (scheduleOverrides.length === 0) {
+          <p class="text-sm text-gray-500 italic py-4">
+            No holidays or special hours configured yet.
+          </p>
+        } @else {
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            @for (override of scheduleOverrides; track override.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-bold text-gray-900 dark:text-white text-sm">{{ override.date }}</p>
+                    <div class="mt-1 flex items-center gap-2 flex-wrap">
+                      @if (override.reason) {
+                        <span class="text-xs text-gray-600 dark:text-gray-300">{{ override.reason }}</span>
+                        <span class="text-gray-400 text-xs">|</span>
+                      }
+                      <span class="text-xs text-gray-500">
+                        @if (override.isClosed) {
+                          Closed
+                        } @else if (override.open && override.close) {
+                          {{ override.open }} to {{ override.close }}
+                        } @else {
+                          —
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs font-bold px-3 py-1.5 rounded-lg border"
+                      [class.bg-red-50]="override.isClosed"
+                      [class.text-red-700]="override.isClosed"
+                      [class.border-red-200]="override.isClosed"
+                      [class.bg-emerald-50]="!override.isClosed"
+                      [class.text-emerald-700]="!override.isClosed"
+                      [class.border-emerald-200]="!override.isClosed">
+                  {{ override.status }}
+                </span>
+
+                    <button (click)="openEditOverride(override)"
+                            class="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                      Edit
+                    </button>
+                    <button (click)="deleteOverride(override)"
+                            class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    }
+
+    @if (overrideModalOpen) {
+      <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeOverrideModal()">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" (click)="closeOverrideModal()"></div>
+
+          <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
+               (click)="$event.stopPropagation()">
+
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                  {{ editingOverride ? 'Edit Override' : 'Add Holiday / Event' }}
+                </h3>
+                <button (click)="closeOverrideModal()"
+                        class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              @if (overrideError) {
+                <div class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{{ overrideError }}</div>
+              }
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Date *</label>
+                  <input type="date" [(ngModel)]="overrideForm.overrideDate"
+                         class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="overrideForm.isClosed">
+                    Closed all day
+                  </label>
+                </div>
+
+                @if (!overrideForm.isClosed) {
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Opens</label>
+                      <input type="time" [(ngModel)]="overrideForm.openingTime"
+                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Closes</label>
+                      <input type="time" [(ngModel)]="overrideForm.closingTime"
+                             class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+                    </div>
+                  </div>
+                }
+
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                  <input type="text" [(ngModel)]="overrideForm.reason"
+                         placeholder="e.g. Christmas Day, Private event"
+                         class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
                 </div>
               </div>
 
-              <span class="text-xs font-bold px-3 py-2 rounded-lg border"
-                    [class.bg-red-50]="override.status === 'Closed'"
-                    [class.text-red-700]="override.status === 'Closed'"
-                    [class.border-red-200]="override.status === 'Closed'"
-                    [class.bg-emerald-50]="override.status === 'Open'"
-                    [class.text-emerald-700]="override.status === 'Open'"
-                    [class.border-emerald-200]="override.status === 'Open'">
-                {{ override.status }}
-              </span>
+              <div class="mt-6 flex items-center gap-3">
+                <button (click)="closeOverrideModal()"
+                        class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+                  Cancel
+                </button>
+                <button (click)="saveOverride()"
+                        [disabled]="overrideSaving"
+                        class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50">
+                  @if (overrideSaving) { <span>Saving...</span> }
+                  @else { <span>{{ editingOverride ? 'Save Changes' : 'Create' }}</span> }
+                </button>
+              </div>
             </div>
-          }
+          </div>
         </div>
       </div>
     }

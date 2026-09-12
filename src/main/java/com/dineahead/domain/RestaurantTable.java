@@ -1,6 +1,6 @@
 package com.dineahead.domain;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -23,6 +23,7 @@ public class RestaurantTable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnore
     private Restaurant restaurant;
 
     @Column(name = "table_number", nullable = false)
@@ -33,4 +34,7 @@ public class RestaurantTable {
 
     @Column(name = "max_capacity", nullable = false)
     private Integer maxCapacity;
+
+    @Column(length = 50)
+    private String status;
 }

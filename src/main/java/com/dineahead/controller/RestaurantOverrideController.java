@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/restaurant-overrides")
@@ -32,5 +33,17 @@ public class RestaurantOverrideController {
     @GetMapping("/restaurant/{restaurantId}/date/{date}")
     public ResponseEntity<List<RestaurantOverride>> getOverridesByDate(@PathVariable Long restaurantId, @PathVariable String date) {
         return ResponseEntity.ok(restaurantOverrideService.getOverridesByDate(restaurantId, LocalDate.parse(date)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<RestaurantOverride> updateOverride(@PathVariable Long id,
+                                                             @RequestBody RestaurantOverride updates) {
+        return ResponseEntity.ok(restaurantOverrideService.updateOverride(id, updates));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> deleteOverride(@PathVariable Long id) {
+        restaurantOverrideService.deleteOverride(id);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 }
