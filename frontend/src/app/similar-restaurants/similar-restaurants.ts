@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
-import { FavoritesService } from '../services/favorites.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
 import {Header} from '../header/header';
 
@@ -90,6 +89,9 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   bookingSlotTime: string | null = null;
   bookingSlotDate: Date | null = null;
 
+  favoriteIds = new Set<number>();
+  private userId: number | null = null;
+
   sortBy = 'averageRating';
   infoMessage: string = '';
 
@@ -113,12 +115,12 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef,
-    private favoritesService: FavoritesService
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.generateTimeSlots();
+    this.loadFavoriteIds();
 
     const today = new Date();
     this.selectedDate = this.formatDate(today);
@@ -139,6 +141,31 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+  }
+
+  private loadFavoriteIds(): void {
+    const stored = localStorage.getItem('user');
+    if (!stored) return;
+
+    try {
+      const u = JSON.parse(stored);
+      this.userId = u.id ?? u.userId ?? null;
+    } catch {}
+
+    if (!this.userId) return;
+
+    this.api.getUserFavorites(this.userId).subscribe({
+      next: (list: any[]) => {
+        this.favoriteIds = new Set(
+          (list || []).map(f => f.restaurantId).filter((x: any) => x != null)
+        );
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[favorites] load failed', err);
+        this.favoriteIds = new Set();
+      }
+    });
   }
 
   async loadReferenceRestaurant(id: number): Promise<void> {
@@ -489,7 +516,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   }
 
   isFavorite(id: number): boolean {
-    return this.favoritesService.isFavorite(id);
+    return this.favoriteIds.has(id);
   }
 
   toggleFavorite(id: number, event?: Event): void {
@@ -497,20 +524,43 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
       event.preventDefault();
       event.stopPropagation();
     }
-    const restaurant = this.allRestaurants.find(r => r.id === id);
-    if (restaurant) {
-      this.favoritesService.toggleFavorite({
-        id: restaurant.id,
-        name: restaurant.name,
-        coverPhotoUrl: restaurant.coverPhotoUrl || '',
-        cuisineType: restaurant.cuisineType || '',
-        priceRange: restaurant.priceRange || '',
-        averageRating: restaurant.averageRating || 0,
-        reviewCount: restaurant.reviewCount || 0,
-        address: restaurant.address || '',
-        city: restaurant.city || ''
+
+    if (!this.userId) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: this.router.url }
       });
+      return;
     }
+
+    const currentlyFav = this.favoriteIds.has(id);
+
+    if (currentlyFav) {
+      this.favoriteIds.delete(id);
+    } else {
+      this.favoriteIds.add(id);
+    }
+    this.favoriteIds = new Set(this.favoriteIds);
+    this.cdr.detectChanges();
+
+    const req = currentlyFav
+      ? this.api.removeFavorite(this.userId, id)
+      : this.api.addFavorite(this.userId, id);
+
+    req.subscribe({
+      next: () => {
+      },
+      error: (err) => {
+        console.error('[favorites] toggle failed', err);
+
+        if (currentlyFav) {
+          this.favoriteIds.add(id);
+        } else {
+          this.favoriteIds.delete(id);
+        }
+        this.favoriteIds = new Set(this.favoriteIds);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   getPageTitle(): string {

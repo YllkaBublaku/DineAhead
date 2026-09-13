@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { Header } from '../header/header';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
-import { FavoritesService } from '../services/favorites.service';
 
 export interface RestaurantItem {
   id: number;
@@ -51,7 +50,6 @@ export class Home implements OnInit {
   constructor(
     private router: Router,
     private api: ApiService,
-    private favoritesService: FavoritesService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -67,8 +65,11 @@ export class Home implements OnInit {
   offerRestaurants: RestaurantItem[] = [];
   cities: CityItem[] = [];
   cuisines: CuisineItem[] = [];
+  favoriteIds = new Set<number>();
+  private userId: number | null = null;
 
   ngOnInit(): void {
+    this.loadFavoriteIds();
     this.loadRestaurants();
     this.loadCities();
   }
@@ -91,6 +92,31 @@ export class Home implements OnInit {
       .catch((error) => {
         console.error('Error loading cities:', error);
       });
+  }
+
+  private loadFavoriteIds(): void {
+    const stored = localStorage.getItem('user');
+    if (!stored) return;
+
+    try {
+      const u = JSON.parse(stored);
+      this.userId = u.id ?? u.userId ?? null;
+    } catch {}
+
+    if (!this.userId) return;
+
+    this.api.getUserFavorites(this.userId).subscribe({
+      next: (list: any[]) => {
+        this.favoriteIds = new Set(
+          (list || []).map(f => f.restaurantId).filter((x: any) => x != null)
+        );
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[favorites] load failed', err);
+        this.favoriteIds = new Set();
+      }
+    });
   }
 
   loadRestaurants(): void {
@@ -223,25 +249,46 @@ export class Home implements OnInit {
       event.stopPropagation();
     }
 
-    const restaurant = this.allRestaurants.find(r => r.id === id);
-    if (restaurant) {
-      this.favoritesService.toggleFavorite({
-        id: restaurant.id,
-        name: restaurant.name,
-        coverPhotoUrl: restaurant.coverPhotoUrl || '',
-        cuisineType: restaurant.cuisineType || '',
-        priceRange: restaurant.priceRange || '',
-        averageRating: restaurant.averageRating || 0,
-        reviewCount: restaurant.reviewCount || 0,
-        address: restaurant.address || '',
-        city: restaurant.city || ''
+    if (!this.userId) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: this.router.url }
       });
+      return;
     }
+
+    const currentlyFav = this.favoriteIds.has(id);
+
+    if (currentlyFav) {
+      this.favoriteIds.delete(id);
+    } else {
+      this.favoriteIds.add(id);
+    }
+    this.favoriteIds = new Set(this.favoriteIds);
+    this.cdr.detectChanges();
+
+    const req = currentlyFav
+      ? this.api.removeFavorite(this.userId, id)
+      : this.api.addFavorite(this.userId, id);
+
+    req.subscribe({
+      next: () => {
+      },
+      error: (err) => {
+        console.error('[favorites] toggle failed', err);
+        if (currentlyFav) {
+          this.favoriteIds.add(id);
+        } else {
+          this.favoriteIds.delete(id);
+        }
+        this.favoriteIds = new Set(this.favoriteIds);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+  isFavorite(id: number): boolean {
+    return this.favoriteIds.has(id);
   }
 
-  isFavorite(id: number): boolean {
-    return this.favoritesService.isFavorite(id);
-  }
 
   scrollCarousel(elementId: string, offset: number): void {
     const el = document.getElementById(elementId);

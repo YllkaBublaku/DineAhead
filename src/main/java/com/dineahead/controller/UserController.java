@@ -20,7 +20,7 @@ public class UserController {
     }
 
     private UserResponseDTO mapToDTO(User user) {
-        return new UserResponseDTO(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole(), user.getAvatarUrl());
+        return new UserResponseDTO(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole(), user.getAvatarUrl(), user.getCreatedAt(), user.getPhone());
     }
 
     @PostMapping("/register")
@@ -88,5 +88,13 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.ok(null);
         }
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserResponseDTO> updateUser(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> updates) {
+        User updated = userService.updateUser(id, updates);
+        return ResponseEntity.ok(mapToDTO(updated));
     }
 }

@@ -80,6 +80,7 @@ export class Login implements OnInit {
           lastName: response.lastName || response.user?.lastName || '',
           email: response.email || response.user?.email || this.email,
           role: response.role || response.user?.role || 'USER',
+          createdAt: response.createdAt || response.user?.createdAt || null,
           token: response.token || response.accessToken || response.jwt || null,
           initials: this.getInitials(
             response.firstName || response.user?.firstName || '',

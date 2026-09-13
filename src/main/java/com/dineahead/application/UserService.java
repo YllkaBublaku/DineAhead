@@ -125,4 +125,39 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
+
+    @Transactional
+    public User updateUser(Long id, Map<String, Object> updates) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found: " + id));
+
+        if (updates.containsKey("firstName")) {
+            Object v = updates.get("firstName");
+            user.setFirstName(v != null ? v.toString() : null);
+        }
+        if (updates.containsKey("lastName")) {
+            Object v = updates.get("lastName");
+            user.setLastName(v != null ? v.toString() : null);
+        }
+        if (updates.containsKey("email")) {
+            Object v = updates.get("email");
+            if (v != null) {
+                String newEmail = v.toString().trim();
+                if (!newEmail.isEmpty() && !newEmail.equalsIgnoreCase(user.getEmail())) {
+                    userRepository.findByEmail(newEmail).ifPresent(other -> {
+                        if (!other.getId().equals(id)) {
+                            throw new RuntimeException("Email is already in use");
+                        }
+                    });
+                    user.setEmail(newEmail);
+                }
+            }
+        }
+        if (updates.containsKey("phone")) {
+            Object v = updates.get("phone");
+            user.setPhone(v != null ? v.toString() : null);
+        }
+
+        return userRepository.save(user);
+    }
 }

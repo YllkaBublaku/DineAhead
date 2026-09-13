@@ -626,4 +626,47 @@ export class ApiService {
       { restaurantIds, date, guests }
     );
   }
+
+  getReservationsByUser(userId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/reservations/user/${userId}`);
+  }
+
+  cancelReservation(id: number): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/reservations/${id}/cancel`, {});
+  }
+
+  getReviewsByUser(userId: number): Promise<any[]> {
+    return firstValueFrom(
+      this.http.get<any[]>(`${this.apiUrl}/reviews/user/${userId}`)
+        .pipe(
+          map(response => {
+            if (Array.isArray(response)) return response;
+            if (response && (response as any).content && Array.isArray((response as any).content)) {
+              return (response as any).content;
+            }
+            return [];
+          })
+        )
+    );
+  }
+
+  updateUser(id: number, updates: any): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/users/${id}`, updates);
+  }
+
+  getUserById(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/users/${id}`);
+  }
+
+  getUserFavorites(userId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/favorites/user/${userId}`);
+  }
+
+  addFavorite(userId: number, restaurantId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/favorites/${userId}/${restaurantId}`, {});
+  }
+
+  removeFavorite(userId: number, restaurantId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/favorites/${userId}/${restaurantId}`);
+  }
 }

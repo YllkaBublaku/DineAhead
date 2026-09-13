@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import * as L from 'leaflet';
-import {FavoritesService} from '../services/favorites.service';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
@@ -90,7 +89,14 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   @Output() search = new EventEmitter<{ city: string; query: string }>();
 
   activeTab: 'about' | 'menu' | 'reviews' = 'about';
-  isFavorite = false;
+
+  favoriteIds = new Set<number>();
+  private userId: number | null = null;
+
+  get isFavorite(): boolean {
+    return this.restaurant != null && this.favoriteIds.has(this.restaurant.id);
+  }
+
   bookingSuccess = false;
   bookingModalOpen = false;
   loading = true;
@@ -125,7 +131,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   guestAvailability: Record<number, boolean> = {};
   guestsLoading = false;
-
+  modifyReservationId: number | null = null;
 
   availableSlots: string[] = [];
   slotsLoading = false;
@@ -164,17 +170,10 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef,
-    private favoritesService: FavoritesService
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.favoritesService.favorites$.subscribe(() => {
-      if (this.restaurant) {
-        this.isFavorite = this.favoritesService.isFavorite(this.restaurant.id);
-        this.cdr.detectChanges();
-      }
-    });
 
     this.route.params.subscribe(params => {
       const id = params['id'];
@@ -185,8 +184,42 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       }
     });
 
+    this.route.queryParams.subscribe(params => {
+      const modId = params['modifyReservationId'];
+      const dateParam = params['date'];
+      const timeParam = params['time'];
+      const guestsParam = params['guests'];
+
+      if (!modId) return;
+
+      this.modifyReservationId = Number(modId);
+
+      if (dateParam) {
+        const parts = String(dateParam).split('-');
+        if (parts.length === 3) {
+          this.selectedDate = new Date(
+            Number(parts[0]),
+            Number(parts[1]) - 1,
+            Number(parts[2])
+          );
+          this.currentYear = this.selectedDate.getFullYear();
+          this.currentMonth = this.selectedDate.getMonth();
+        }
+      }
+
+      if (timeParam) this.selectedTime = String(timeParam).substring(0, 5);
+      if (guestsParam) this.selectedGuests = Number(guestsParam) || 2;
+
+      this.bookingStep = this.selectedTime ? 'time' : 'date';
+
+      setTimeout(() => {
+        if (this.selectedDate) this.fetchAvailability();
+      }, 300);
+    });
+
     this.checkLoginStatus();
     this.generateTimeSlots();
+    this.loadFavoriteIds();
   }
 
   checkLoginStatus(): void {
@@ -208,6 +241,36 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       this.user = null;
       this.userRole = null;
     }
+  }
+
+  private loadFavoriteIds(): void {
+    const stored = localStorage.getItem('user');
+    if (!stored) return;
+
+    try {
+      const u = JSON.parse(stored);
+      this.userId = u.id ?? u.userId ?? null;
+    } catch {}
+
+    if (!this.userId) return;
+
+    this.api.getUserFavorites(this.userId).subscribe({
+      next: (list: any[]) => {
+        this.favoriteIds = new Set(
+          (list || []).map(f => f.restaurantId).filter((x: any) => x != null)
+        );
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[detail] favorites load failed', err);
+        this.favoriteIds = new Set();
+      }
+    });
+  }
+
+  cancelModify(): void {
+    this.modifyReservationId = null;
+    this.router.navigate(['/dashboard'], { queryParams: { tab: 'bookings' } });
   }
 
   private get isRestaurantOwner(): boolean {
@@ -249,7 +312,6 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
-          this.isFavorite = this.favoritesService.isFavorite(this.restaurant.id);
 
           this.generateCalendar();
           this.loadReviews(id);
@@ -566,19 +628,44 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   toggleFavorite(): void {
-    if (this.restaurant) {
-      this.isFavorite = this.favoritesService.toggleFavorite({
-        id: this.restaurant.id,
-        name: this.restaurant.name,
-        coverPhotoUrl: this.restaurant.coverPhotoUrl || '',
-        cuisineType: this.restaurant.cuisineType || '',
-        priceRange: this.restaurant.priceRange || '',
-        averageRating: this.restaurant.averageRating || 0,
-        reviewCount: this.restaurant.reviewCount || 0,
-        address: this.restaurant.address || '',
-        city: this.restaurant.city || ''
+    if (!this.restaurant) return;
+
+    if (!this.userId) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: this.router.url }
       });
+      return;
     }
+
+    const id = this.restaurant.id;
+    const currentlyFav = this.favoriteIds.has(id);
+
+    if (currentlyFav) {
+      this.favoriteIds.delete(id);
+    } else {
+      this.favoriteIds.add(id);
+    }
+    this.favoriteIds = new Set(this.favoriteIds);
+    this.cdr.detectChanges();
+
+    const req = currentlyFav
+      ? this.api.removeFavorite(this.userId, id)
+      : this.api.addFavorite(this.userId, id);
+
+    req.subscribe({
+      next: () => {
+      },
+      error: (err) => {
+        console.error('[detail] favorite toggle failed', err);
+        if (currentlyFav) {
+          this.favoriteIds.add(id);
+        } else {
+          this.favoriteIds.delete(id);
+        }
+        this.favoriteIds = new Set(this.favoriteIds);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   selectTab(tab: 'about' | 'menu' | 'reviews'): void {
@@ -631,6 +718,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       return;
     }
 
+    const wasModifying = this.modifyReservationId != null;
     this.bookingLoading = true;
     this.bookingError = '';
     this.bookingMessage = '';
@@ -691,6 +779,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         status: this.isPaymentRequired && this.bookingForm.paymentMethod === 'cash' ? 'PENDING' : 'CONFIRMED'
       });
 
+      if (this.modifyReservationId) {
+        try {
+          await firstValueFrom(this.api.cancelReservation(this.modifyReservationId));
+        } catch (err) {
+          console.warn('[detail] Could not cancel old reservation during modify', err);
+        }
+        this.modifyReservationId = null;
+      }
+
       this.bookingMessage = this.isPaymentRequired && this.bookingForm.paymentMethod === 'cash'
         ? `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`
         : 'Your reservation has been confirmed.';
@@ -701,6 +798,9 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
       setTimeout(() => {
         this.closeBookingModal();
+        if (wasModifying) {
+          this.router.navigate(['/dashboard'], { queryParams: { tab: 'bookings' } });
+        }
       }, 3500);
 
     } catch (error) {
@@ -817,7 +917,18 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.slotsLoading = false;
         this.availabilityOpen = res?.open ?? true;
         this.availabilityReason = res?.reason || '';
-        this.availableSlots = res?.slots || [];
+        const fromApi: string[] = res?.slots || [];
+
+        if (this.modifyReservationId && this.selectedTime && !fromApi.includes(this.selectedTime)) {
+          this.availableSlots = [this.selectedTime, ...fromApi].sort();
+        } else {
+          this.availableSlots = fromApi;
+        }
+
+        if (this.modifyReservationId && this.selectedTime && this.availableSlots.length === 0) {
+          this.availableSlots = [this.selectedTime];
+        }
+
         this.cdr.detectChanges();
       },
       error: (err: any) => {

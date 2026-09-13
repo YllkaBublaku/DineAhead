@@ -4,6 +4,7 @@ import com.dineahead.domain.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -15,4 +16,6 @@ public class UserResponseDTO {
     private String email;
     private Role role;
     private String avatarUrl;
+    private LocalDateTime createdAt;
+    private String phone;
 }
