@@ -6,6 +6,7 @@ import com.dineahead.domain.User;
 import com.dineahead.domain.UserResponseDTO;
 import com.dineahead.domain.UserUpdateDTO;
 import com.dineahead.infrastructure.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -133,5 +134,25 @@ public class UserController {
         userRepository.save(user);
 
         return ResponseEntity.ok(mapToDTO(user));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String password = body.get("password");
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Password confirmation required"));
+        }
+
+        try {
+            userService.deleteUser(id, password);
+            return ResponseEntity.ok(Map.of("message", "Account deleted"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 }

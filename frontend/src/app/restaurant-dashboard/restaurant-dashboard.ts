@@ -91,6 +91,13 @@ export class RestaurantDashboard implements OnInit {
 
   profileSaving = false;
 
+  deleteRestaurantDialogOpen = false;
+  deleteRestaurantConfirmText = '';
+  deleteRestaurantPassword = '';
+  deleteRestaurantError = '';
+  deleteRestaurantLoading = false;
+  restaurantIsActive = true;
+
   constructor(
     private router: Router,
     private api: ApiService,
@@ -98,6 +105,19 @@ export class RestaurantDashboard implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const stored = localStorage.getItem('user');
+    if (!stored) {
+      this.router.navigate(['/']);
+      return;
+    }
+
+    const u = JSON.parse(stored);
+
+    if (u.role !== 'ADMIN') {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
     this.loadOwnerRestaurant();
   }
 
@@ -131,6 +151,7 @@ export class RestaurantDashboard implements OnInit {
           avatar: this.getRestaurantInitials(r.name || ''),
           profilePicture: r.coverPhotoUrl || ''
         };
+        this.restaurantIsActive = r.isActive !== false;
 
         this.cdr.detectChanges();
 
@@ -858,7 +879,119 @@ export class RestaurantDashboard implements OnInit {
     input.value = '';
   }
 
+  confirmDeactivateRestaurant(): void {
+    if (!this.restaurantId) return;
+
+    const ok = confirm(
+      'Deactivate your restaurant?\n\n' +
+      'It will be hidden from search results and no new reservations can be made. ' +
+      'You will be logged out.'
+    );
+    if (!ok) return;
+
+    this.api.deactivateRestaurant(this.restaurantId).subscribe({
+      next: () => {
+        this.showToast('Restaurant deactivated');
+        setTimeout(() => this.logout(), 1200);
+      },
+      error: (err) => {
+        console.error('[Dashboard] deactivate failed', err);
+        this.showToast(err?.error?.message || 'Could not deactivate', 'error');
+      }
+    });
+  }
+
+  openDeleteRestaurantDialog(): void {
+    this.deleteRestaurantConfirmText = '';
+    this.deleteRestaurantPassword = '';
+    this.deleteRestaurantError = '';
+    this.deleteRestaurantLoading = false;
+    this.deleteRestaurantDialogOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeleteRestaurantDialog(): void {
+    this.deleteRestaurantDialogOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  submitDeleteRestaurant(): void {
+    if (!this.restaurantId) return;
+
+    if (this.deleteRestaurantConfirmText.trim().toUpperCase() !== 'DELETE') {
+      this.deleteRestaurantError = 'Please type DELETE to confirm.';
+      return;
+    }
+    if (!this.deleteRestaurantPassword) {
+      this.deleteRestaurantError = 'Password is required.';
+      return;
+    }
+
+    this.deleteRestaurantLoading = true;
+    this.deleteRestaurantError = '';
+
+    this.api.deleteRestaurant(this.restaurantId, this.deleteRestaurantPassword).subscribe({
+      next: () => {
+        this.deleteRestaurantLoading = false;
+        this.deleteRestaurantDialogOpen = false;
+        this.showToast('Restaurant deleted');
+        setTimeout(() => this.logout(), 1200);
+      },
+      error: (err) => {
+        this.deleteRestaurantLoading = false;
+        this.deleteRestaurantError = err?.error?.message || 'Could not delete restaurant.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  toggleRestaurantActive(): void {
+    if (!this.restaurantId) return;
+
+    if (this.restaurantIsActive) {
+      const ok = confirm(
+        'Deactivate your restaurant?\n\n' +
+        'It will be hidden from search and no new reservations can be made. ' +
+        'You will be logged out.'
+      );
+      if (!ok) return;
+
+      this.api.deactivateRestaurant(this.restaurantId).subscribe({
+        next: () => {
+          this.restaurantIsActive = false;
+          this.showToast('Restaurant deactivated');
+          setTimeout(() => this.logout(), 1200);
+        },
+        error: (err) => {
+          console.error('[Dashboard] deactivate failed', err);
+          this.showToast(err?.error?.message || 'Could not deactivate', 'error');
+        }
+      });
+    } else {
+      const ok = confirm('Activate your restaurant again? It will become visible and accept reservations.');
+      if (!ok) return;
+
+      this.api.activateRestaurant(this.restaurantId).subscribe({
+        next: () => {
+          this.restaurantIsActive = true;
+          this.showToast('Restaurant activated');
+        },
+        error: (err) => {
+          console.error('[Dashboard] activate failed', err);
+          this.showToast(err?.error?.message || 'Could not activate', 'error');
+        }
+      });
+    }
+  }
+
   logout() {
+    this.api.logout().subscribe({
+      next: () => this.clearAndGoHome(),
+      error: () => this.clearAndGoHome()
+    });
+  }
+
+  private clearAndGoHome() {
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
     this.router.navigate(['/']);

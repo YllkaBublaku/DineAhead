@@ -2,9 +2,13 @@ package com.dineahead.controller;
 
 import com.dineahead.application.*;
 import com.dineahead.domain.*;
+import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.infrastructure.RestaurantRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,8 +27,9 @@ public class RestaurantController {
     private final AvailabilityService availabilityService;
     private final FileStorageService fileStorageService;
     private final RestaurantRepository restaurantRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService, AvailabilityService availabilityService, FileStorageService fileStorageService, RestaurantRepository restaurantRepository) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService, AvailabilityService availabilityService, FileStorageService fileStorageService, RestaurantRepository restaurantRepository, PasswordEncoder passwordEncoder) {
         this.restaurantService = restaurantService;
         this.featureService = featureService;
         this.reviewService = reviewService;
@@ -32,6 +37,7 @@ public class RestaurantController {
         this.availabilityService = availabilityService;
         this.fileStorageService = fileStorageService;
         this.restaurantRepository = restaurantRepository;
+        this.passwordEncoder = passwordEncoder;;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
@@ -41,6 +47,11 @@ public class RestaurantController {
     @GetMapping
     public ResponseEntity<List<RestaurantResponseDTO>> getAllRestaurants() {
         List<Restaurant> restaurants = restaurantImageService.getAllRestaurantsWithImages();
+
+        restaurants = restaurants.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                .collect(Collectors.toList());
+
         List<RestaurantResponseDTO> dtos = restaurants.stream()
                 .map(RestaurantResponseDTO::new)
                 .collect(Collectors.toList());
@@ -50,6 +61,10 @@ public class RestaurantController {
     @GetMapping("/city/{city}")
     public ResponseEntity<List<RestaurantResponseDTO>> getRestaurantsByCity(@PathVariable String city) {
         List<Restaurant> restaurants = restaurantService.getRestaurantsByCity(city);
+
+        restaurants = restaurants.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                .collect(Collectors.toList());
 
         restaurants.forEach(restaurant -> {
             if (restaurant.getCity() != null && restaurant.getCity().getName() != null && !restaurant.getCity().getName().isEmpty()) {
@@ -148,5 +163,36 @@ public class RestaurantController {
         restaurantRepository.save(restaurant);
 
         return ResponseEntity.ok(new RestaurantResponseDTO(restaurant));
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<RestaurantResponseDTO> deactivateRestaurant(@PathVariable Long id) {
+        restaurantService.deactivateRestaurant(id);
+        Restaurant r = restaurantRepository.findById(id).orElseThrow();
+        return ResponseEntity.ok(new RestaurantResponseDTO(r));
+    }
+
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<RestaurantResponseDTO> activateRestaurant(@PathVariable Long id) {
+        restaurantService.activateRestaurant(id);
+        Restaurant r = restaurantRepository.findById(id).orElseThrow();
+        return ResponseEntity.ok(new RestaurantResponseDTO(r));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRestaurant(@PathVariable Long id,
+                                              @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String password = body != null ? body.get("password") : null;
+            restaurantService.deleteRestaurant(id, password, passwordEncoder);
+            return ResponseEntity.ok(Map.of("message", "Restaurant deleted"));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Could not delete: " + e.getMessage()));
+        }
     }
 }

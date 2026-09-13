@@ -1,7 +1,9 @@
 package com.dineahead.application;
 
+import com.dineahead.domain.Reservation;
 import com.dineahead.domain.Restaurant;
 import com.dineahead.domain.User;
+import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.domain.enums.Role;
 import com.dineahead.infrastructure.UserRepository;
 import jakarta.transaction.Transactional;
@@ -159,5 +161,32 @@ public class UserService {
         }
 
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUser(Long id, String rawPassword) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (rawPassword == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw new RuntimeException("Incorrect password");
+        }
+
+        if (user.getOwnedRestaurants() != null && !user.getOwnedRestaurants().isEmpty()) {
+            throw new RuntimeException(
+                    "You own one or more restaurants. Delete them from the Restaurant Dashboard first."
+            );
+        }
+
+        if (user.getReservations() != null) {
+            for (Reservation r : user.getReservations()) {
+                if (r.getStatus() != null
+                        && r.getStatus() != ReservationStatus.CANCELLED
+                        && r.getStatus() != ReservationStatus.NO_SHOW) {
+                    r.setStatus(ReservationStatus.CANCELLED);
+                }
+            }
+        }
+        userRepository.delete(user);
     }
 }

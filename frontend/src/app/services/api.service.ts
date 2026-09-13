@@ -709,4 +709,24 @@ export class ApiService {
     formData.append('file', file);
     return this.http.post<any>(`${this.apiUrl}/restaurants/${restaurantId}/cover-photo`, formData);
   }
+
+  deleteUser(userId: number, password: string): Observable<any> {
+    return this.http.request<any>('delete', `${this.apiUrl}/users/${userId}`, {
+      body: { password }
+    });
+  }
+
+  deactivateRestaurant(restaurantId: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/restaurants/${restaurantId}/deactivate`, {});
+  }
+
+  deleteRestaurant(restaurantId: number, password: string): Observable<any> {
+    return this.http.request<any>('delete', `${this.apiUrl}/restaurants/${restaurantId}`, {
+      body: { password }
+    });
+  }
+
+  activateRestaurant(restaurantId: number): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/restaurants/${restaurantId}/activate`, {});
+  }
 }

@@ -1,11 +1,13 @@
 package com.dineahead.application;
 
-import com.dineahead.domain.MenuItem;
-import com.dineahead.domain.Restaurant;
-import com.dineahead.domain.TimeSlot;
+import com.dineahead.domain.*;
+import com.dineahead.domain.enums.ReservationStatus;
 import com.dineahead.infrastructure.MenuItemRepository;
+import com.dineahead.infrastructure.ReservationRepository;
 import com.dineahead.infrastructure.RestaurantRepository;
 import com.dineahead.infrastructure.TimeSlotRepository;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +26,14 @@ public class RestaurantService {
     private final MenuItemRepository menuItemRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final CityService cityService;
+    private final ReservationRepository reservationRepository;
 
-    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository, CityService cityService) {
+    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository, CityService cityService, ReservationRepository reservationRepository) {
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.cityService = cityService;
+        this.reservationRepository = reservationRepository;
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -109,4 +113,50 @@ public class RestaurantService {
         return restaurantRepository.save(restaurant);
     }
 
+    @Transactional
+    public void deactivateRestaurant(Long id) {
+        Restaurant r = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+        r.setIsActive(false);
+        restaurantRepository.save(r);
+    }
+
+    @Transactional
+    public void activateRestaurant(Long id) {
+        Restaurant r = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+        r.setIsActive(true);
+        restaurantRepository.save(r);
+    }
+
+    @Transactional
+    public void deleteRestaurant(Long id, String password, PasswordEncoder passwordEncoder) {
+        Restaurant r = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        User owner = r.getOwner();
+        if (owner == null) {
+            throw new RuntimeException("No owner linked to this restaurant.");
+        }
+
+        if (owner.getPasswordHash() != null && !owner.getPasswordHash().isBlank()) {
+            if (password == null || !passwordEncoder.matches(password, owner.getPasswordHash())) {
+                throw new BadCredentialsException("Incorrect password.");
+            }
+        }
+
+        List<Reservation> reservations = reservationRepository.findByRestaurantId(id);
+        for (Reservation rv : reservations) {
+            if (rv.getStatus() != null
+                    && rv.getStatus() != ReservationStatus.CANCELLED
+                    && rv.getStatus() != ReservationStatus.NO_SHOW) {
+                rv.setStatus(ReservationStatus.CANCELLED);
+            }
+        }
+        reservationRepository.saveAll(reservations);
+
+        r.setOwner(null);
+        restaurantRepository.save(r);
+        restaurantRepository.delete(r);
+    }
 }

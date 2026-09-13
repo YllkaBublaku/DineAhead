@@ -66,10 +66,13 @@ public class SecurityConfig {
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
-                        .logoutSuccessUrl("http://localhost:4200/")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_OK);
+                            response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
+                            response.setHeader("Access-Control-Allow-Credentials", "true");
+                        })
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
-                        .clearAuthentication(true)
                 );
 
         return http.build();

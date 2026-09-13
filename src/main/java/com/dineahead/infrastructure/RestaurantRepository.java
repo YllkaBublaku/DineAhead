@@ -51,4 +51,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     @Query("SELECT r.gallery FROM Restaurant r WHERE r.id = :id")
     List<String> findGalleryByRestaurantId(@Param("id") Long id);
+
+    @Query("SELECT r FROM Restaurant r WHERE r.isActive = true")
+    List<Restaurant> findAllActive();
 }

@@ -29,6 +29,10 @@ public class HomeController {
 
         List<Restaurant> restaurants = restaurantImageService.getAllRestaurantsWithImages();
 
+        restaurants = restaurants.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                .collect(Collectors.toList());
+
         List<RestaurantResponseDTO> restaurantDTOs = restaurants.stream()
                 .map(restaurant -> {
                     RestaurantResponseDTO dto = new RestaurantResponseDTO(restaurant);

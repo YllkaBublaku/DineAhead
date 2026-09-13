@@ -33,7 +33,7 @@ public class RestaurantImageService {
 
     @Transactional(readOnly = true)
     public List<Restaurant> getAllRestaurantsWithImages() {
-        List<Restaurant> restaurants = restaurantRepository.findAll();
+        List<Restaurant> restaurants = restaurantRepository.findAllActive();
 
         restaurants.forEach(restaurant -> {
             if (restaurant.getGallery() != null) {

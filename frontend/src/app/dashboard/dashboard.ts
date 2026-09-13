@@ -41,6 +41,12 @@ export class Dashboard implements OnInit {
   reviews: any[] = [];
   user = { firstName: '', lastName: '', email: '', phone: '', joined: '', avatarUrl: '' };
 
+  deleteDialogOpen = false;
+  deletePassword = '';
+  deleteConfirmText = '';
+  deleteError = '';
+  deleteLoading = false;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -334,7 +340,7 @@ export class Dashboard implements OnInit {
 
     input.value = '';
   }
-  
+
   private formatReviewDate(iso: string): string {
     try {
       const d = new Date(iso);
@@ -437,6 +443,50 @@ export class Dashboard implements OnInit {
 
         if (removed) this.favorites = [...this.favorites, removed];
         this.showToast('Could not remove favorite', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openDeleteDialog(): void {
+    this.deletePassword = '';
+    this.deleteConfirmText = '';
+    this.deleteError = '';
+    this.deleteLoading = false;
+    this.deleteDialogOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeleteDialog(): void {
+    this.deleteDialogOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  submitDelete(): void {
+    if (!this.userId) return;
+
+    if (this.deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      this.deleteError = 'Please type DELETE to confirm.';
+      return;
+    }
+    if (!this.deletePassword) {
+      this.deleteError = 'Password is required.';
+      return;
+    }
+
+    this.deleteLoading = true;
+    this.deleteError = '';
+
+    this.api.deleteUser(this.userId, this.deletePassword).subscribe({
+      next: () => {
+        this.deleteLoading = false;
+        this.deleteDialogOpen = false;
+        this.showToast('Account deleted');
+        setTimeout(() => this.logout(), 1200);
+      },
+      error: (err) => {
+        this.deleteLoading = false;
+        this.deleteError = err?.error?.message || 'Could not delete account.';
         this.cdr.detectChanges();
       }
     });

@@ -38,6 +38,7 @@ public class RestaurantResponseDTO {
     private String cityImageUrl;
     private String cuisineImageUrl;
     private LocalDateTime createdAt;
+    private Boolean isActive;
 
     public RestaurantResponseDTO(Restaurant restaurant) {
         this.id = restaurant.getId();
@@ -108,6 +109,7 @@ public class RestaurantResponseDTO {
         this.cityImageUrl = restaurant.getCityImageUrl();
         this.cuisineImageUrl = restaurant.getCuisineImageUrl();
         this.createdAt = restaurant.getCreatedAt();
+        this.isActive = restaurant.getIsActive();
     }
 
 }
