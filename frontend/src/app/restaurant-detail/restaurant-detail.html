@@ -306,10 +306,18 @@
 
           @if (reviews.length > 0) {
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl">
-              <div>
-                <span class="text-4xl font-extrabold text-gray-900">★ {{ restaurant?.averageRating?.toFixed(1) || 'N/A' }}</span>
-                <p class="text-sm font-bold text-green-600">Excellent</p>
-                <p class="text-xs text-gray-500">{{ restaurant?.reviewCount || 0 }} reviews</p>
+              <div class="text-center sm:text-left">
+                <span class="text-4xl font-extrabold text-gray-900 dark:text-white">
+                  ★ {{ averageOverallRating.toFixed(1) }}
+                </span>
+                <p class="text-sm font-bold"
+                   [class.text-green-600]="averageOverallRating >= 4"
+                   [class.text-amber-600]="averageOverallRating >= 3 && averageOverallRating < 4"
+                   [class.text-red-500]="averageOverallRating > 0 && averageOverallRating < 3"
+                   [class.text-gray-500]="averageOverallRating === 0">
+                  {{ ratingLabel }}
+                </p>
+                <p class="text-xs text-gray-500">{{ reviews.length }} {{ reviews.length === 1 ? 'review' : 'reviews' }}</p>
               </div>
               <div class="flex-1 w-full space-y-2">
                 <div>
@@ -416,22 +424,20 @@
         </div>
 
         @if (isLoggedIn && !hasUserReviewed) {
-          <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+          <div class="mt-6 text-center">
             <button (click)="openReviewModal()"
-                    class="w-full py-3 bg-[#005943] hover:bg-[#004735] text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    class="inline-flex items-center gap-2 px-6 py-2.5 border border-[#005943] text-[#005943] hover:bg-[#005943] hover:text-white text-sm font-bold rounded-full transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
               </svg>
-              Write a Review
+              Write a review
             </button>
           </div>
         } @else if (!isLoggedIn) {
-          <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl text-center">
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Sign in to write a review</p>
+          <div class="mt-6 text-center text-sm text-gray-500">
             <a [routerLink]="['/login']" [queryParams]="{ returnUrl: router.url }"
-               class="inline-block px-6 py-2 bg-[#005943] hover:bg-[#004735] text-white text-sm font-bold rounded-lg transition">
-              Log In
-            </a>
+               class="font-bold text-[#005943] hover:underline">Log in</a>
+            to write a review
           </div>
         }
       </div>
@@ -988,14 +994,14 @@
 @if (reviewModalOpen) {
   <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeReviewModal()">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="closeReviewModal()"></div>
+      <div class="fixed inset-0 bg-black/50 transition-opacity" (click)="closeReviewModal()"></div>
 
       <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
            (click)="$event.stopPropagation()">
 
         <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Write a Review</h3>
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Write a review</h3>
             <button (click)="closeReviewModal()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
               <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1004,76 +1010,64 @@
           </div>
 
           @if (reviewError) {
-            <div class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{{ reviewError }}</div>
+            <div class="mb-4 p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-lg">
+              {{ reviewError }}
+            </div>
           }
 
-          <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Overall Rating *</label>
-            <div class="flex items-center gap-1">
+          <div class="mb-5 text-center">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Overall Rating
+            </label>
+            <div class="flex items-center justify-center gap-2">
               @for (star of [1,2,3,4,5]; track star) {
-                <button (click)="newReview.rating = star" class="focus:outline-none">
-                  <svg class="w-8 h-8 transition-colors"
-                       [class.text-amber-400]="star <= newReview.rating"
-                       [class.text-gray-300]="star > newReview.rating"
-                       fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </button>
-              }
-              <span class="ml-2 text-sm font-bold text-gray-700 dark:text-gray-300">{{ newReview.rating }}/5</span>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Food</label>
-            <div class="flex items-center gap-1">
-              @for (star of [1,2,3,4,5]; track star) {
-                <button (click)="newReview.foodRating = star" class="focus:outline-none">
-                  <svg class="w-6 h-6 transition-colors"
-                       [class.text-amber-400]="star <= newReview.foodRating"
-                       [class.text-gray-300]="star > newReview.foodRating"
+                <button type="button"
+                        (click)="newReview.rating = star"
+                        (mouseenter)="hoverRating = star"
+                        (mouseleave)="hoverRating = 0"
+                        class="focus:outline-none">
+                  <svg class="w-10 h-10 transition-colors"
+                       [class.text-amber-400]="star <= (hoverRating || newReview.rating)"
+                       [class.text-gray-200]="star > (hoverRating || newReview.rating)"
+                       [class.dark:text-gray-700]="star > (hoverRating || newReview.rating)"
                        fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                   </svg>
                 </button>
               }
             </div>
+            <p class="mt-1 text-xs text-gray-500">
+              {{ newReview.rating > 0 ? ratingWord(newReview.rating) : 'Tap a star' }}
+            </p>
           </div>
 
-          <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Service</label>
-            <div class="flex items-center gap-1">
-              @for (star of [1,2,3,4,5]; track star) {
-                <button (click)="newReview.serviceRating = star" class="focus:outline-none">
-                  <svg class="w-6 h-6 transition-colors"
-                       [class.text-amber-400]="star <= newReview.serviceRating"
-                       [class.text-gray-300]="star > newReview.serviceRating"
-                       fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </button>
-              }
-            </div>
+          <div class="space-y-3 mb-5">
+            @for (item of subRatingItems; track item.key) {
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ item.label }}</span>
+                <div class="flex items-center gap-1">
+                  @for (n of [1,2,3,4,5]; track n) {
+                    <button type="button"
+                            (click)="setSubRating(item.key, n)"
+                            class="focus:outline-none">
+                      <svg class="w-5 h-5 transition-colors"
+                           [class.text-amber-400]="n <= getSubRating(item.key)"
+                           [class.text-gray-200]="n > getSubRating(item.key)"
+                           [class.dark:text-gray-700]="n > getSubRating(item.key)"
+                           fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
           </div>
 
-          <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Ambiance</label>
-            <div class="flex items-center gap-1">
-              @for (star of [1,2,3,4,5]; track star) {
-                <button (click)="newReview.ambianceRating = star" class="focus:outline-none">
-                  <svg class="w-6 h-6 transition-colors"
-                       [class.text-amber-400]="star <= newReview.ambianceRating"
-                       [class.text-gray-300]="star > newReview.ambianceRating"
-                       fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </button>
-              }
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Your Review *</label>
+          <div class="mb-5">
+            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Your review
+            </label>
             <textarea [(ngModel)]="newReview.comment"
                       rows="4"
                       placeholder="Share your experience..."
@@ -1086,9 +1080,9 @@
               Cancel
             </button>
             <button (click)="submitReview()"
-                    [disabled]="reviewSubmitting"
-                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50">
-              {{ reviewSubmitting ? 'Submitting...' : 'Submit Review' }}
+                    [disabled]="reviewSubmitting || newReview.rating === 0"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ reviewSubmitting ? 'Submitting...' : 'Submit' }}
             </button>
           </div>
         </div>

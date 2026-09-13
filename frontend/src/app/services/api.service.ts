@@ -654,21 +654,24 @@ export class ApiService {
     restaurantId: number;
     userId: number;
     rating: number;
-    foodRating?: number;
-    serviceRating?: number;
-    ambianceRating?: number;
+    foodRating?: number | null;
+    serviceRating?: number | null;
+    ambianceRating?: number | null;
     comment: string;
   }): Promise<any> {
+    const payload: any = {
+      restaurant: { id: reviewData.restaurantId },
+      user: { id: reviewData.userId },
+      rating: reviewData.rating,
+      comment: reviewData.comment
+    };
+
+    if (reviewData.foodRating != null)     payload.foodRating     = reviewData.foodRating;
+    if (reviewData.serviceRating != null)  payload.serviceRating  = reviewData.serviceRating;
+    if (reviewData.ambianceRating != null) payload.ambianceRating = reviewData.ambianceRating;
+
     return firstValueFrom(
-      this.http.post<any>(`${this.apiUrl}/reviews`, {
-        restaurant: { id: reviewData.restaurantId },
-        user: { id: reviewData.userId },
-        rating: reviewData.rating,
-        foodRating: reviewData.foodRating,
-        serviceRating: reviewData.serviceRating,
-        ambianceRating: reviewData.ambianceRating,
-        comment: reviewData.comment
-      }, {
+      this.http.post<any>(`${this.apiUrl}/reviews`, payload, {
         headers: this.getHeaders(),
         withCredentials: true
       })

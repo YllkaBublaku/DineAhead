@@ -155,15 +155,16 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     paymentMethod: 'card'
   };
 
+  hoverRating = 0;
   reviewModalOpen = false;
   reviewSubmitting = false;
   reviewError = '';
   hasUserReviewed = false;
   newReview = {
-    rating: 5,
-    foodRating: 5,
-    serviceRating: 5,
-    ambianceRating: 5,
+    rating: 0,
+    foodRating: 0,
+    serviceRating: 0,
+    ambianceRating: 0,
     comment: ''
   };
 
@@ -1217,18 +1218,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   }
 
   getFoodRatingPercentage(): number {
-    const max = 10;
-    return (this.averageFoodRating / max) * 100;
+    return Math.min((this.averageFoodRating / 5) * 100, 100);
   }
 
   getServiceRatingPercentage(): number {
-    const max = 10;
-    return (this.averageServiceRating / max) * 100;
+    return Math.min((this.averageServiceRating / 5) * 100, 100);
   }
 
   getAmbianceRatingPercentage(): number {
-    const max = 10;
-    return (this.averageAmbianceRating / max) * 100;
+    return Math.min((this.averageAmbianceRating / 5) * 100, 100);
   }
 
   formatDate(dateString: string): string {
@@ -1504,12 +1502,13 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   openReviewModal(): void {
     this.newReview = {
-      rating: 5,
-      foodRating: 5,
-      serviceRating: 5,
-      ambianceRating: 5,
+      rating: 0,
+      foodRating: 0,
+      serviceRating: 0,
+      ambianceRating: 0,
       comment: ''
     };
+    this.hoverRating = 0;
     this.reviewError = '';
     this.reviewModalOpen = true;
     this.cdr.detectChanges();
@@ -1522,32 +1521,59 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  subRatingItems: { key: 'foodRating' | 'serviceRating' | 'ambianceRating'; label: string }[] = [
+    { key: 'foodRating',     label: 'Food' },
+    { key: 'serviceRating',  label: 'Service' },
+    { key: 'ambianceRating', label: 'Ambiance' }
+  ];
+
+  getSubRating(key: 'foodRating' | 'serviceRating' | 'ambianceRating'): number {
+    return this.newReview[key] ?? 0;
+  }
+
+  setSubRating(key: 'foodRating' | 'serviceRating' | 'ambianceRating', value: number): void {
+    this.newReview[key] = value;
+  }
+
   async submitReview(): Promise<void> {
     if (!this.restaurant || !this.userId) return;
-
-    if (!this.newReview.comment.trim()) {
-      this.reviewError = 'Please write a comment.';
-      return;
-    }
-
-    if (this.newReview.rating < 1) {
-      this.reviewError = 'Please select an overall rating.';
-      return;
-    }
+    if (!this.newReview.comment.trim()) { this.reviewError = 'Please write a comment.'; return; }
+    if (this.newReview.rating < 1) { this.reviewError = 'Please select an overall rating.'; return; }
 
     this.reviewSubmitting = true;
     this.reviewError = '';
 
     try {
-      await this.api.createReview({
+      const created: any = await this.api.createReview({
         restaurantId: this.restaurant.id,
         userId: this.userId,
         rating: this.newReview.rating,
-        foodRating: this.newReview.foodRating,
-        serviceRating: this.newReview.serviceRating,
-        ambianceRating: this.newReview.ambianceRating,
+        foodRating: this.newReview.foodRating || null,
+        serviceRating: this.newReview.serviceRating || null,
+        ambianceRating: this.newReview.ambianceRating || null,
         comment: this.newReview.comment.trim()
       });
+
+      if (created && created.id) {
+        const author = `${this.user?.firstName || ''} ${this.user?.lastName || ''}`.trim() || 'You';
+        this.reviews = [
+          {
+            id: created.id,
+            rating: created.rating ?? this.newReview.rating,
+            foodRating: created.foodRating ?? this.newReview.foodRating,
+            serviceRating: created.serviceRating ?? this.newReview.serviceRating,
+            ambianceRating: created.ambianceRating ?? this.newReview.ambianceRating,
+            comment: created.comment ?? this.newReview.comment,
+            createdAt: created.createdAt ?? new Date().toISOString(),
+            author,
+            text: created.comment ?? this.newReview.comment,
+            date: 'Just now',
+            isHelpful: false,
+            helpfulCount: 0
+          },
+          ...this.reviews
+        ];
+      }
 
       this.reviewSubmitting = false;
       this.reviewModalOpen = false;
@@ -1562,6 +1588,27 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       console.error('[detail] review submit failed', error);
       this.cdr.detectChanges();
     }
+  }
+
+  get averageOverallRating(): number {
+    if (!this.reviews || this.reviews.length === 0) return 0;
+    const total = this.reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+    return total / this.reviews.length;
+  }
+
+  get ratingLabel(): string {
+    const avg = this.averageOverallRating;
+    if (avg === 0) return 'No ratings yet';
+    if (avg >= 4.5) return 'Exceptional';
+    if (avg >= 4.0) return 'Excellent';
+    if (avg >= 3.5) return 'Very Good';
+    if (avg >= 3.0) return 'Good';
+    if (avg >= 2.5) return 'Average';
+    return 'Below Average';
+  }
+
+  ratingWord(n: number): string {
+    return ['', 'Terrible', 'Poor', 'Average', 'Very Good', 'Excellent'][n] || '';
   }
 
 }

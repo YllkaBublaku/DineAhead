@@ -23,4 +23,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.restaurant.id = :restaurantId")
     Double findAverageRatingByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT r FROM Review r " +
+            "JOIN FETCH r.restaurant " +
+            "WHERE r.user.id = :userId " +
+            "ORDER BY r.createdAt DESC")
+    List<Review> findByUserIdWithRestaurant(@Param("userId") Long userId);
 }

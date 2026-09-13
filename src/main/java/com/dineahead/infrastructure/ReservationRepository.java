@@ -52,4 +52,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                        @Param("from") LocalDate from,
                                        @Param("to") LocalDate to);
 
+    @Query("SELECT r FROM Reservation r " +
+            "JOIN FETCH r.restaurant " +
+            "WHERE r.user.id = :userId " +
+            "ORDER BY r.reservationDate DESC")
+    List<Reservation> findByUserIdWithRestaurant(@Param("userId") Long userId);
+
 }

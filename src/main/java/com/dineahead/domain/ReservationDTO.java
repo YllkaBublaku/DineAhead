@@ -18,6 +18,7 @@ public class ReservationDTO {
     private Long id;
     private Long restaurantId;
     private String restaurantName;
+    private String restaurantCoverPhotoUrl;
     private Long userId;
     private String userEmail;
     private LocalDate reservationDate;
@@ -40,6 +41,7 @@ public class ReservationDTO {
         if (reservation.getRestaurant() != null) {
             dto.setRestaurantId(reservation.getRestaurant().getId());
             dto.setRestaurantName(reservation.getRestaurant().getName());
+            dto.setRestaurantCoverPhotoUrl(reservation.getRestaurant().getCoverPhotoUrl());
         }
 
         if (reservation.getUser() != null) {
