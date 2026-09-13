@@ -155,6 +155,18 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     paymentMethod: 'card'
   };
 
+  reviewModalOpen = false;
+  reviewSubmitting = false;
+  reviewError = '';
+  hasUserReviewed = false;
+  newReview = {
+    rating: 5,
+    foodRating: 5,
+    serviceRating: 5,
+    ambianceRating: 5,
+    comment: ''
+  };
+
   private mapInitialized = false;
   private mapInitAttempts = 0;
   private maxMapRetries = 5;
@@ -168,7 +180,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router,
+    public router: Router,
     private api: ApiService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -336,6 +348,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       });
 
+    this.checkIfUserReviewed();
     this.loadAllRestaurants()
   }
 
@@ -1472,6 +1485,82 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       this.map.remove();
       this.map = null;
       this.mapInitialized = false;
+    }
+  }
+
+  checkIfUserReviewed(): void {
+    if (!this.userId || !this.restaurant) return;
+
+    this.api.getReviewsByUser(this.userId)
+      .then((reviews: any[]) => {
+        const list = Array.isArray(reviews) ? reviews : [];
+        this.hasUserReviewed = list.some((r: any) => r.restaurantId === this.restaurant?.id);
+        this.cdr.detectChanges();
+      })
+      .catch(() => {
+        this.hasUserReviewed = false;
+      });
+  }
+
+  openReviewModal(): void {
+    this.newReview = {
+      rating: 5,
+      foodRating: 5,
+      serviceRating: 5,
+      ambianceRating: 5,
+      comment: ''
+    };
+    this.reviewError = '';
+    this.reviewModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeReviewModal(): void {
+    this.reviewModalOpen = false;
+    this.reviewError = '';
+    this.reviewSubmitting = false;
+    this.cdr.detectChanges();
+  }
+
+  async submitReview(): Promise<void> {
+    if (!this.restaurant || !this.userId) return;
+
+    if (!this.newReview.comment.trim()) {
+      this.reviewError = 'Please write a comment.';
+      return;
+    }
+
+    if (this.newReview.rating < 1) {
+      this.reviewError = 'Please select an overall rating.';
+      return;
+    }
+
+    this.reviewSubmitting = true;
+    this.reviewError = '';
+
+    try {
+      await this.api.createReview({
+        restaurantId: this.restaurant.id,
+        userId: this.userId,
+        rating: this.newReview.rating,
+        foodRating: this.newReview.foodRating,
+        serviceRating: this.newReview.serviceRating,
+        ambianceRating: this.newReview.ambianceRating,
+        comment: this.newReview.comment.trim()
+      });
+
+      this.reviewSubmitting = false;
+      this.reviewModalOpen = false;
+      this.hasUserReviewed = true;
+
+      this.loadReviews(this.restaurant.id);
+
+      this.cdr.detectChanges();
+    } catch (error) {
+      this.reviewSubmitting = false;
+      this.reviewError = 'Could not submit review. Please try again.';
+      console.error('[detail] review submit failed', error);
+      this.cdr.detectChanges();
     }
   }
 

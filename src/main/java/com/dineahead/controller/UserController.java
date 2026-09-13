@@ -1,10 +1,15 @@
 package com.dineahead.controller;
 
+import com.dineahead.application.FileStorageService;
 import com.dineahead.application.UserService;
 import com.dineahead.domain.User;
 import com.dineahead.domain.UserResponseDTO;
+import com.dineahead.domain.UserUpdateDTO;
+import com.dineahead.infrastructure.UserRepository;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -14,9 +19,15 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService,
+                          UserRepository userRepository,
+                          FileStorageService fileStorageService) {
         this.userService = userService;
+        this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     private UserResponseDTO mapToDTO(User user) {
@@ -93,8 +104,34 @@ public class UserController {
     @PatchMapping("/{id}")
     public ResponseEntity<UserResponseDTO> updateUser(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> updates) {
-        User updated = userService.updateUser(id, updates);
-        return ResponseEntity.ok(mapToDTO(updated));
+            @RequestBody UserUpdateDTO dto) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
+        if (dto.getLastName()  != null) user.setLastName(dto.getLastName());
+        if (dto.getEmail()     != null) user.setEmail(dto.getEmail());
+        if (dto.getPhone()     != null) user.setPhone(dto.getPhone());
+        if (dto.getAvatarUrl() != null) user.setAvatarUrl(dto.getAvatarUrl());
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new UserResponseDTO(user));
+    }
+
+    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserResponseDTO> uploadAvatar(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String url = fileStorageService.saveAvatar(file, id);
+        user.setAvatarUrl(url);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(mapToDTO(user));
     }
 }

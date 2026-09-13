@@ -27,11 +27,27 @@
 
     <div class="p-6 text-center border-b border-gray-100 dark:border-gray-800">
       <div class="relative inline-block">
-        <div class="w-20 h-20 rounded-full bg-[#005943] text-white flex items-center justify-center text-3xl font-extrabold">{{ restaurant.avatar }}</div>
+        @if (restaurant.profilePicture) {
+          <img [src]="restaurant.profilePicture"
+               class="w-20 h-20 rounded-full object-cover border-2 border-[#005943]"
+               alt="Restaurant profile">
+        } @else {
+          <div class="w-20 h-20 rounded-full bg-[#005943] text-white flex items-center justify-center text-3xl font-extrabold">
+            {{ restaurant.avatar }}
+          </div>
+        }
+        <button (click)="fileInput.click()"
+                class="absolute bottom-0 right-0 w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center text-gray-500 hover:text-[#005943]">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+          </svg>
+        </button>
+        <input #fileInput type="file" accept="image/*" class="hidden" (change)="onProfilePictureSelected($event)">
       </div>
       <h2 class="mt-3 text-lg font-bold text-gray-900 dark:text-white">{{ restaurant.name }}</h2>
       <p class="text-xs text-gray-500 dark:text-gray-400">Managed by {{ restaurant.first }} {{ restaurant.last }} • Since {{ restaurant.joined }}</p>
     </div>
+
     <nav class="mt-4 px-3 space-y-1">
       <button (click)="setTab('overview')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition" [class.bg-[#005943]]="activeTab() === 'overview'" [class.text-white]="activeTab() === 'overview'" [class.text-gray-700]="activeTab() !== 'overview'" [class.hover:bg-gray-50]="activeTab() !== 'overview'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> Overview</button>
       <button (click)="setTab('reservations')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition" [class.bg-[#005943]]="activeTab() === 'reservations'" [class.text-white]="activeTab() === 'reservations'" [class.text-gray-700]="activeTab() !== 'reservations'" [class.hover:bg-gray-50]="activeTab() !== 'reservations'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Reservations</button>

@@ -650,6 +650,31 @@ export class ApiService {
     );
   }
 
+  createReview(reviewData: {
+    restaurantId: number;
+    userId: number;
+    rating: number;
+    foodRating?: number;
+    serviceRating?: number;
+    ambianceRating?: number;
+    comment: string;
+  }): Promise<any> {
+    return firstValueFrom(
+      this.http.post<any>(`${this.apiUrl}/reviews`, {
+        restaurant: { id: reviewData.restaurantId },
+        user: { id: reviewData.userId },
+        rating: reviewData.rating,
+        foodRating: reviewData.foodRating,
+        serviceRating: reviewData.serviceRating,
+        ambianceRating: reviewData.ambianceRating,
+        comment: reviewData.comment
+      }, {
+        headers: this.getHeaders(),
+        withCredentials: true
+      })
+    );
+  }
+
   updateUser(id: number, updates: any): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/users/${id}`, updates);
   }
@@ -668,5 +693,17 @@ export class ApiService {
 
   removeFavorite(userId: number, restaurantId: number): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/favorites/${userId}/${restaurantId}`);
+  }
+
+  uploadUserAvatar(userId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${this.apiUrl}/users/${userId}/avatar`, formData);
+  }
+
+  uploadRestaurantCover(restaurantId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${this.apiUrl}/restaurants/${restaurantId}/cover-photo`, formData);
   }
 }

@@ -2,8 +2,11 @@ package com.dineahead.controller;
 
 import com.dineahead.application.*;
 import com.dineahead.domain.*;
+import com.dineahead.infrastructure.RestaurantRepository;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,13 +21,17 @@ public class RestaurantController {
     private final ReviewService reviewService;
     private final RestaurantImageService restaurantImageService;
     private final AvailabilityService availabilityService;
+    private final FileStorageService fileStorageService;
+    private final RestaurantRepository restaurantRepository;
 
-    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService, AvailabilityService availabilityService) {
+    public RestaurantController(RestaurantService restaurantService, FeatureService featureService, ReviewService reviewService, RestaurantImageService restaurantImageService, AvailabilityService availabilityService, FileStorageService fileStorageService, RestaurantRepository restaurantRepository) {
         this.restaurantService = restaurantService;
         this.featureService = featureService;
         this.reviewService = reviewService;
         this.restaurantImageService = restaurantImageService;
         this.availabilityService = availabilityService;
+        this.fileStorageService = fileStorageService;
+        this.restaurantRepository = restaurantRepository;
     }
 
     private RestaurantResponseDTO mapToDTO(Restaurant restaurant) {
@@ -126,5 +133,20 @@ public class RestaurantController {
         return ResponseEntity.ok(
                 availabilityService.getBatchAvailability(ids, LocalDate.parse(dateStr), guests)
         );
+    }
+
+    @PostMapping(value = "/{id}/cover-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RestaurantResponseDTO> uploadCoverPhoto(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+
+        Restaurant restaurant = restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        String url = fileStorageService.saveCoverPhoto(file, id);
+        restaurant.setCoverPhotoUrl(url);
+        restaurantRepository.save(restaurant);
+
+        return ResponseEntity.ok(new RestaurantResponseDTO(restaurant));
     }
 }

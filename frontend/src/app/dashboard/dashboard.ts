@@ -39,7 +39,7 @@ export class Dashboard implements OnInit {
 
   favorites: any[] = [];
   reviews: any[] = [];
-  user = { firstName: '', lastName: '', email: '', phone: '', joined: '' };
+  user = { firstName: '', lastName: '', email: '', phone: '', joined: '', avatarUrl: '' };
 
   constructor(
     private router: Router,
@@ -60,6 +60,7 @@ export class Dashboard implements OnInit {
         this.user.lastName = u.lastName || '';
         this.user.email = u.email || '';
         this.user.phone = u.phone || '';
+        this.user.avatarUrl = u.avatarUrl || '';
         this.user.joined = u.createdAt
           ? new Date(u.createdAt).getFullYear().toString()
           : '';
@@ -108,6 +109,7 @@ export class Dashboard implements OnInit {
               id: r.id,
               restaurantId: r.restaurantId,
               name: r.restaurantName || 'Restaurant',
+              image: r.restaurantCoverPhotoUrl || r.coverPhotoUrl || '',
               date: dateStr,
               time: timeStr,
               guests: r.partySize ?? 0,
@@ -154,10 +156,12 @@ export class Dashboard implements OnInit {
           id: r.id,
           restaurant: r.restaurantName || 'Restaurant',
           restaurantId: r.restaurantId ?? null,
+          restaurantImage: r.restaurantCoverPhotoUrl || r.coverPhotoUrl || '',
           rating: r.rating ?? 0,
           date: r.createdAt ? this.formatReviewDate(r.createdAt) : 'Recently',
           text: r.comment || 'No comment provided.',
-          helpfulCount: r.helpfulCount ?? 0
+          helpfulCount: r.helpfulCount ?? 0,
+          ownerResponse: r.ownerResponse || ''
         }));
 
         this.cdr.detectChanges();
@@ -183,6 +187,7 @@ export class Dashboard implements OnInit {
         this.user.lastName = u.lastName || '';
         this.user.email = u.email || '';
         this.user.phone = u.phone || '';
+        this.user.avatarUrl = u.avatarUrl || '';
         this.user.joined = u.createdAt
           ? new Date(u.createdAt).getFullYear().toString()
           : this.user.joined;
@@ -243,7 +248,8 @@ export class Dashboard implements OnInit {
       firstName: this.user.firstName,
       lastName: this.user.lastName,
       email: this.user.email,
-      phone: this.user.phone
+      phone: this.user.phone,
+      avatarUrl: this.user.avatarUrl
     };
 
     this.api.updateUser(this.userId, payload).subscribe({
@@ -255,6 +261,7 @@ export class Dashboard implements OnInit {
         this.user.lastName = u.lastName || this.user.lastName;
         this.user.email = u.email || this.user.email;
         this.user.phone = u.phone || this.user.phone;
+        this.user.avatarUrl = u.avatarUrl || this.user.avatarUrl;
 
         const stored = localStorage.getItem('user');
         if (stored) {
@@ -264,6 +271,7 @@ export class Dashboard implements OnInit {
             cached.lastName = this.user.lastName;
             cached.email = this.user.email;
             cached.phone = this.user.phone;
+            cached.avatarUrl = this.user.avatarUrl;
             localStorage.setItem('user', JSON.stringify(cached));
           } catch {}
         }
@@ -278,6 +286,55 @@ export class Dashboard implements OnInit {
     });
   }
 
+  onProfilePictureSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('File is too large. Max 5MB.', 'error');
+      input.value = '';
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      this.showToast('Please select an image file.', 'error');
+      input.value = '';
+      return;
+    }
+    if (!this.userId) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    this.user.avatarUrl = previewUrl;
+    this.cdr.detectChanges();
+
+    this.api.uploadUserAvatar(this.userId, file).subscribe({
+      next: (u: any) => {
+        URL.revokeObjectURL(previewUrl);
+        this.user.avatarUrl = u.avatarUrl;
+        this.showToast('Profile picture updated');
+
+        const stored = localStorage.getItem('user');
+        if (stored) {
+          try {
+            const cached = JSON.parse(stored);
+            cached.avatarUrl = u.avatarUrl;
+            localStorage.setItem('user', JSON.stringify(cached));
+          } catch {}
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        URL.revokeObjectURL(previewUrl);
+        console.error('[Dashboard] avatar upload failed', err);
+        this.showToast('Could not save profile picture', 'error');
+        this.loadPersonal();
+      }
+    });
+
+    input.value = '';
+  }
+  
   private formatReviewDate(iso: string): string {
     try {
       const d = new Date(iso);
@@ -329,7 +386,6 @@ export class Dashboard implements OnInit {
       }
     });
   }
-
 
   toggleSidebar() {
     this.isSidebarOpen.update(v => !v);

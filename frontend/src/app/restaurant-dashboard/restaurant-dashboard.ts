@@ -21,7 +21,8 @@ export class RestaurantDashboard implements OnInit {
     first: '',
     last: '',
     joined: '',
-    avatar: ''
+    avatar: '',
+    profilePicture: ''
   };
   allReservations: any[] = [];
   reservations: any[] = [];
@@ -127,7 +128,8 @@ export class RestaurantDashboard implements OnInit {
           first: user.firstName || '',
           last: user.lastName || '',
           joined: joinedYear,
-          avatar: this.getRestaurantInitials(r.name || '')
+          avatar: this.getRestaurantInitials(r.name || ''),
+          profilePicture: r.coverPhotoUrl || ''
         };
 
         this.cdr.detectChanges();
@@ -758,6 +760,7 @@ export class RestaurantDashboard implements OnInit {
         specialOffer: r.specialOffer || '',
         coverPhotoUrl: r.coverPhotoUrl || ''
       };
+      this.restaurant.profilePicture = this.profile.coverPhotoUrl || '';
       this.cdr.detectChanges();
     }).catch((err: any) => {
       console.error('[Dashboard] profile load failed', err);
@@ -800,6 +803,7 @@ export class RestaurantDashboard implements OnInit {
         this.profile.coverPhotoUrl = updated.coverPhotoUrl || this.profile.coverPhotoUrl;
         this.restaurant.name = updated.name || this.restaurant.name;
         this.restaurant.avatar = this.getRestaurantInitials(this.restaurant.name);
+        this.restaurant.profilePicture = updated.coverPhotoUrl || this.restaurant.profilePicture;
 
         this.showToast('Profile saved');
         this.cdr.detectChanges();
@@ -810,6 +814,48 @@ export class RestaurantDashboard implements OnInit {
         this.showToast('Could not save profile', 'error');
       }
     });
+  }
+
+  onProfilePictureSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.showToast('File is too large. Max 5MB.', 'error');
+      input.value = '';
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      this.showToast('Please select an image file.', 'error');
+      input.value = '';
+      return;
+    }
+    if (!this.restaurantId) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    this.restaurant.profilePicture = previewUrl;
+    this.cdr.detectChanges();
+
+    this.api.uploadRestaurantCover(this.restaurantId, file).subscribe({
+      next: (updated: any) => {
+        URL.revokeObjectURL(previewUrl);
+        this.restaurant.profilePicture = updated.coverPhotoUrl;
+        this.profile.coverPhotoUrl = updated.coverPhotoUrl;
+        this.showToast('Profile picture updated');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        URL.revokeObjectURL(previewUrl);
+        console.error('[Dashboard] cover upload failed', err);
+        this.showToast('Could not save profile picture', 'error');
+        this.restaurant.profilePicture = this.profile.coverPhotoUrl || '';
+        this.cdr.detectChanges();
+      }
+    });
+
+    input.value = '';
   }
 
   logout() {

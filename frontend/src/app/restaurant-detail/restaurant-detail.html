@@ -414,6 +414,26 @@
             </div>
           }
         </div>
+
+        @if (isLoggedIn && !hasUserReviewed) {
+          <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+            <button (click)="openReviewModal()"
+                    class="w-full py-3 bg-[#005943] hover:bg-[#004735] text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Write a Review
+            </button>
+          </div>
+        } @else if (!isLoggedIn) {
+          <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Sign in to write a review</p>
+            <a [routerLink]="['/login']" [queryParams]="{ returnUrl: router.url }"
+               class="inline-block px-6 py-2 bg-[#005943] hover:bg-[#004735] text-white text-sm font-bold rounded-lg transition">
+              Log In
+            </a>
+          </div>
+        }
       </div>
 
       <div class="lg:col-span-5 order-first lg:order-last sticky top-24 self-start">
@@ -957,6 +977,118 @@
               } @else {
                 <span>Pay Deposit</span>
               }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (reviewModalOpen) {
+  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeReviewModal()">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="closeReviewModal()"></div>
+
+      <div class="inline-block align-bottom bg-white dark:bg-gray-900 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full"
+           (click)="$event.stopPropagation()">
+
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">Write a Review</h3>
+            <button (click)="closeReviewModal()" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          @if (reviewError) {
+            <div class="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{{ reviewError }}</div>
+          }
+
+          <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Overall Rating *</label>
+            <div class="flex items-center gap-1">
+              @for (star of [1,2,3,4,5]; track star) {
+                <button (click)="newReview.rating = star" class="focus:outline-none">
+                  <svg class="w-8 h-8 transition-colors"
+                       [class.text-amber-400]="star <= newReview.rating"
+                       [class.text-gray-300]="star > newReview.rating"
+                       fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </button>
+              }
+              <span class="ml-2 text-sm font-bold text-gray-700 dark:text-gray-300">{{ newReview.rating }}/5</span>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Food</label>
+            <div class="flex items-center gap-1">
+              @for (star of [1,2,3,4,5]; track star) {
+                <button (click)="newReview.foodRating = star" class="focus:outline-none">
+                  <svg class="w-6 h-6 transition-colors"
+                       [class.text-amber-400]="star <= newReview.foodRating"
+                       [class.text-gray-300]="star > newReview.foodRating"
+                       fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Service</label>
+            <div class="flex items-center gap-1">
+              @for (star of [1,2,3,4,5]; track star) {
+                <button (click)="newReview.serviceRating = star" class="focus:outline-none">
+                  <svg class="w-6 h-6 transition-colors"
+                       [class.text-amber-400]="star <= newReview.serviceRating"
+                       [class.text-gray-300]="star > newReview.serviceRating"
+                       fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Ambiance</label>
+            <div class="flex items-center gap-1">
+              @for (star of [1,2,3,4,5]; track star) {
+                <button (click)="newReview.ambianceRating = star" class="focus:outline-none">
+                  <svg class="w-6 h-6 transition-colors"
+                       [class.text-amber-400]="star <= newReview.ambianceRating"
+                       [class.text-gray-300]="star > newReview.ambianceRating"
+                       fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Your Review *</label>
+            <textarea [(ngModel)]="newReview.comment"
+                      rows="4"
+                      placeholder="Share your experience..."
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent resize-none"></textarea>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button (click)="closeReviewModal()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              Cancel
+            </button>
+            <button (click)="submitReview()"
+                    [disabled]="reviewSubmitting"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50">
+              {{ reviewSubmitting ? 'Submitting...' : 'Submit Review' }}
             </button>
           </div>
         </div>

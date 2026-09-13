@@ -18,4 +18,15 @@ public class UserResponseDTO {
     private String avatarUrl;
     private LocalDateTime createdAt;
     private String phone;
+
+    public UserResponseDTO(User user) {
+        this.id = user.getId();
+        this.firstName = user.getFirstName();
+        this.lastName = user.getLastName();
+        this.email = user.getEmail();
+        this.role = user.getRole();
+        this.avatarUrl = user.getAvatarUrl();
+        this.createdAt = user.getCreatedAt();
+        this.phone = user.getPhone();
+    }
 }

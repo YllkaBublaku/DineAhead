@@ -32,3 +32,5 @@ target/
 
 # Frontend environment files
 frontend/src/environments/environment.ts
+
+uploads/
