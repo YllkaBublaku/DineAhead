@@ -54,4 +54,9 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     @Query("SELECT r FROM Restaurant r WHERE r.isActive = true")
     List<Restaurant> findAllActive();
+
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.owner " +
+            "LEFT JOIN FETCH r.city")
+    List<Restaurant> findAllWithOwnerAndCity();
 }

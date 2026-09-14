@@ -8,11 +8,20 @@
          [class.bg-red-50]="toastType === 'error'"
          [class.text-red-700]="toastType === 'error'"
          [class.border-red-300]="toastType === 'error'">
+      @if (toastType === 'success') {
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      } @else {
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      }
       {{ toastMessage }}
     </div>
   }
 
-  <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300"
+  <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300 overflow-y-auto"
          [class.-translate-x-full]="!isSidebarOpen()"
          [class.translate-x-0]="isSidebarOpen()">
 
@@ -24,50 +33,85 @@
       <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
     </div>
 
-    <nav class="mt-4 px-3 space-y-1">
+    <nav class="mt-4 px-3 space-y-1 pb-6">
       <button (click)="setTab('overview')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'overview'"
               [class.text-white]="activeTab() === 'overview'"
-              [class.text-gray-700]="activeTab() !== 'overview'">
+              [class.text-gray-700]="activeTab() !== 'overview'"
+              [class.dark:text-gray-200]="activeTab() !== 'overview'"
+              [class.hover:bg-gray-50]="activeTab() !== 'overview'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         Overview
       </button>
+
       <button (click)="setTab('restaurants')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'restaurants'"
               [class.text-white]="activeTab() === 'restaurants'"
-              [class.text-gray-700]="activeTab() !== 'restaurants'">
+              [class.text-gray-700]="activeTab() !== 'restaurants'"
+              [class.dark:text-gray-200]="activeTab() !== 'restaurants'"
+              [class.hover:bg-gray-50]="activeTab() !== 'restaurants'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/></svg>
         Restaurants
       </button>
+
       <button (click)="setTab('users')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'users'"
               [class.text-white]="activeTab() === 'users'"
-              [class.text-gray-700]="activeTab() !== 'users'">
+              [class.text-gray-700]="activeTab() !== 'users'"
+              [class.dark:text-gray-200]="activeTab() !== 'users'"
+              [class.hover:bg-gray-50]="activeTab() !== 'users'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
         Users
       </button>
+
       <button (click)="setTab('reservations')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'reservations'"
               [class.text-white]="activeTab() === 'reservations'"
-              [class.text-gray-700]="activeTab() !== 'reservations'">
+              [class.text-gray-700]="activeTab() !== 'reservations'"
+              [class.dark:text-gray-200]="activeTab() !== 'reservations'"
+              [class.hover:bg-gray-50]="activeTab() !== 'reservations'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         Reservations
       </button>
+
       <button (click)="setTab('reviews')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'reviews'"
               [class.text-white]="activeTab() === 'reviews'"
-              [class.text-gray-700]="activeTab() !== 'reviews'">
+              [class.text-gray-700]="activeTab() !== 'reviews'"
+              [class.dark:text-gray-200]="activeTab() !== 'reviews'"
+              [class.hover:bg-gray-50]="activeTab() !== 'reviews'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
         Reviews
       </button>
+
+      <button (click)="setTab('cities')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'cities'"
+              [class.text-white]="activeTab() === 'cities'"
+              [class.text-gray-700]="activeTab() !== 'cities'"
+              [class.dark:text-gray-200]="activeTab() !== 'cities'"
+              [class.hover:bg-gray-50]="activeTab() !== 'cities'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Cities
+      </button>
+
       <button (click)="setTab('settings')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
               [class.bg-[#0f172a]]="activeTab() === 'settings'"
               [class.text-white]="activeTab() === 'settings'"
-              [class.text-gray-700]="activeTab() !== 'settings'">
+              [class.text-gray-700]="activeTab() !== 'settings'"
+              [class.dark:text-gray-200]="activeTab() !== 'settings'"
+              [class.hover:bg-gray-50]="activeTab() !== 'settings'">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Settings
       </button>
 
       <button (click)="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         Log Out
       </button>
 
       <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 px-4">
-        <a routerLink="/" class="flex items-center gap-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-[#0f172a] transition">
+        <a routerLink="/" class="flex items-center gap-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-[#0f172a] dark:hover:text-white transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Back to Home
         </a>
       </div>
@@ -78,9 +122,9 @@
     <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" (click)="isSidebarOpen.set(false)"></div>
   }
 
-  <main class="flex-1 lg:ml-80 p-4 sm:p-8 transition-all duration-300">
+  <main class="flex-1 lg:ml-80 p-4 sm:p-8 transition-all duration-300 min-w-0">
     <button (click)="toggleSidebar()" class="lg:hidden mb-4 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-      ☰
+      <svg class="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
 
     @if (activeTab() === 'overview') {
@@ -90,64 +134,362 @@
           Hello {{ user.firstName }}, here's the state of DineAhead.
         </p>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+          <button (click)="setTab('restaurants')"
+                  class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition">
             <p class="text-[10px] font-bold text-gray-500 uppercase">Restaurants</p>
             <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.restaurants }}</p>
-          </div>
-          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          </button>
+
+          <button (click)="setTab('restaurants')"
+                  class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-emerald-400/40 transition">
             <p class="text-[10px] font-bold text-gray-500 uppercase">Active</p>
             <p class="text-2xl font-extrabold text-emerald-600 mt-1">{{ totals.activeRestaurants }}</p>
-          </div>
-          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          </button>
+
+          <button (click)="setTab('users')"
+                  class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition">
             <p class="text-[10px] font-bold text-gray-500 uppercase">Users</p>
             <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.users }}</p>
-          </div>
-          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+          </button>
+
+          <button (click)="setTab('reservations')"
+                  class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition">
             <p class="text-[10px] font-bold text-gray-500 uppercase">Reservations today</p>
             <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.reservationsToday }}</p>
-          </div>
+          </button>
+
+          <button (click)="setTab('reviews')"
+                  class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Reviews</p>
+            <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.reviews }}</p>
+          </button>
         </div>
 
-        <div class="mt-8 text-sm text-gray-500 italic">
-          (Data will populate once we wire up the admin endpoints in a later step.)
+        <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <button (click)="setTab('restaurants')"
+                  class="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition text-left flex items-start gap-4">
+            <div class="w-11 h-11 rounded-xl bg-[#0f172a]/5 dark:bg-white/5 text-[#0f172a] dark:text-white flex items-center justify-center shrink-0 group-hover:bg-[#0f172a] group-hover:text-white transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1-5h16l1 5M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M9 21v-6h6v6M3 9h18M7 5v3m5-3v3m5-3v3"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white">Manage Restaurants</h3>
+              <p class="text-xs text-gray-500 mt-1">View, activate/deactivate, delete restaurants</p>
+            </div>
+            <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 ml-auto shrink-0 mt-3 group-hover:text-[#0f172a] dark:group-hover:text-white group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+
+          <button (click)="setTab('users')"
+                  class="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-[#0f172a]/30 transition text-left flex items-start gap-4">
+            <div class="w-11 h-11 rounded-xl bg-[#0f172a]/5 dark:bg-white/5 text-[#0f172a] dark:text-white flex items-center justify-center shrink-0 group-hover:bg-[#0f172a] group-hover:text-white transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-sm font-bold text-gray-900 dark:text-white">Manage Users</h3>
+              <p class="text-xs text-gray-500 mt-1">Change roles, delete accounts</p>
+            </div>
+            <svg class="w-4 h-4 text-gray-300 dark:text-gray-600 ml-auto shrink-0 mt-3 group-hover:text-[#0f172a] dark:group-hover:text-white group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
         </div>
       </div>
     }
 
     @if (activeTab() === 'restaurants') {
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Restaurants</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 5.</p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Restaurants</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {{ filteredRestaurants.length }} total · {{ totals.activeRestaurants }} active
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="restaurantSearch"
+                   (ngModelChange)="restaurantPage = 1"
+                   placeholder="Search by name, city, cuisine, owner email..."
+                   class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30">
+          </div>
+
+          <select [(ngModel)]="restaurantFilter" (ngModelChange)="restaurantPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="all">All</option>
+            <option value="active">Active only</option>
+            <option value="inactive">Inactive only</option>
+          </select>
+
+          <select [(ngModel)]="restaurantSort" (ngModelChange)="restaurantPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="newest">Newest</option>
+            <option value="name">Name</option>
+            <option value="rating">Rating</option>
+          </select>
+
+          <button (click)="loadRestaurants()"
+                  class="px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            Refresh
+          </button>
+        </div>
+        @if (loading()) {
+          <div class="flex justify-center py-12">
+            <div class="animate-spin rounded-full h-10 w-10 border-4 border-[#0f172a] border-t-transparent"></div>
+          </div>
+        } @else if (filteredRestaurants.length === 0) {
+          <div class="mt-8 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <p class="text-gray-500 dark:text-gray-400">No restaurants found.</p>
+          </div>
+        } @else {
+          <div class="mt-5 hidden lg:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+              <tr>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Restaurant</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Location</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Owner</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Rating</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Status</th>
+                <th class="text-right px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Actions</th>
+              </tr>
+              </thead>
+              <tbody>
+                @for (r of pagedRestaurants; track r.id) {
+                  <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+                          @if (r.coverPhotoUrl) {
+                            <img [src]="r.coverPhotoUrl" [alt]="r.name" class="w-full h-full object-cover">
+                          } @else {
+                            <div class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
+                              {{ r.name.charAt(0) }}
+                            </div>
+                          }
+                        </div>
+                        <div class="min-w-0">
+                          <p class="font-bold text-gray-900 dark:text-white truncate">{{ r.name }}</p>
+                          <p class="text-xs text-gray-500 truncate">{{ r.cuisineType }} · {{ r.priceRange }}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ r.city || '—' }}</td>
+                    <td class="px-4 py-3">
+                      <p class="text-gray-700 dark:text-gray-300 truncate">{{ r.ownerName || '—' }}</p>
+                      <p class="text-xs text-gray-500 truncate">{{ r.ownerEmail }}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="font-bold text-emerald-600">★ {{ r.averageRating?.toFixed(1) || 'N/A' }}</span>
+                      <span class="text-xs text-gray-500 ml-1">({{ r.reviewCount }})</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      @if (r.isActive) {
+                        <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400">
+                          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Inactive
+                        </span>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-2">
+                        <button (click)="toggleRestaurantActive(r)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg transition border"
+                                [class.text-amber-700]="r.isActive"
+                                [class.border-amber-300]="r.isActive"
+                                [class.hover:bg-amber-50]="r.isActive"
+                                [class.text-emerald-700]="!r.isActive"
+                                [class.border-emerald-300]="!r.isActive"
+                                [class.hover:bg-emerald-50]="!r.isActive">
+                          {{ r.isActive ? 'Deactivate' : 'Activate' }}
+                        </button>
+                        <button (click)="openDeleteRestaurant(r)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-5 lg:hidden space-y-3">
+            @for (r of pagedRestaurants; track r.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <div class="flex items-start gap-3">
+                  <div class="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+                    @if (r.coverPhotoUrl) {
+                      <img [src]="r.coverPhotoUrl" [alt]="r.name" class="w-full h-full object-cover">
+                    } @else {
+                      <div class="w-full h-full flex items-center justify-center text-lg font-bold text-gray-400">
+                        {{ r.name.charAt(0) }}
+                      </div>
+                    }
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ r.name }}</h3>
+                      @if (r.isActive) {
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 shrink-0">Active</span>
+                      } @else {
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 shrink-0">Inactive</span>
+                      }
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ r.cuisineType }} · {{ r.priceRange }} · {{ r.city }}</p>
+                    <p class="text-xs text-gray-500 mt-0.5 truncate">{{ r.ownerEmail }}</p>
+                    <p class="text-xs mt-1"><span class="font-bold text-emerald-600">★ {{ r.averageRating?.toFixed(1) || 'N/A' }}</span> <span class="text-gray-400">({{ r.reviewCount }})</span></p>
+                  </div>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <button (click)="toggleRestaurantActive(r)"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg border transition"
+                          [class.text-amber-700]="r.isActive"
+                          [class.border-amber-300]="r.isActive"
+                          [class.text-emerald-700]="!r.isActive"
+                          [class.border-emerald-300]="!r.isActive">
+                    {{ r.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button (click)="openDeleteRestaurant(r)"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-red-50 text-red-600">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (restaurantTotalPages > 1) {
+            <div class="mt-6 flex items-center justify-between">
+              <p class="text-xs text-gray-500">
+                Page {{ restaurantPage }} of {{ restaurantTotalPages }}
+              </p>
+              <div class="flex items-center gap-2">
+                <button (click)="restaurantPrevPage()"
+                        [disabled]="restaurantPage === 1"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  ← Prev
+                </button>
+                <button (click)="restaurantNextPage()"
+                        [disabled]="restaurantPage === restaurantTotalPages"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  Next →
+                </button>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
 
     @if (activeTab() === 'users') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Users</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 6.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {{ users.length }} registered · coming in the next step
+        </p>
       </div>
     }
-
     @if (activeTab() === 'reservations') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reservations</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {{ reservations.length }} total · coming in the next step
+        </p>
       </div>
     }
-
     @if (activeTab() === 'reviews') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reviews</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {{ reviews.length }} total · coming in the next step
+        </p>
       </div>
     }
-
+    @if (activeTab() === 'cities') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Cities</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {{ cities.length }} total · coming in the next step
+        </p>
+      </div>
+    }
     @if (activeTab() === 'settings') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Settings</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in the next step.</p>
       </div>
     }
   </main>
+
+  @if (deleteRestaurantDialogOpen) {
+    <div class="fixed inset-0 z-[100] overflow-y-auto" (click)="closeDeleteRestaurant()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeDeleteRestaurant()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19H18.93a2 2 0 001.72-3.03l-6.93-12a2 2 0 00-3.44 0l-6.93 12A2 2 0 005.07 19z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Delete this restaurant?</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                This will permanently remove <strong>{{ deleteRestaurantTarget?.name }}</strong> and all its data (reservations, reviews, tables, hours).
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Type <span class="font-mono text-red-600">DELETE</span> to confirm
+              </label>
+              <input type="text"
+                     [(ngModel)]="deleteRestaurantConfirmText"
+                     placeholder="DELETE"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent">
+            </div>
+
+            @if (deleteRestaurantError) {
+              <div class="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+                {{ deleteRestaurantError }}
+              </div>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeDeleteRestaurant()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+              Cancel
+            </button>
+            <button (click)="confirmDeleteRestaurant()"
+                    [disabled]="deleteRestaurantLoading || deleteRestaurantConfirmText.trim().toUpperCase() !== 'DELETE'"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ deleteRestaurantLoading ? 'Deleting...' : 'Delete restaurant' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 </div>

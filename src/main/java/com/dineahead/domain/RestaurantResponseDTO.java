@@ -37,6 +37,9 @@ public class RestaurantResponseDTO {
     private BigDecimal depositAmount;
     private String cityImageUrl;
     private String cuisineImageUrl;
+    private Long ownerId;
+    private String ownerName;
+    private String ownerEmail;
     private LocalDateTime createdAt;
     private Boolean isActive;
 
@@ -104,6 +107,21 @@ public class RestaurantResponseDTO {
         } catch (Exception e) {
             this.timeSlots = new ArrayList<>();
         }
+
+        try {
+            if (restaurant.getOwner() != null) {
+                this.ownerId = restaurant.getOwner().getId();
+                String fn = restaurant.getOwner().getFirstName();
+                String ln = restaurant.getOwner().getLastName();
+                this.ownerName = ((fn != null ? fn : "") + " " + (ln != null ? ln : "")).trim();
+                this.ownerEmail = restaurant.getOwner().getEmail();
+            }
+        } catch (Exception e) {
+            this.ownerId = null;
+            this.ownerName = null;
+            this.ownerEmail = null;
+        }
+
         this.requiresDeposit = restaurant.isRequiresDeposit();
         this.depositAmount = restaurant.getDepositAmount();
         this.cityImageUrl = restaurant.getCityImageUrl();

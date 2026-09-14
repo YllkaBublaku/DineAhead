@@ -729,4 +729,106 @@ export class ApiService {
   activateRestaurant(restaurantId: number): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/restaurants/${restaurantId}/activate`, {});
   }
+
+  // ============================================
+// PLATFORM ADMIN
+// ============================================
+
+  private adminHeaders() {
+    const token = this.getToken();
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  }
+
+  getAdminStats(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/admin/stats`, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  getAdminRestaurants(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/restaurants`, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  adminActivateRestaurant(id: number): Observable<any> {
+    return this.http.patch<any>(
+      `${this.apiUrl}/restaurants/${id}/activate`, {},
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  adminDeactivateRestaurant(id: number): Observable<any> {
+    return this.http.patch<any>(
+      `${this.apiUrl}/restaurants/${id}/deactivate`, {},
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  adminDeleteRestaurant(id: number): Observable<any> {
+    return this.http.delete<any>(
+      `${this.apiUrl}/admin/restaurants/${id}`,
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  getAdminUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/users`, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  adminChangeUserRole(id: number, role: string): Observable<any> {
+    return this.http.patch<any>(
+      `${this.apiUrl}/admin/users/${id}/role`,
+      { role },
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  adminDeleteUser(id: number): Observable<any> {
+    return this.http.delete<any>(
+      `${this.apiUrl}/admin/users/${id}`,
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  getAdminReservations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/reservations`, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  getAdminReviews(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/reviews`, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  adminDeleteReview(id: number): Observable<any> {
+    return this.http.delete<any>(
+      `${this.apiUrl}/admin/reviews/${id}`,
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  createCity(city: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/admin/cities`, city, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  updateCity(id: number, city: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/admin/cities/${id}`, city, {
+      headers: this.adminHeaders()
+    });
+  }
+
+  deleteCity(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/admin/cities/${id}`, {
+      headers: this.adminHeaders()
+    });
+  }
 }
