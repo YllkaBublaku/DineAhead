@@ -79,7 +79,7 @@ export class Login implements OnInit {
           firstName: response.firstName || response.user?.firstName || '',
           lastName: response.lastName || response.user?.lastName || '',
           email: response.email || response.user?.email || this.email,
-          role: response.role || response.user?.role || 'USER',
+          role: this.normalizeRole(response.role || response.user?.role || response.roles?.[0] || 'USER'),
           createdAt: response.createdAt || response.user?.createdAt || null,
           token: response.token || response.accessToken || response.jwt || null,
           initials: this.getInitials(
@@ -99,12 +99,8 @@ export class Login implements OnInit {
 
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
 
-        const role = (user.role || '').toUpperCase();
-        const isOwner =
-          role === 'ADMIN' ||
-          role === 'RESTAURANT_OWNER' ||
-          role === 'OWNER' ||
-          role === 'RESTAURANT';
+        const role = this.normalizeRole(user.role);
+        const isOwner = role === 'RESTAURANT_OWNER';
 
         if (isOwner && user.id) {
           this.api.getRestaurantsByOwner(user.id).subscribe({
@@ -131,6 +127,11 @@ export class Login implements OnInit {
     });
   }
 
+  private normalizeRole(raw: any): string {
+    const r = Array.isArray(raw) ? raw[0] : raw;
+    return String(r || 'USER').toUpperCase().replace(/^ROLE_/, '');
+  }
+
   private getInitials(firstName: string, lastName: string): string {
     const first = firstName?.charAt(0) || '';
     const last = lastName?.charAt(0) || '';
@@ -138,6 +139,14 @@ export class Login implements OnInit {
   }
 
   private navigateAfterLogin(returnUrl: string) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = String(user.role || '').toUpperCase().replace(/^ROLE_/, '');
+
+    if (role === 'PLATFORM_ADMIN') {
+      void this.router.navigate(['/platform-admin']);
+      return;
+    }
+
     const isSafeInternal = returnUrl
       && returnUrl.startsWith('/')
       && !returnUrl.startsWith('//');

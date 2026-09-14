@@ -47,7 +47,7 @@ public class UserService {
         user.setLastName((String) payload.get("lastName"));
         user.setEmail((String) payload.get("email"));
         user.setPasswordHash((String) payload.get("passwordHash"));
-        user.setRole(Role.ADMIN);
+        user.setRole(Role.RESTAURANT_OWNER);
         user.setCreatedAt(LocalDateTime.now());
 
         User savedUser = registerUser(user);

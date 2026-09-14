@@ -288,10 +288,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   private get isRestaurantOwner(): boolean {
     const role = (this.userRole || '').toUpperCase();
-    return role === 'ADMIN'
-      || role === 'RESTAURANT_OWNER'
-      || role === 'OWNER'
-      || role === 'RESTAURANT';
+    return role === 'RESTAURANT_OWNER';
   }
 
   private getInitialsFromName(name: string): string {

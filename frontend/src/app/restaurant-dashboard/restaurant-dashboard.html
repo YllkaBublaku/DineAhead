@@ -101,13 +101,13 @@
 
           <div class="flex items-end gap-2 h-24">
             @if (stats.weekRevenue && stats.weekRevenue.length > 0) {
-              @for (value of stats.weekRevenue; track $index) {
+              @for (value of stats.weekRevenue; track $index; let i = $index) {
                 @let pct = maxWeekRevenue() > 0 ? (value / maxWeekRevenue()) * 100 : 0;
                 <div class="flex-1 rounded-t-md transition-all duration-300"
                      [style.height.%]="pct > 0 ? pct : 2"
-                     [class.bg-[#005943]]="isTodayIndex($index)"
-                     [class.bg-emerald-100]="!isTodayIndex($index) && value === 0"
-                     [class.bg-emerald-200]="!isTodayIndex($index) && value > 0"
+                     [class.bg-[#005943]]="isTodayIndex(i)"
+                     [class.bg-emerald-100]="!isTodayIndex(i) && value === 0"
+                     [class.bg-emerald-200]="!isTodayIndex(i) && value > 0"
                      [title]="'€' + value">
                 </div>
               }

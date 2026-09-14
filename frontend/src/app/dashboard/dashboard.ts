@@ -446,6 +446,7 @@ export class Dashboard implements OnInit {
         this.cdr.detectChanges();
       }
     });
+
   }
 
   openDeleteDialog(): void {

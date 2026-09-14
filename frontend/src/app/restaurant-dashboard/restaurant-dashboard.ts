@@ -113,7 +113,7 @@ export class RestaurantDashboard implements OnInit {
 
     const u = JSON.parse(stored);
 
-    if (u.role !== 'ADMIN') {
+    if (u.role !== 'RESTAURANT_OWNER') {
       this.router.navigate(['/dashboard']);
       return;
     }

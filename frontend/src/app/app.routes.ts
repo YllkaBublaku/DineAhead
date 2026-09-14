@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { OauthRedirectComponent } from './oauth-redirect/oauth-redirect';
 import { AuthGuard } from './auth-guard';
+import { PlatformAdminGuard } from './platform-admin/platform-admin.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -21,6 +22,11 @@ export const routes: Routes = [
     path: 'restaurant-dashboard',
     loadComponent: () => import('./restaurant-dashboard/restaurant-dashboard').then(m => m.RestaurantDashboard),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'platform-admin',
+    loadComponent: () => import('./platform-admin/platform-admin-dashboard').then(m => m.PlatformAdminDashboard),
+    canActivate: [PlatformAdminGuard]
   },
 
   { path: 'login', loadComponent: () => import('./login/login').then(m => m.Login) },

@@ -87,7 +87,7 @@ export class Signup {
       lastName: this.lastName,
       email: this.email,
       passwordHash: this.password,
-      role: this.accountType() === 'restaurant' ? 'ADMIN' : 'DINER'
+      role: this.accountType() === 'restaurant' ? 'RESTAURANT_OWNER' : 'DINER'
     };
 
     if (this.accountType() === 'restaurant') {

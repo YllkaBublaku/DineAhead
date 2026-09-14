@@ -1,0 +1,153 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+
+  @if (toastMessage) {
+    <div class="fixed top-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border-2 text-sm font-bold"
+         [class.bg-green-50]="toastType === 'success'"
+         [class.text-green-700]="toastType === 'success'"
+         [class.border-green-300]="toastType === 'success'"
+         [class.bg-red-50]="toastType === 'error'"
+         [class.text-red-700]="toastType === 'error'"
+         [class.border-red-300]="toastType === 'error'">
+      {{ toastMessage }}
+    </div>
+  }
+
+  <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300"
+         [class.-translate-x-full]="!isSidebarOpen()"
+         [class.translate-x-0]="isSidebarOpen()">
+
+    <div class="p-6 text-center border-b border-gray-100 dark:border-gray-800">
+      <div class="w-20 h-20 mx-auto rounded-full bg-[#0f172a] text-white flex items-center justify-center text-3xl font-extrabold">
+        {{ user.avatar }}
+      </div>
+      <h2 class="mt-3 text-lg font-bold text-gray-900 dark:text-white">Platform Admin</h2>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
+    </div>
+
+    <nav class="mt-4 px-3 space-y-1">
+      <button (click)="setTab('overview')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'overview'"
+              [class.text-white]="activeTab() === 'overview'"
+              [class.text-gray-700]="activeTab() !== 'overview'">
+        Overview
+      </button>
+      <button (click)="setTab('restaurants')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'restaurants'"
+              [class.text-white]="activeTab() === 'restaurants'"
+              [class.text-gray-700]="activeTab() !== 'restaurants'">
+        Restaurants
+      </button>
+      <button (click)="setTab('users')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'users'"
+              [class.text-white]="activeTab() === 'users'"
+              [class.text-gray-700]="activeTab() !== 'users'">
+        Users
+      </button>
+      <button (click)="setTab('reservations')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'reservations'"
+              [class.text-white]="activeTab() === 'reservations'"
+              [class.text-gray-700]="activeTab() !== 'reservations'">
+        Reservations
+      </button>
+      <button (click)="setTab('reviews')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'reviews'"
+              [class.text-white]="activeTab() === 'reviews'"
+              [class.text-gray-700]="activeTab() !== 'reviews'">
+        Reviews
+      </button>
+      <button (click)="setTab('settings')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition"
+              [class.bg-[#0f172a]]="activeTab() === 'settings'"
+              [class.text-white]="activeTab() === 'settings'"
+              [class.text-gray-700]="activeTab() !== 'settings'">
+        Settings
+      </button>
+
+      <button (click)="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition">
+        Log Out
+      </button>
+
+      <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 px-4">
+        <a routerLink="/" class="flex items-center gap-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-[#0f172a] transition">
+          Back to Home
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  @if (isSidebarOpen()) {
+    <div class="fixed inset-0 bg-black/40 z-30 lg:hidden" (click)="isSidebarOpen.set(false)"></div>
+  }
+
+  <main class="flex-1 lg:ml-80 p-4 sm:p-8 transition-all duration-300">
+    <button (click)="toggleSidebar()" class="lg:hidden mb-4 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+      ☰
+    </button>
+
+    @if (activeTab() === 'overview') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Platform Overview</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Hello {{ user.firstName }}, here's the state of DineAhead.
+        </p>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Restaurants</p>
+            <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.restaurants }}</p>
+          </div>
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Active</p>
+            <p class="text-2xl font-extrabold text-emerald-600 mt-1">{{ totals.activeRestaurants }}</p>
+          </div>
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Users</p>
+            <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.users }}</p>
+          </div>
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Reservations today</p>
+            <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.reservationsToday }}</p>
+          </div>
+        </div>
+
+        <div class="mt-8 text-sm text-gray-500 italic">
+          (Data will populate once we wire up the admin endpoints in a later step.)
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'restaurants') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Restaurants</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 5.</p>
+      </div>
+    }
+
+    @if (activeTab() === 'users') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Users</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 6.</p>
+      </div>
+    }
+
+    @if (activeTab() === 'reservations') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reservations</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+      </div>
+    }
+
+    @if (activeTab() === 'reviews') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reviews</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+      </div>
+    }
+
+    @if (activeTab() === 'settings') {
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Settings</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Coming in Step 7.</p>
+      </div>
+    }
+  </main>
+</div>

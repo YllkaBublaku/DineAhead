@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { filter, Subscription } from 'rxjs';
+import {RoleService} from '../services/role.service';
 
 @Component({
   selector: 'app-header',
@@ -22,9 +23,10 @@ export class Header implements OnInit, OnDestroy {
   userRole: string | null = null;
   userAvatar: string | null = null;
   user: any = null;
+  isPlatformAdmin : boolean = false;
   private routerSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private api: ApiService) {}
+  constructor(private router: Router, private api: ApiService, private roles : RoleService) {}
 
   ngOnInit(): void {
     this.checkLoginStatus();
@@ -53,16 +55,20 @@ export class Header implements OnInit, OnDestroy {
         const first = this.user?.firstName?.charAt(0) || '';
         const last = this.user?.lastName?.charAt(0) || '';
         this.user.initials = (first + last).toUpperCase() || 'U';
+
+        this.isPlatformAdmin = this.roles.isPlatformAdmin();
       } else {
         this.isLoggedIn = false;
         this.user = null;
         this.userRole = null;
+        this.isPlatformAdmin = false;
       }
     } catch (error) {
       console.error('Error checking login status:', error);
       this.isLoggedIn = false;
       this.user = null;
       this.userRole = null;
+      this.isPlatformAdmin = false;
     }
   }
 
@@ -78,7 +84,10 @@ export class Header implements OnInit, OnDestroy {
     localStorage.removeItem('isLoggedIn');
     this.clearUserState();
 
-    window.location.href = 'http://localhost:8080/logout';
+    this.api.logout().subscribe({
+      next: () => this.router.navigate(['/']),
+      error: () => this.router.navigate(['/'])
+    });
   }
 
   toggleDarkMode(): void {
@@ -94,10 +103,7 @@ export class Header implements OnInit, OnDestroy {
   }
 
   get isRestaurantOwner(): boolean {
-    return this.userRole === 'ADMIN'
-      || this.userRole === 'RESTAURANT_OWNER'
-      || this.userRole === 'OWNER'
-      || this.userRole === 'RESTAURANT';
+    return this.roles.getRole() === 'RESTAURANT_OWNER';
   }
 
   onSearch(): void {

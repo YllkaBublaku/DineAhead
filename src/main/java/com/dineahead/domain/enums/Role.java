@@ -1,5 +1,5 @@
 package com.dineahead.domain.enums;
 
 public enum Role {
-    DINER, ADMIN
+    DINER, RESTAURANT_OWNER, PLATFORM_ADMIN
 }
