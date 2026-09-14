@@ -399,36 +399,548 @@
 
     @if (activeTab() === 'users') {
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Users</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ users.length }} registered · coming in the next step
-        </p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Users</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ filteredUsers.length }} total</p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="userSearch"
+                   (ngModelChange)="userPage = 1"
+                   placeholder="Search by name or email..."
+                   class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30">
+          </div>
+
+          <select [(ngModel)]="userRoleFilter" (ngModelChange)="userPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="all">All roles</option>
+            <option value="DINER">Diner</option>
+            <option value="RESTAURANT_OWNER">Owner</option>
+            <option value="PLATFORM_ADMIN">Admin</option>
+          </select>
+
+          <select [(ngModel)]="userSort" (ngModelChange)="userPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="newest">Newest</option>
+            <option value="name">Name</option>
+          </select>
+
+          <button (click)="loadUsers()"
+                  class="px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            Refresh
+          </button>
+        </div>
+
+        @if (filteredUsers.length === 0) {
+          <div class="mt-8 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <p class="text-gray-500 dark:text-gray-400">No users found.</p>
+          </div>
+        } @else {
+          <div class="mt-5 hidden lg:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+              <tr>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">User</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Email</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Role</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Joined</th>
+                <th class="text-right px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Actions</th>
+              </tr>
+              </thead>
+              <tbody>
+                @for (u of pagedUsers; track u.id) {
+                  <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-[#0f172a] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                          {{ userInitials(u) }}
+                        </div>
+                        <p class="font-bold text-gray-900 dark:text-white truncate">{{ u.firstName }} {{ u.lastName }}</p>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300 truncate">{{ u.email }}</td>
+                    <td class="px-4 py-3">
+                  <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full" [ngClass]="roleClass(u.role)">
+                    {{ roleLabel(u.role) }}
+                  </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500 text-xs">
+                      {{ u.createdAt ? (u.createdAt | date:'MMM d, y') : '—' }}
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-2">
+                        <button (click)="openRoleModal(u)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                          Change Role
+                        </button>
+                        <button (click)="openDeleteUser(u)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-5 lg:hidden space-y-3">
+            @for (u of pagedUsers; track u.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-full bg-[#0f172a] text-white flex items-center justify-center text-sm font-bold shrink-0">
+                    {{ userInitials(u) }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ u.firstName }} {{ u.lastName }}</h3>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" [ngClass]="roleClass(u.role)">
+                    {{ roleLabel(u.role) }}
+                  </span>
+                    </div>
+                    <p class="text-xs text-gray-500 truncate mt-0.5">{{ u.email }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Joined {{ u.createdAt ? (u.createdAt | date:'MMM y') : '—' }}</p>
+                  </div>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <button (click)="openRoleModal(u)"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-blue-50 text-blue-700">
+                    Change Role
+                  </button>
+                  <button (click)="openDeleteUser(u)"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-red-50 text-red-600">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (userTotalPages > 1) {
+            <div class="mt-6 flex items-center justify-between">
+              <p class="text-xs text-gray-500">Page {{ userPage }} of {{ userTotalPages }}</p>
+              <div class="flex items-center gap-2">
+                <button (click)="userPrevPage()" [disabled]="userPage === 1"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  ← Prev
+                </button>
+                <button (click)="userNextPage()" [disabled]="userPage === userTotalPages"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  Next →
+                </button>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
+
     @if (activeTab() === 'reservations') {
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reservations</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ reservations.length }} total · coming in the next step
-        </p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reservations</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ filteredReservations.length }} total</p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="reservationSearch"
+                   (ngModelChange)="reservationPage = 1"
+                   placeholder="Search by restaurant, customer, email..."
+                   class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30">
+          </div>
+
+          <select [(ngModel)]="reservationStatusFilter" (ngModelChange)="reservationPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="all">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="SEATED">Seated</option>
+            <option value="NO_SHOW">No Show</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+
+          <input type="date"
+                 [(ngModel)]="reservationDateFilter"
+                 (ngModelChange)="reservationPage = 1"
+                 class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+
+          <button (click)="loadReservations()"
+                  class="px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            Refresh
+          </button>
+
+          @if (reservationDateFilter) {
+            <button (click)="reservationDateFilter = ''; reservationPage = 1"
+                    class="px-3 py-2.5 text-xs font-bold rounded-xl text-red-600 hover:bg-red-50 transition">
+              Clear date
+            </button>
+          }
+        </div>
+
+        @if (filteredReservations.length === 0) {
+          <div class="mt-8 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <p class="text-gray-500 dark:text-gray-400">No reservations found.</p>
+          </div>
+        } @else {
+          <div class="mt-5 hidden lg:block bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+              <tr>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Date & Time</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Restaurant</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Customer</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Guests</th>
+                <th class="text-left px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Status</th>
+                <th class="text-right px-4 py-3 font-bold text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">Actions</th>
+              </tr>
+              </thead>
+              <tbody>
+                @for (r of pagedReservations; track r.id) {
+                  <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                    <td class="px-4 py-3">
+                      <p class="font-bold text-gray-900 dark:text-white">{{ r.reservationDate || '—' }}</p>
+                      <p class="text-xs text-gray-500">{{ r.reservationTime || '—' }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300 truncate max-w-[220px]">{{ r.restaurantName }}</td>
+                    <td class="px-4 py-3">
+                      <p class="font-bold text-gray-900 dark:text-white truncate">{{ r.customerName }}</p>
+                      <p class="text-xs text-gray-500 truncate">{{ r.customerEmail }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ r.partySize }}</td>
+                    <td class="px-4 py-3">
+                      <select
+                        [ngModel]="r.status"
+                        (ngModelChange)="changeReservationStatus(r, $event)"
+                        [disabled]="reservationActionSaving"
+                        class="text-xs font-bold px-2 py-1.5 rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30"
+                        [ngClass]="statusClass(r.status)">
+                        @for (s of reservationStatuses; track s) {
+                          <option [value]="s">{{ statusLabel(s) }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-2">
+                        <button (click)="openReservationDetails(r)"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">
+                          Details
+                        </button>
+                        <button (click)="forceCancelReservation(r)"
+                                [disabled]="r.status === 'CANCELLED' || reservationActionSaving"
+                                class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-5 lg:hidden space-y-3">
+            @for (r of pagedReservations; track r.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ r.restaurantName }}</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                      {{ r.reservationDate }} · {{ r.reservationTime }} · {{ r.partySize }} guests
+                    </p>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0" [ngClass]="statusClass(r.status)">
+                {{ statusLabel(r.status) }}
+              </span>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <p class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ r.customerName }}</p>
+                  <p class="text-xs text-gray-500 truncate">{{ r.customerEmail }}</p>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <button (click)="openReservationDetails(r)"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-gray-100 text-gray-700">
+                    Details
+                  </button>
+                  <button (click)="forceCancelReservation(r)"
+                          [disabled]="r.status === 'CANCELLED'"
+                          class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-red-50 text-red-600 disabled:opacity-40">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (reservationTotalPages > 1) {
+            <div class="mt-6 flex items-center justify-between">
+              <p class="text-xs text-gray-500">Page {{ reservationPage }} of {{ reservationTotalPages }}</p>
+              <div class="flex items-center gap-2">
+                <button (click)="reservationPrevPage()" [disabled]="reservationPage === 1"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  ← Prev
+                </button>
+                <button (click)="reservationNextPage()" [disabled]="reservationPage === reservationTotalPages"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  Next →
+                </button>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
+
     @if (activeTab() === 'reviews') {
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reviews</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ reviews.length }} total · coming in the next step
-        </p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Reviews</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ filteredReviews.length }} total</p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="reviewSearch"
+                   (ngModelChange)="reviewPage = 1"
+                   placeholder="Search by author, restaurant, or comment..."
+                   class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30">
+          </div>
+
+          <select [(ngModel)]="reviewRatingFilter" (ngModelChange)="reviewPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="all">All ratings</option>
+            <option value="5">★★★★★ (5)</option>
+            <option value="4">★★★★ (4)</option>
+            <option value="3">★★★ (3)</option>
+            <option value="2">★★ (2)</option>
+            <option value="1">★ (1)</option>
+          </select>
+
+          <select [(ngModel)]="reviewSort" (ngModelChange)="reviewPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="newest">Newest</option>
+            <option value="rating-high">Highest rated</option>
+            <option value="rating-low">Lowest rated</option>
+          </select>
+
+          <button (click)="loadReviews()"
+                  class="px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            Refresh
+          </button>
+        </div>
+
+        @if (filteredReviews.length === 0) {
+          <div class="mt-8 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <p class="text-gray-500 dark:text-gray-400">No reviews found.</p>
+          </div>
+        } @else {
+          <div class="mt-5 space-y-3">
+            @for (r of pagedReviews; track r.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-full bg-[#0f172a] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {{ reviewAuthorInitials(r) }}
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="font-bold text-gray-900 dark:text-white truncate">{{ r.authorName }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ r.authorEmail || '—' }}</p>
+                      </div>
+
+                      <div class="flex items-center gap-3 shrink-0">
+                        <div class="flex items-center gap-0.5 text-amber-500">
+                          @for (star of ratingStars(r.rating); track star) {
+                            <svg class="w-4 h-4"
+                                 [class.text-amber-400]="star <= r.rating"
+                                 [class.text-gray-200]="star > r.rating"
+                                 [class.dark:text-gray-700]="star > r.rating"
+                                 fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                          }
+                        </div>
+                        <button (click)="openDeleteReview(r)"
+                                class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition"
+                                title="Delete review">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="mt-1 text-xs text-gray-500">
+                      on <span class="font-bold text-gray-700 dark:text-gray-300">{{ r.restaurantName }}</span>
+                      @if (r.createdAt) {
+                        · {{ r.createdAt | date:'MMM d, y' }}
+                      }
+                    </div>
+
+                    @if (r.comment) {
+                      <p class="mt-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{{ r.comment }}</p>
+                    }
+
+                    @if (r.ownerResponse) {
+                      <div class="mt-3 pl-3 border-l-2 border-emerald-400 text-xs text-gray-600 dark:text-gray-400">
+                        <span class="font-bold text-emerald-700 dark:text-emerald-400">Owner replied:</span>
+                        {{ r.ownerResponse }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (reviewTotalPages > 1) {
+            <div class="mt-6 flex items-center justify-between">
+              <p class="text-xs text-gray-500">Page {{ reviewPage }} of {{ reviewTotalPages }}</p>
+              <div class="flex items-center gap-2">
+                <button (click)="reviewPrevPage()" [disabled]="reviewPage === 1"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  ← Prev
+                </button>
+                <button (click)="reviewNextPage()" [disabled]="reviewPage === reviewTotalPages"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  Next →
+                </button>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
+
     @if (activeTab() === 'cities') {
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Cities</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {{ cities.length }} total · coming in the next step
-        </p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Cities</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ filteredCities.length }} total</p>
+          </div>
+
+          <button (click)="openCreateCity()"
+                  class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add City
+          </button>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="citySearch"
+                   (ngModelChange)="cityPage = 1"
+                   placeholder="Search by city or country..."
+                   class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30">
+          </div>
+
+          <select [(ngModel)]="citySort" (ngModelChange)="cityPage = 1"
+                  class="px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+            <option value="name">Name</option>
+            <option value="newest">Newest</option>
+          </select>
+
+          <button (click)="loadCities()"
+                  class="px-4 py-2.5 text-sm font-bold rounded-xl bg-[#0f172a] text-white hover:bg-[#1e293b] transition">
+            Refresh
+          </button>
+        </div>
+
+        @if (filteredCities.length === 0) {
+          <div class="mt-8 text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+            <p class="text-gray-500 dark:text-gray-400">No cities found.</p>
+          </div>
+        } @else {
+          <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @for (c of pagedCities; track c.id) {
+              <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-md transition">
+                <div class="relative h-32 bg-gray-100 dark:bg-gray-800">
+                  @if (c.imageUrl) {
+                    <img [src]="c.imageUrl" [alt]="c.name" class="w-full h-full object-cover">
+                  } @else {
+                    <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                      No image
+                    </div>
+                  }
+                </div>
+
+                <div class="p-4">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ c.name }}</h3>
+                      @if (c.country) {
+                        <p class="text-xs text-gray-500 mt-0.5">{{ c.country }}</p>
+                      }
+                    </div>
+                    @if (c.restaurantCount > 0) {
+                      <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 shrink-0">
+                    {{ c.restaurantCount }} restaurants
+                  </span>
+                    }
+                  </div>
+
+                  <div class="mt-3 flex gap-2">
+                    <button (click)="openEditCity(c)"
+                            class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                      Edit
+                    </button>
+                    <button (click)="openDeleteCity(c)"
+                            class="flex-1 px-3 py-2 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (cityTotalPages > 1) {
+            <div class="mt-6 flex items-center justify-between">
+              <p class="text-xs text-gray-500">Page {{ cityPage }} of {{ cityTotalPages }}</p>
+              <div class="flex items-center gap-2">
+                <button (click)="cityPrevPage()" [disabled]="cityPage === 1"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  ← Prev
+                </button>
+                <button (click)="cityNextPage()" [disabled]="cityPage === cityTotalPages"
+                        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition">
+                  Next →
+                </button>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
+
     @if (activeTab() === 'settings') {
       <div>
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Settings</h1>
@@ -492,4 +1004,416 @@
       </div>
     </div>
   }
+
+  @if (roleModalOpen && roleModalTarget) {
+    <div class="fixed inset-0 z-[110] overflow-y-auto" (click)="closeRoleModal()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeRoleModal()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <h3 class="text-lg font-extrabold text-gray-900 dark:text-white mb-1">Change Role</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+            For <strong>{{ roleModalTarget.firstName }} {{ roleModalTarget.lastName }}</strong>
+          </p>
+
+          <div class="space-y-2">
+            @for (role of ['DINER', 'RESTAURANT_OWNER', 'PLATFORM_ADMIN']; track role) {
+              <label class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition"
+                     [class.border-[#0f172a]]="roleModalNewRole === role"
+                     [class.border-gray-200]="roleModalNewRole !== role"
+                     [class.bg-gray-50]="roleModalNewRole === role"
+                     [class.dark:bg-gray-800]="roleModalNewRole === role">
+                <input type="radio"
+                       name="role"
+                       [value]="role"
+                       [(ngModel)]="roleModalNewRole"
+                       class="w-4 h-4 accent-[#0f172a]">
+                <div class="flex-1">
+                  <p class="font-bold text-sm text-gray-900 dark:text-white">{{ roleLabel(role) }}</p>
+                  <p class="text-xs text-gray-500">
+                    @if (role === 'DINER') { Regular diner }
+                    @if (role === 'RESTAURANT_OWNER') { Can manage restaurant(s) }
+                    @if (role === 'PLATFORM_ADMIN') { Full admin access }
+                  </p>
+                </div>
+              </label>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeRoleModal()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="saveRole()"
+                    [disabled]="roleModalSaving"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#0f172a] hover:bg-[#1e293b] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ roleModalSaving ? 'Saving...' : 'Save Role' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (deleteUserDialogOpen && deleteUserTarget) {
+    <div class="fixed inset-0 z-[110] overflow-y-auto" (click)="closeDeleteUser()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeDeleteUser()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19H18.93a2 2 0 001.72-3.03l-6.93-12a2 2 0 00-3.44 0l-6.93 12A2 2 0 005.07 19z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Delete this user?</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <strong>{{ deleteUserTarget.firstName }} {{ deleteUserTarget.lastName }}</strong>
+                ({{ deleteUserTarget.email }}) will be permanently deleted along with their reservations, reviews, and favorites.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Type <span class="font-mono text-red-600">DELETE</span> to confirm
+              </label>
+              <input type="text" [(ngModel)]="deleteUserConfirmText" placeholder="DELETE"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent">
+            </div>
+
+            @if (deleteUserError) {
+              <div class="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+                {{ deleteUserError }}
+              </div>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeDeleteUser()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="confirmDeleteUser()"
+                    [disabled]="deleteUserLoading || deleteUserConfirmText.trim().toUpperCase() !== 'DELETE'"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ deleteUserLoading ? 'Deleting...' : 'Delete user' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (viewReservationOpen && viewReservation) {
+    <div class="fixed inset-0 z-[120] overflow-y-auto" (click)="closeReservationDetails()">
+      <div class="flex items-stretch justify-end min-h-screen">
+        <div class="fixed inset-0 bg-black/60" (click)="closeReservationDetails()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 shadow-2xl w-full max-w-lg h-screen overflow-y-auto flex flex-col"
+             (click)="$event.stopPropagation()">
+
+          <div class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between z-10">
+            <div>
+              <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">Reservation #{{ viewReservation.id }}</h2>
+              <p class="text-xs text-gray-500">{{ viewReservation.reservationDate }} · {{ viewReservation.reservationTime }}</p>
+            </div>
+            <button (click)="closeReservationDetails()"
+                    class="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center transition">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex-1 p-6 space-y-6">
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">Status</p>
+              <select [(ngModel)]="viewReservation.status"
+                      (ngModelChange)="changeReservationStatus(viewReservation, $event)"
+                      [disabled]="reservationActionSaving"
+                      class="w-full text-sm font-bold px-3 py-2.5 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-[#0f172a]/30"
+                      [ngClass]="statusClass(viewReservation.status)">
+                @for (s of reservationStatuses; track s) {
+                  <option [value]="s">{{ statusLabel(s) }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">Customer</p>
+              <p class="font-bold text-gray-900 dark:text-white">{{ viewReservation.customerName }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ viewReservation.customerEmail }}</p>
+              @if (viewReservation.customerPhone) {
+                <p class="text-xs text-gray-500 mt-0.5">{{ viewReservation.customerPhone }}</p>
+              }
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">Restaurant</p>
+              <p class="font-bold text-gray-900 dark:text-white">{{ viewReservation.restaurantName }}</p>
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">When</p>
+              <div class="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p class="text-xs text-gray-500">Date</p>
+                  <p class="font-bold text-gray-900 dark:text-white">{{ viewReservation.reservationDate || '—' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Time</p>
+                  <p class="font-bold text-gray-900 dark:text-white">{{ viewReservation.reservationTime || '—' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Guests</p>
+                  <p class="font-bold text-gray-900 dark:text-white">{{ viewReservation.partySize }}</p>
+                </div>
+              </div>
+              @if (viewReservation.tableNumber) {
+                <p class="text-xs text-gray-500 mt-3">Table {{ viewReservation.tableNumber }}</p>
+              }
+            </div>
+
+            <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">Deposit</p>
+              @if (viewReservation.depositAmount > 0) {
+                <p class="font-bold text-gray-900 dark:text-white">€{{ viewReservation.depositAmount }}</p>
+                <p class="text-xs mt-1"
+                   [class.text-emerald-600]="viewReservation.depositPaid"
+                   [class.text-amber-600]="!viewReservation.depositPaid">
+                  {{ viewReservation.depositPaid ? 'Paid' : 'Not yet paid' }}
+                </p>
+              } @else {
+                <p class="text-sm text-gray-500 italic">No deposit required</p>
+              }
+            </div>
+
+            @if (viewReservation.specialRequests) {
+              <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                <p class="text-xs font-bold text-gray-500 uppercase mb-2">Special requests</p>
+                <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{{ viewReservation.specialRequests }}</p>
+              </div>
+            }
+
+            <div>
+              <p class="text-xs font-bold text-gray-500 uppercase mb-2">Internal note (only admins see this)</p>
+              <textarea [(ngModel)]="noteDraft"
+                        rows="4"
+                        placeholder="e.g. Called restaurant, they confirmed table 5 for 6pm..."
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f172a]/30 focus:border-transparent resize-none"></textarea>
+
+              @if (viewReservation.adminNoteUpdatedAt) {
+                <p class="text-[10px] text-gray-400 mt-1">
+                  Last updated {{ viewReservation.adminNoteUpdatedAt | date:'MMM d, y · h:mm a' }}
+                </p>
+              }
+
+              <button (click)="saveAdminNote()"
+                      [disabled]="noteSaving"
+                      class="mt-2 px-4 py-2 text-xs font-bold rounded-lg bg-[#0f172a] text-white hover:bg-[#1e293b] transition disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ noteSaving ? 'Saving...' : 'Save note' }}
+              </button>
+            </div>
+
+          </div>
+
+          <div class="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 flex items-center gap-3">
+            <button (click)="closeReservationDetails()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Close
+            </button>
+            <button (click)="forceCancelReservation(viewReservation)"
+                    [disabled]="viewReservation.status === 'CANCELLED' || reservationActionSaving"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed">
+              Force Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (deleteReviewDialogOpen && deleteReviewTarget) {
+    <div class="fixed inset-0 z-[110] overflow-y-auto" (click)="closeDeleteReview()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeDeleteReview()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19H18.93a2 2 0 001.72-3.03l-6.93-12a2 2 0 00-3.44 0l-6.93 12A2 2 0 005.07 19z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Delete this review?</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Review by <strong>{{ deleteReviewTarget.authorName }}</strong> on
+                <strong>{{ deleteReviewTarget.restaurantName }}</strong>. This cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Type <span class="font-mono text-red-600">DELETE</span> to confirm
+              </label>
+              <input type="text" [(ngModel)]="deleteReviewConfirmText" placeholder="DELETE"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent">
+            </div>
+
+            @if (deleteReviewError) {
+              <div class="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+                {{ deleteReviewError }}
+              </div>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeDeleteReview()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="confirmDeleteReview()"
+                    [disabled]="deleteReviewLoading || deleteReviewConfirmText.trim().toUpperCase() !== 'DELETE'"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ deleteReviewLoading ? 'Deleting...' : 'Delete review' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (cityModalOpen) {
+    <div class="fixed inset-0 z-[110] overflow-y-auto" (click)="closeCityModal()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeCityModal()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <h3 class="text-lg font-extrabold text-gray-900 dark:text-white mb-5">
+            {{ cityModalMode === 'create' ? 'Add City' : 'Edit City' }}
+          </h3>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">City name *</label>
+              <input type="text" [(ngModel)]="cityModalForm.name" placeholder="e.g. Paris"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f172a]/30 focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Country</label>
+              <input type="text" [(ngModel)]="cityModalForm.country" placeholder="e.g. France"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f172a]/30 focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Image URL</label>
+              <input type="text" [(ngModel)]="cityModalForm.imageUrl" placeholder="https://..."
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f172a]/30 focus:border-transparent">
+              @if (cityModalForm.imageUrl) {
+                <div class="mt-2 h-24 rounded-lg overflow-hidden bg-gray-100">
+                  <img [src]="cityModalForm.imageUrl" alt="Preview" class="w-full h-full object-cover">
+                </div>
+              }
+            </div>
+
+            @if (cityModalError) {
+              <div class="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+                {{ cityModalError }}
+              </div>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeCityModal()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="saveCity()"
+                    [disabled]="cityModalSaving"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#0f172a] hover:bg-[#1e293b] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ cityModalSaving ? 'Saving...' : (cityModalMode === 'create' ? 'Create' : 'Save Changes') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (deleteCityDialogOpen && deleteCityTarget) {
+    <div class="fixed inset-0 z-[110] overflow-y-auto" (click)="closeDeleteCity()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeDeleteCity()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-start gap-3 mb-5">
+            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19H18.93a2 2 0 001.72-3.03l-6.93-12a2 2 0 00-3.44 0l-6.93 12A2 2 0 005.07 19z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Delete this city?</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <strong>{{ deleteCityTarget.name }}</strong> will be permanently removed.
+                @if (deleteCityTarget.restaurantCount > 0) {
+                  <span class="text-red-500 font-bold block mt-1">
+                  ⚠️ This city has {{ deleteCityTarget.restaurantCount }} restaurant(s) attached.
+                </span>
+                }
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Type <span class="font-mono text-red-600">DELETE</span> to confirm
+              </label>
+              <input type="text" [(ngModel)]="deleteCityConfirmText" placeholder="DELETE"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent">
+            </div>
+
+            @if (deleteCityError) {
+              <div class="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+                {{ deleteCityError }}
+              </div>
+            }
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeDeleteCity()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="confirmDeleteCity()"
+                    [disabled]="deleteCityLoading || deleteCityConfirmText.trim().toUpperCase() !== 'DELETE'"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ deleteCityLoading ? 'Deleting...' : 'Delete city' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
 </div>

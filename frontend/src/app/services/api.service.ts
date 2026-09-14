@@ -831,4 +831,28 @@ export class ApiService {
       headers: this.adminHeaders()
     });
   }
+
+  adminChangeReservationStatus(id: number, status: string): Observable<any> {
+    const adminId = this.getCurrentUserId();
+    return this.http.patch<any>(
+      `${this.apiUrl}/reservations/${id}/status`,
+      { status, userId: adminId },
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  adminCancelReservation(id: number): Observable<any> {
+    return this.http.put<any>(
+      `${this.apiUrl}/reservations/${id}/cancel`, {},
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  adminUpdateReservationNote(id: number, note: string): Observable<any> {
+    return this.http.patch<any>(
+      `${this.apiUrl}/admin/reservations/${id}/note`,
+      { note },
+      { headers: this.adminHeaders() }
+    );
+  }
 }

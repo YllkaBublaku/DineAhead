@@ -51,12 +51,66 @@ export class PlatformAdminDashboard implements OnInit {
   deleteRestaurantError = '';
 
   users: any[] = [];
+  userSearch = '';
+  userRoleFilter: 'all' | 'DINER' | 'RESTAURANT_OWNER' | 'PLATFORM_ADMIN' = 'all';
+  userSort: 'newest' | 'name' = 'newest';
+  userPage = 1;
+  userPageSize = 15;
+
+  roleModalOpen = false;
+  roleModalTarget: any = null;
+  roleModalNewRole = '';
+  roleModalSaving = false;
+
+  deleteUserDialogOpen = false;
+  deleteUserTarget: any = null;
+  deleteUserConfirmText = '';
+  deleteUserLoading = false;
+  deleteUserError = '';
 
   reservations: any[] = [];
+  reservationSearch = '';
+  reservationStatusFilter: 'all' | 'PENDING' | 'CONFIRMED' | 'SEATED' | 'NO_SHOW' | 'CANCELLED' = 'all';
+  reservationDateFilter = '';
+  reservationPage = 1;
+  reservationPageSize = 15;
+  viewReservationOpen = false;
+  viewReservation: any = null;
+  noteDraft = '';
+  noteSaving = false;
+  reservationActionSaving = false;
 
   reviews: any[] = [];
+  reviewSearch = '';
+  reviewRatingFilter: 'all' | '1' | '2' | '3' | '4' | '5' = 'all';
+  reviewSort: 'newest' | 'rating-low' | 'rating-high' = 'newest';
+  reviewPage = 1;
+  reviewPageSize = 15;
+
+  deleteReviewDialogOpen = false;
+  deleteReviewTarget: any = null;
+  deleteReviewConfirmText = '';
+  deleteReviewLoading = false;
+  deleteReviewError = '';
 
   cities: any[] = [];
+  citySearch = '';
+  citySort: 'name' | 'newest' = 'name';
+  cityPage = 1;
+  cityPageSize = 15;
+
+  cityModalOpen = false;
+  cityModalMode: 'create' | 'edit' = 'create';
+  cityModalTarget: any = null;
+  cityModalForm = { name: '', imageUrl: '', country: '' };
+  cityModalSaving = false;
+  cityModalError = '';
+
+  deleteCityDialogOpen = false;
+  deleteCityTarget: any = null;
+  deleteCityConfirmText = '';
+  deleteCityLoading = false;
+  deleteCityError = '';
 
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
@@ -276,8 +330,19 @@ export class PlatformAdminDashboard implements OnInit {
 
   loadUsers(): void {
     this.api.getAdminUsers().subscribe({
-      next: (list: any[]) => {
-        this.users = list || [];
+      next: (raw: any) => {
+        console.log('[admin] raw users:', raw);
+
+        let list: any[] = [];
+        if (Array.isArray(raw)) {
+          list = raw;
+        } else if (raw && Array.isArray(raw.content)) {
+          list = raw.content;
+        } else if (raw && Array.isArray(raw.data)) {
+          list = raw.data;
+        }
+
+        this.users = list;
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -287,10 +352,186 @@ export class PlatformAdminDashboard implements OnInit {
     });
   }
 
+  get filteredUsers(): any[] {
+    let list = [...this.users];
+
+    if (this.userRoleFilter !== 'all') {
+      list = list.filter(u => (u.role || '').toUpperCase().replace(/^ROLE_/, '') === this.userRoleFilter);
+    }
+
+    const q = this.userSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(u =>
+        ((u.firstName || '') + ' ' + (u.lastName || '')).toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (this.userSort === 'name') {
+      list.sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+    } else {
+      list.sort((a, b) => (b.id || 0) - (a.id || 0));
+    }
+    return list;
+  }
+
+  get pagedUsers(): any[] {
+    const start = (this.userPage - 1) * this.userPageSize;
+    return this.filteredUsers.slice(start, start + this.userPageSize);
+  }
+
+  get userTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredUsers.length / this.userPageSize));
+  }
+
+  userNextPage() { if (this.userPage < this.userTotalPages) this.userPage++; }
+  userPrevPage() { if (this.userPage > 1) this.userPage--; }
+
+  userInitials(u: any): string {
+    const f = (u.firstName || '').charAt(0);
+    const l = (u.lastName || '').charAt(0);
+    return (f + l).toUpperCase() || 'U';
+  }
+
+  roleLabel(role: string): string {
+    const r = (role || '').toUpperCase().replace(/^ROLE_/, '');
+    if (r === 'PLATFORM_ADMIN') return 'Admin';
+    if (r === 'RESTAURANT_OWNER') return 'Owner';
+    if (r === 'DINER') return 'Diner';
+    return r || '—';
+  }
+
+  roleClass(role: string): string {
+    const r = (role || '').toUpperCase().replace(/^ROLE_/, '');
+    if (r === 'PLATFORM_ADMIN') return 'bg-[#0f172a] text-white';
+    if (r === 'RESTAURANT_OWNER') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  }
+
+  openRoleModal(u: any): void {
+    this.roleModalTarget = u;
+    this.roleModalNewRole = (u.role || 'USER').toUpperCase().replace(/^ROLE_/, '');
+    this.roleModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeRoleModal(): void {
+    this.roleModalOpen = false;
+    this.roleModalTarget = null;
+    this.roleModalNewRole = '';
+    this.cdr.detectChanges();
+  }
+
+  saveRole(): void {
+    if (!this.roleModalTarget || !this.roleModalNewRole) return;
+
+    this.roleModalSaving = true;
+
+    this.api.adminChangeUserRole(this.roleModalTarget.id, this.roleModalNewRole).subscribe({
+      next: () => {
+        this.roleModalSaving = false;
+
+        const idx = this.users.findIndex(u => u.id === this.roleModalTarget.id);
+        if (idx !== -1) {
+          this.users[idx] = { ...this.users[idx], role: this.roleModalNewRole };
+          this.users = [...this.users];
+        }
+
+        this.showToast('Role updated');
+        this.closeRoleModal();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.roleModalSaving = false;
+        console.error('[admin] change role failed', err);
+        this.showToast('Could not change role', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openDeleteUser(u: any): void {
+    this.deleteUserTarget = u;
+    this.deleteUserConfirmText = '';
+    this.deleteUserError = '';
+    this.deleteUserLoading = false;
+    this.deleteUserDialogOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeleteUser(): void {
+    this.deleteUserDialogOpen = false;
+    this.deleteUserTarget = null;
+    this.cdr.detectChanges();
+  }
+
+  confirmDeleteUser(): void {
+    if (!this.deleteUserTarget) return;
+
+    if (this.deleteUserConfirmText.trim().toUpperCase() !== 'DELETE') {
+      this.deleteUserError = 'Please type DELETE to confirm.';
+      return;
+    }
+
+    this.deleteUserLoading = true;
+    this.deleteUserError = '';
+
+    this.api.adminDeleteUser(this.deleteUserTarget.id).subscribe({
+      next: () => {
+        this.deleteUserLoading = false;
+        this.deleteUserDialogOpen = false;
+        this.users = this.users.filter(u => u.id !== this.deleteUserTarget.id);
+        this.showToast('User deleted');
+        this.deleteUserTarget = null;
+        this.loadStats();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.deleteUserLoading = false;
+        console.error('[admin] delete user failed', err);
+        this.deleteUserError = err?.error?.message || 'Could not delete user.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   loadReservations(): void {
     this.api.getAdminReservations().subscribe({
-      next: (list: any[]) => {
-        this.reservations = list || [];
+      next: (raw: any) => {
+        let list: any[] = [];
+        if (Array.isArray(raw)) {
+          list = raw;
+        } else if (raw && Array.isArray(raw.content)) {
+          list = raw.content;
+        } else if (raw && Array.isArray(raw.data)) {
+          list = raw.data;
+        } else {
+          console.warn('[admin] unexpected reservations shape:', raw);
+        }
+
+        this.reservations = list.map(r => ({
+          id: r.id,
+          reservationDate: r.reservationDate || '',
+          reservationTime: r.reservationTime ? String(r.reservationTime).substring(0, 5) : '',
+          partySize: r.partySize ?? 0,
+          status: (r.status || 'PENDING').toUpperCase(),
+          specialRequests: r.specialRequests || '',
+          restaurantId: r.restaurant?.id ?? r.restaurantId ?? null,
+          restaurantName: r.restaurant?.name || r.restaurantName || 'Restaurant',
+          customerName: r.user
+            ? `${r.user.firstName || ''} ${r.user.lastName || ''}`.trim()
+            : (r.customerName || 'Guest'),
+          customerEmail: r.user?.email || r.customerEmail || '',
+          customerPhone: r.user?.phone || r.customerPhone || '',
+          customerId: r.user?.id ?? r.userId ?? null,
+          tableNumber: r.tableNumber ?? r.table?.tableNumber ?? null,
+          depositPaid: r.depositPaid === true,
+          depositAmount: r.depositAmount ?? 0,
+          adminNote: r.adminNote || '',
+          adminNoteUpdatedAt: r.adminNoteUpdatedAt || null,
+          createdAt: r.createdAt || null
+        }));
+
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -300,10 +541,209 @@ export class PlatformAdminDashboard implements OnInit {
     });
   }
 
+  get filteredReservations(): any[] {
+    let list = [...this.reservations];
+
+    if (this.reservationStatusFilter !== 'all') {
+      list = list.filter(r => (r.status || '').toUpperCase() === this.reservationStatusFilter);
+    }
+
+    if (this.reservationDateFilter) {
+      list = list.filter(r => (r.reservationDate || '').startsWith(this.reservationDateFilter));
+    }
+
+    const q = this.reservationSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(r =>
+        (r.restaurantName || '').toLowerCase().includes(q) ||
+        (r.customerName || '').toLowerCase().includes(q) ||
+        (r.customerEmail || '').toLowerCase().includes(q)
+      );
+    }
+
+    list.sort((a, b) => {
+      const da = `${a.reservationDate || ''}T${a.reservationTime || ''}`;
+      const db = `${b.reservationDate || ''}T${b.reservationTime || ''}`;
+      return db.localeCompare(da);
+    });
+    return list;
+  }
+
+  get pagedReservations(): any[] {
+    const start = (this.reservationPage - 1) * this.reservationPageSize;
+    return this.filteredReservations.slice(start, start + this.reservationPageSize);
+  }
+
+  get reservationTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredReservations.length / this.reservationPageSize));
+  }
+
+  reservationNextPage() { if (this.reservationPage < this.reservationTotalPages) this.reservationPage++; }
+  reservationPrevPage() { if (this.reservationPage > 1) this.reservationPage--; }
+
+  statusClass(status: string): string {
+    const s = (status || '').toUpperCase();
+    if (s === 'CONFIRMED') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400';
+    if (s === 'PENDING') return 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400';
+    if (s === 'SEATED') return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400';
+    if (s === 'NO_SHOW' || s === 'CANCELLED') return 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  }
+
+  statusLabel(status: string): string {
+    const s = (status || '').toUpperCase();
+    if (s === 'NO_SHOW') return 'No Show';
+    if (!s) return '—';
+    return s.charAt(0) + s.slice(1).toLowerCase();
+  }
+
+  openReservationDetails(r: any): void {
+    this.viewReservation = r;
+    this.noteDraft = r.adminNote || '';
+    this.viewReservationOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeReservationDetails(): void {
+    this.viewReservationOpen = false;
+    this.viewReservation = null;
+    this.noteDraft = '';
+    this.cdr.detectChanges();
+  }
+
+  changeReservationStatus(r: any, newStatus: string): void {
+    if (!r || !newStatus) return;
+    if ((r.status || '').toUpperCase() === newStatus.toUpperCase()) return;
+
+    const prev = r.status;
+    r.status = newStatus.toUpperCase();
+    this.reservationActionSaving = true;
+
+    this.api.adminChangeReservationStatus(r.id, newStatus.toUpperCase()).subscribe({
+      next: (updated: any) => {
+        this.reservationActionSaving = false;
+
+        if (updated && updated.status) {
+          r.status = String(updated.status).toUpperCase();
+        }
+
+        if (this.viewReservation && this.viewReservation.id === r.id) {
+          this.viewReservation = { ...this.viewReservation, status: r.status };
+        }
+
+        this.showToast(`Status changed to ${this.statusLabel(r.status)}`);
+        this.loadStats();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.reservationActionSaving = false;
+        r.status = prev;
+        console.error('[admin] status change failed', err);
+        this.showToast('Could not change status', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  forceCancelReservation(r: any): void {
+    if (!r) return;
+
+    const ok = confirm(
+      `Force-cancel reservation for ${r.customerName} at ${r.restaurantName}?\n\n` +
+      `Date: ${r.reservationDate} ${r.reservationTime}\n` +
+      `Party: ${r.partySize}`
+    );
+    if (!ok) return;
+
+    this.reservationActionSaving = true;
+
+    this.api.adminCancelReservation(r.id).subscribe({
+      next: (updated: any) => {
+        this.reservationActionSaving = false;
+        r.status = 'CANCELLED';
+
+        if (this.viewReservation && this.viewReservation.id === r.id) {
+          this.viewReservation = { ...this.viewReservation, status: 'CANCELLED' };
+        }
+
+        this.showToast('Reservation cancelled');
+        this.loadStats();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.reservationActionSaving = false;
+        console.error('[admin] cancel failed', err);
+        this.showToast('Could not cancel reservation', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  saveAdminNote(): void {
+    if (!this.viewReservation) return;
+
+    this.noteSaving = true;
+
+    this.api.adminUpdateReservationNote(this.viewReservation.id, this.noteDraft).subscribe({
+      next: (updated: any) => {
+        this.noteSaving = false;
+
+        const newNote = updated?.adminNote ?? this.noteDraft;
+        const newStamp = updated?.adminNoteUpdatedAt ?? new Date().toISOString();
+
+        this.viewReservation.adminNote = newNote;
+        this.viewReservation.adminNoteUpdatedAt = newStamp;
+
+        const idx = this.reservations.findIndex(r => r.id === this.viewReservation.id);
+        if (idx !== -1) {
+          this.reservations[idx].adminNote = newNote;
+          this.reservations[idx].adminNoteUpdatedAt = newStamp;
+          this.reservations = [...this.reservations];
+        }
+
+        this.showToast('Note saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.noteSaving = false;
+        console.error('[admin] note save failed', err);
+        this.showToast('Could not save note', 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  readonly reservationStatuses: string[] = [
+    'PENDING', 'CONFIRMED', 'SEATED', 'NO_SHOW', 'CANCELLED'
+  ];
+
   loadReviews(): void {
     this.api.getAdminReviews().subscribe({
-      next: (list: any[]) => {
-        this.reviews = list || [];
+      next: (raw: any) => {
+        let list: any[] = [];
+        if (Array.isArray(raw)) list = raw;
+        else if (raw && Array.isArray(raw.content)) list = raw.content;
+        else if (raw && Array.isArray(raw.data)) list = raw.data;
+
+        this.reviews = list.map(r => ({
+          id: r.id,
+          rating: r.rating ?? 0,
+          foodRating: r.foodRating ?? null,
+          serviceRating: r.serviceRating ?? null,
+          ambianceRating: r.ambianceRating ?? null,
+          comment: r.comment || '',
+          createdAt: r.createdAt || null,
+          ownerResponse: r.ownerResponse || '',
+          helpfulCount: r.helpfulCount ?? 0,
+          authorName: r.userName
+            || (r.user ? `${r.user.firstName || ''} ${r.user.lastName || ''}`.trim() : '')
+            || 'Anonymous',
+          authorEmail: r.user?.email || r.userEmail || '',
+          authorId: r.user?.id ?? r.userId ?? null,
+          restaurantId: r.restaurant?.id ?? r.restaurantId ?? null,
+          restaurantName: r.restaurant?.name || r.restaurantName || 'Restaurant'
+        }));
+
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -313,15 +753,288 @@ export class PlatformAdminDashboard implements OnInit {
     });
   }
 
+  get filteredReviews(): any[] {
+    let list = [...this.reviews];
+
+    if (this.reviewRatingFilter !== 'all') {
+      const target = Number(this.reviewRatingFilter);
+      list = list.filter(r => Math.floor(r.rating) === target);
+    }
+
+    const q = this.reviewSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(r =>
+        (r.authorName || '').toLowerCase().includes(q) ||
+        (r.authorEmail || '').toLowerCase().includes(q) ||
+        (r.restaurantName || '').toLowerCase().includes(q) ||
+        (r.comment || '').toLowerCase().includes(q)
+      );
+    }
+
+    switch (this.reviewSort) {
+      case 'rating-low':
+        list.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+        break;
+      case 'rating-high':
+        list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'newest':
+      default:
+        list.sort((a, b) => {
+          const da = a.createdAt || '';
+          const db = b.createdAt || '';
+          return db.localeCompare(da);
+        });
+        break;
+    }
+    return list;
+  }
+
+  get pagedReviews(): any[] {
+    const start = (this.reviewPage - 1) * this.reviewPageSize;
+    return this.filteredReviews.slice(start, start + this.reviewPageSize);
+  }
+
+  get reviewTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredReviews.length / this.reviewPageSize));
+  }
+
+  reviewNextPage() { if (this.reviewPage < this.reviewTotalPages) this.reviewPage++; }
+  reviewPrevPage() { if (this.reviewPage > 1) this.reviewPage--; }
+
+  reviewAuthorInitials(r: any): string {
+    const name = (r.authorName || 'A').trim();
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'A';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  ratingStars(rating: number): number[] {
+    return [1, 2, 3, 4, 5];
+  }
+
+  openDeleteReview(r: any): void {
+    this.deleteReviewTarget = r;
+    this.deleteReviewConfirmText = '';
+    this.deleteReviewError = '';
+    this.deleteReviewLoading = false;
+    this.deleteReviewDialogOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeleteReview(): void {
+    this.deleteReviewDialogOpen = false;
+    this.deleteReviewTarget = null;
+    this.cdr.detectChanges();
+  }
+
+  confirmDeleteReview(): void {
+    if (!this.deleteReviewTarget) return;
+
+    if (this.deleteReviewConfirmText.trim().toUpperCase() !== 'DELETE') {
+      this.deleteReviewError = 'Please type DELETE to confirm.';
+      return;
+    }
+
+    this.deleteReviewLoading = true;
+    this.deleteReviewError = '';
+
+    this.api.adminDeleteReview(this.deleteReviewTarget.id).subscribe({
+      next: () => {
+        this.deleteReviewLoading = false;
+        this.deleteReviewDialogOpen = false;
+        this.reviews = this.reviews.filter(r => r.id !== this.deleteReviewTarget.id);
+        this.showToast('Review deleted');
+        this.deleteReviewTarget = null;
+        this.loadStats();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.deleteReviewLoading = false;
+        console.error('[admin] delete review failed', err);
+        this.deleteReviewError = err?.error?.message || 'Could not delete review.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   loadCities(): void {
     this.api.getCities()
-      .then((list: any[]) => {
-        this.cities = list || [];
+      .then((raw: any) => {
+        let list: any[] = [];
+        if (Array.isArray(raw)) list = raw;
+        else if (raw && Array.isArray(raw.content)) list = raw.content;
+        else if (raw && Array.isArray(raw.data)) list = raw.data;
+
+        this.cities = list.map(c => ({
+          id: c.id,
+          name: c.name || '',
+          country: c.country || '',
+          countryFlag: c.countryFlag || '',
+          imageUrl: c.imageUrl || '',
+          restaurantCount: c.restaurantCount ?? 0
+        }));
+
         this.cdr.detectChanges();
       })
       .catch((err) => {
         console.error('[admin] cities failed', err);
+        this.showToast('Could not load cities', 'error');
       });
+  }
+
+  get filteredCities(): any[] {
+    let list = [...this.cities];
+
+    const q = this.citySearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.country || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (this.citySort === 'newest') {
+      list.sort((a, b) => (b.id || 0) - (a.id || 0));
+    } else {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+    return list;
+  }
+
+  get pagedCities(): any[] {
+    const start = (this.cityPage - 1) * this.cityPageSize;
+    return this.filteredCities.slice(start, start + this.cityPageSize);
+  }
+
+  get cityTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredCities.length / this.cityPageSize));
+  }
+
+  cityNextPage() { if (this.cityPage < this.cityTotalPages) this.cityPage++; }
+  cityPrevPage() { if (this.cityPage > 1) this.cityPage--; }
+
+  openCreateCity(): void {
+    this.cityModalMode = 'create';
+    this.cityModalTarget = null;
+    this.cityModalForm = { name: '', imageUrl: '', country: '' };
+    this.cityModalError = '';
+    this.cityModalSaving = false;
+    this.cityModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  openEditCity(c: any): void {
+    this.cityModalMode = 'edit';
+    this.cityModalTarget = c;
+    this.cityModalForm = {
+      name: c.name || '',
+      imageUrl: c.imageUrl || '',
+      country: c.country || ''
+    };
+    this.cityModalError = '';
+    this.cityModalSaving = false;
+    this.cityModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeCityModal(): void {
+    this.cityModalOpen = false;
+    this.cityModalTarget = null;
+    this.cityModalError = '';
+    this.cdr.detectChanges();
+  }
+
+  saveCity(): void {
+    if (!this.cityModalForm.name.trim()) {
+      this.cityModalError = 'City name is required.';
+      return;
+    }
+
+    this.cityModalSaving = true;
+    this.cityModalError = '';
+
+    const payload = {
+      name: this.cityModalForm.name.trim(),
+      imageUrl: this.cityModalForm.imageUrl.trim(),
+      country: this.cityModalForm.country.trim()
+    };
+
+    const req = this.cityModalMode === 'create'
+      ? this.api.createCity(payload)
+      : this.api.updateCity(this.cityModalTarget.id, payload);
+
+    req.subscribe({
+      next: (result: any) => {
+        this.cityModalSaving = false;
+
+        if (this.cityModalMode === 'create') {
+          this.cities = [result, ...this.cities];
+          this.showToast('City created');
+        } else {
+          const idx = this.cities.findIndex(c => c.id === this.cityModalTarget.id);
+          if (idx !== -1) {
+            this.cities[idx] = { ...this.cities[idx], ...result };
+            this.cities = [...this.cities];
+          }
+          this.showToast('City updated');
+        }
+
+        this.closeCityModal();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.cityModalSaving = false;
+        console.error('[admin] save city failed', err);
+        this.cityModalError = err?.error?.message || 'Could not save city.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openDeleteCity(c: any): void {
+    this.deleteCityTarget = c;
+    this.deleteCityConfirmText = '';
+    this.deleteCityError = '';
+    this.deleteCityLoading = false;
+    this.deleteCityDialogOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDeleteCity(): void {
+    this.deleteCityDialogOpen = false;
+    this.deleteCityTarget = null;
+    this.cdr.detectChanges();
+  }
+
+  confirmDeleteCity(): void {
+    if (!this.deleteCityTarget) return;
+
+    if (this.deleteCityConfirmText.trim().toUpperCase() !== 'DELETE') {
+      this.deleteCityError = 'Please type DELETE to confirm.';
+      return;
+    }
+
+    this.deleteCityLoading = true;
+    this.deleteCityError = '';
+
+    this.api.deleteCity(this.deleteCityTarget.id).subscribe({
+      next: () => {
+        this.deleteCityLoading = false;
+        this.deleteCityDialogOpen = false;
+        this.cities = this.cities.filter(c => c.id !== this.deleteCityTarget.id);
+        this.showToast('City deleted');
+        this.deleteCityTarget = null;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.deleteCityLoading = false;
+        console.error('[admin] delete city failed', err);
+        this.deleteCityError = err?.error?.message || 'Could not delete city.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   showToast(message: string, type: 'success' | 'error' = 'success'): void {

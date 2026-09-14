@@ -33,6 +33,8 @@ public class ReservationDTO {
     private String customerFirstName;
     private String customerLastName;
     private Integer tableNumber;
+    private String adminNote;
+    private LocalDateTime adminNoteUpdatedAt;
 
     public static ReservationDTO fromEntity(Reservation reservation) {
         ReservationDTO dto = new ReservationDTO();
@@ -59,6 +61,8 @@ public class ReservationDTO {
         dto.setDepositPaid(reservation.getDepositPaid());
         dto.setDepositAmount(reservation.getDepositAmount());
         dto.setCreatedAt(reservation.getCreatedAt());
+        dto.setAdminNote(reservation.getAdminNote());
+        dto.setAdminNoteUpdatedAt(reservation.getAdminNoteUpdatedAt());
 
         if (reservation.getPaymentMethod() != null) {
             dto.setPaymentMethod(reservation.getPaymentMethod().toString());

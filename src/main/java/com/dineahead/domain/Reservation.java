@@ -70,6 +70,12 @@ public class Reservation {
     @Column(name = "payment_method")
     private PaymentMethod paymentMethod;
 
+    @Column(name = "admin_note", length = 1000)
+    private String adminNote;
+
+    @Column(name = "admin_note_updated_at")
+    private LocalDateTime adminNoteUpdatedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -6,9 +6,11 @@ import com.dineahead.domain.enums.Role;
 import com.dineahead.infrastructure.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -89,6 +91,7 @@ public class AdminController {
     }
 
     @GetMapping("/users")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         return ResponseEntity.ok(
                 userRepository.findAll().stream()
@@ -125,15 +128,32 @@ public class AdminController {
     }
 
     @GetMapping("/reservations")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ReservationDTO>> getAllReservations() {
         return ResponseEntity.ok(
-                reservationRepository.findAll().stream()
+                reservationRepository.findAllWithRestaurantAndUser().stream()
                         .map(ReservationDTO::fromEntity)
                         .collect(Collectors.toList())
         );
     }
 
+    @PatchMapping("/reservations/{id}/note")
+    public ResponseEntity<ReservationDTO> updateAdminNote(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        Reservation r = reservationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+        r.setAdminNote(body.get("note"));
+        r.setAdminNoteUpdatedAt(LocalDateTime.now());
+        reservationRepository.save(r);
+
+        return ResponseEntity.ok(ReservationDTO.fromEntity(r));
+    }
+
     @GetMapping("/reviews")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ReviewDTO>> getAllReviews() {
         return ResponseEntity.ok(
                 reviewRepository.findAll().stream()
