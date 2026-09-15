@@ -58,8 +58,10 @@
 
       @if (showSearch) {
         <div class="hidden lg:flex items-center gap-3 text-xs font-semibold text-gray-600 dark:text-gray-300">
-          <a routerLink="/restaurant-dashboard" class="hover:text-[#005943] dark:hover:text-emerald-400 transition underline-offset-2 hover:underline">For restaurants</a>
-          <span class="text-gray-300 dark:text-gray-700">|</span>
+          @if (restaurantSignupEnabled) {
+            <a routerLink="/restaurant-dashboard" class="hover:text-[#005943] dark:hover:text-emerald-400 transition underline-offset-2 hover:underline">For restaurants</a>
+            <span class="text-gray-300 dark:text-gray-700">|</span>
+          }
           <a routerLink="/help" class="hover:text-[#005943] dark:hover:text-emerald-400 transition underline-offset-2 hover:underline">Help</a>
         </div>
       } @else {

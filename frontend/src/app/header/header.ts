@@ -147,6 +147,11 @@ export class Header implements OnInit, OnDestroy {
   }
 
   get signupEnabled(): boolean {
-    return this.settings.isEnabled('feature.signup.user', true);
+    return this.settings.isEnabled('feature.signup.user', true)
+      || this.settings.isEnabled('feature.signup.restaurant', true);
+  }
+
+  get restaurantSignupEnabled(): boolean {
+    return this.settings.isEnabled('feature.signup.restaurant', true);
   }
 }

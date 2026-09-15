@@ -1,10 +1,11 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Header } from '../header/header';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
+import { SettingsService } from '../services/settings.service';
 
 @Component({
   selector: 'app-contact',
@@ -13,10 +14,11 @@ import { ApiService } from '../services/api.service';
   templateUrl: './contact.html',
   styleUrl: './contact.css',
 })
-export class Contact {
+export class Contact implements OnInit {
   constructor(
     private api: ApiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private settings: SettingsService
   ) {}
 
   contactData = {
@@ -26,9 +28,23 @@ export class Contact {
     message: ''
   };
 
+  contactEmail = '';
+  contactPhone = '';
+  contactAddress = '';
+
   isSubmitting = false;
   successMessage = '';
   errorMessage = '';
+
+  ngOnInit(): void {
+    this.settings.load().then(() => {
+      const c = this.settings.contact;
+      this.contactEmail = c.email || 'support@dineahead.com';
+      this.contactPhone = c.phone || '';
+      this.contactAddress = c.address || '';
+      this.cdr.detectChanges();
+    });
+  }
 
   submitContact(): void {
     if (!this.contactData.name || !this.contactData.email || !this.contactData.message) {
@@ -43,12 +59,12 @@ export class Contact {
     this.cdr.detectChanges();
 
     this.api.submitContact(this.contactData)
-      .then((response) => {
+      .then(() => {
         this.successMessage = 'Thank you for your message! Our support team will get back to you within 24 hours.';
         this.contactData = { name: '', email: '', subject: '', message: '' };
       })
-      .catch((error) => {
-        this.errorMessage = 'Failed to send your message. Please try again or email us directly at support@dineahead.com.';
+      .catch(() => {
+        this.errorMessage = `Failed to send your message. Please try again or email us directly at ${this.contactEmail || 'support@dineahead.com'}.`;
       })
       .finally(() => {
         this.isSubmitting = false;

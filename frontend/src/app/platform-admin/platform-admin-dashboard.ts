@@ -1141,9 +1141,7 @@ export class PlatformAdminDashboard implements OnInit {
 
   featureFlagKeys: { key: string; label: string; description: string; defaultOn: boolean }[] = [
     { key: 'feature.reservations',       label: 'Reservations',            description: 'Allow users to book tables',           defaultOn: true  },
-    { key: 'feature.reviews',            label: 'Reviews',                 description: 'Allow users to write reviews',         defaultOn: true  },
-    { key: 'feature.deposits',           label: 'Deposits',                description: 'Allow restaurants to require deposits', defaultOn: false },
-    { key: 'feature.favorites',          label: 'Favorites',               description: 'Allow users to save restaurants',      defaultOn: true  },
+    { key: 'feature.reviews',            label: 'Reviews',                description: 'Allow users to save restaurants',      defaultOn: true  },
     { key: 'feature.signup.user',        label: 'New User Signups',        description: 'Allow new diner accounts',             defaultOn: true  },
     { key: 'feature.signup.restaurant',  label: 'New Restaurant Signups',  description: 'Allow new restaurant registrations',   defaultOn: true  }
   ];

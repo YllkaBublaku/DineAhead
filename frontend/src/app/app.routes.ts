@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { OauthRedirectComponent } from './oauth-redirect/oauth-redirect';
 import { AuthGuard } from './auth-guard';
 import { PlatformAdminGuard } from './platform-admin/platform-admin.guard';
+import { SignupEnabledGuard } from './guards/signup-enabled.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -30,7 +31,9 @@ export const routes: Routes = [
   },
 
   { path: 'login', loadComponent: () => import('./login/login').then(m => m.Login) },
-  { path: 'signup', loadComponent: () => import('./signup/signup').then(m => m.Signup) },
+  { path: 'signup',
+    loadComponent: () => import('./signup/signup').then(m => m.Signup),
+    canActivate: [SignupEnabledGuard] },
   { path: 'search', redirectTo: 'restaurants', pathMatch: 'full' },
   { path: 'reset-password', loadComponent: () => import('./reset-password/reset-password').then(m => m.ResetPassword) },
   { path: 'oauth2/redirect', component: OauthRedirectComponent },

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Header } from '../header/header';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
+import { SettingsService } from '../services/settings.service';
 
 export interface RestaurantItem {
   id: number;
@@ -50,7 +51,8 @@ export class Home implements OnInit {
   constructor(
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private settings: SettingsService
   ) {}
 
   mobileMenuOpen = false;
@@ -69,9 +71,14 @@ export class Home implements OnInit {
   private userId: number | null = null;
 
   ngOnInit(): void {
+    this.settings.load();
     this.loadFavoriteIds();
     this.loadRestaurants();
     this.loadCities();
+  }
+
+  get restaurantSignupEnabled(): boolean {
+    return this.settings.isEnabled('feature.signup.restaurant', true);
   }
 
   loadCities(): void {
