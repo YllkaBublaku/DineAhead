@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import * as L from 'leaflet';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
-import {environment} from '../../environments/environment';
+import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
+import { environment } from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {SettingsService} from '../services/settings.service';
 import { RoleService } from '../services/role.service';
@@ -144,7 +144,11 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   availableTimes: string[] = [];
   guestOptions: number[] = Array.from({length: 30}, (_, i) => i + 1);
 
-  stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
+  private stripe: Stripe | null = null;
+  private cardElement: StripeCardElement | null = null;
+
+  @ViewChild('cardElement') cardElementRef!: ElementRef;
+
   bookingMessage: string = '';
   bookingLoading: boolean = false;
   bookingError: string = '';
@@ -191,6 +195,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadStripeInstance();
 
     this.route.params.subscribe(params => {
       const id = params['id'];
@@ -287,6 +292,10 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.favoriteIds = new Set();
       }
     });
+  }
+
+  private async loadStripeInstance(): Promise<void> {
+    this.stripe = await loadStripe(environment.stripePublishableKey);
   }
 
   cancelModify(): void {
@@ -718,6 +727,10 @@ export class RestaurantDetail implements OnInit, OnDestroy {
           }
           this.bookingModalOpen = true;
           this.cdr.detectChanges();
+
+          if (this.isPaymentRequired) {
+            setTimeout(() => this.mountStripeCardElement(), 100);
+          }
         })
         .catch((error) => {
           console.error('Error fetching deposit info:', error);
@@ -766,6 +779,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         this.paymentModalOpen = true;
         this.bookingLoading = false;
         this.cdr.detectChanges();
+        setTimeout(() => this.mountStripeCardElement(), 100);
         return;
       }
 
@@ -855,55 +869,85 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         paymentMethod: paymentMethodUpper
       });
 
-      console.log('Reservation created:', reservation);
-
       if (!reservation || !reservation.id) {
         throw new Error('Reservation was created but no ID was returned');
       }
 
-      const userJson = localStorage.getItem('user');
-      const user = userJson ? JSON.parse(userJson) : null;
-      const userId = user?.id || null;
-
-      const paymentIntentData = await this.api.createPaymentIntent(
-        reservation.id,
-        userId
-      );
-
-      console.log('Payment intent created:', paymentIntentData);
-
-      const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
-      console.log('Payment confirmation result:', result);
-
-      if (result.success || result.status === 'SUCCEEDED') {
+      if (this.bookingForm.paymentMethod === 'cash') {
         await this.api.updateReservation(reservation.id, {
-          depositPaid: true,
+          depositPaid: false,
           depositAmount: this.bookingDepositAmount,
-          status: 'CONFIRMED'
+          status: 'PENDING'
         });
 
-        this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
+        this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
         this.bookingLoading = false;
         this.cdr.detectChanges();
 
-        setTimeout(() => {
-          this.closeBookingModal();
-        }, 3500);
-      } else {
-        throw new Error('Payment confirmation failed');
+        setTimeout(() => this.closeBookingModal(), 3500);
+        return;
       }
 
-    } catch (error) {
+      if (!this.stripe) throw new Error('Stripe is not loaded. Please refresh the page.');
+
+      if (!this.cardElement) {
+        this.mountStripeCardElement();
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      if (!this.cardElement) throw new Error('Card form failed to load. Please try again.');
+
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const intentData: any = await this.api.createPaymentIntent(reservation.id, userId);
+      const clientSecret: string = intentData.clientSecret;
+      const paymentIntentId: string = intentData.paymentIntentId;
+
+      if (!clientSecret) throw new Error('Payment intent could not be created');
+
+      const { error, paymentIntent } = await this.stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: this.cardElement,
+          billing_details: user ? {
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            email: user.email || undefined
+          } : undefined
+        }
+      });
+
+      if (error) throw new Error(error.message || 'Payment failed');
+      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+        throw new Error(`Payment not completed. Status: ${paymentIntent?.status || 'unknown'}`);
+      }
+
+      await this.api.confirmPayment(paymentIntentId);
+      await this.api.updateReservation(reservation.id, {
+        depositPaid: true,
+        depositAmount: this.bookingDepositAmount,
+        status: 'CONFIRMED'
+      });
+
+      this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
+      this.bookingSuccess = true;
+      this.paymentModalOpen = false;
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
+
+      setTimeout(() => this.closeBookingModal(), 3500);
+
+    } catch (error: any) {
       console.error('Payment failed:', error);
-      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
+      this.bookingError = error?.message || 'Payment processing failed. Please try again.';
       this.bookingLoading = false;
       this.cdr.detectChanges();
     }
   }
 
   closeBookingModal(): void {
+    this.unmountStripeCardElement();
     this.bookingModalOpen = false;
     this.paymentModalOpen = false;
     this.bookingSuccess = false;
@@ -1622,5 +1666,39 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
   get reservationsEnabled(): boolean {
     return this.settings.isEnabled('feature.reservations', true);
+  }
+
+  private mountStripeCardElement(retries = 5): void {
+    if (!this.stripe) {
+      console.warn('[Stripe] Stripe not loaded yet');
+      return;
+    }
+
+    if (!this.cardElementRef?.nativeElement) {
+      if (retries > 0) {
+        setTimeout(() => this.mountStripeCardElement(retries - 1), 100);
+      } else {
+        console.error('[Stripe] Card element container never appeared in DOM');
+      }
+      return;
+    }
+
+    if (this.cardElement) return;
+
+    const elements = this.stripe.elements();
+    this.cardElement = elements.create('card', {
+      style: {
+        base: { fontSize: '14px', color: '#1f2937', '::placeholder': { color: '#9ca3af' } },
+        invalid: { color: '#ef4444' }
+      }
+    });
+    this.cardElement.mount(this.cardElementRef.nativeElement);
+  }
+
+  private unmountStripeCardElement(): void {
+    if (this.cardElement) {
+      this.cardElement.unmount();
+      this.cardElement = null;
+    }
   }
 }

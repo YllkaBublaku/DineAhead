@@ -7,7 +7,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/deposit-settings")
@@ -48,5 +52,20 @@ public class RestaurantDepositSettingsController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<Map<Long, BigDecimal>> getBatchDeposits(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Integer> rawIds = (List<Integer>) body.get("restaurantIds");
+        if (rawIds == null) return ResponseEntity.ok(Map.of());
+
+        List<Long> ids = rawIds.stream().map(Long::valueOf).collect(Collectors.toList());
+
+        Map<Long, BigDecimal> result = new HashMap<>();
+        for (RestaurantDepositSettings s : depositSettingsService.findRequiringDepositByRestaurantIds(ids)) {
+            result.put(s.getRestaurant().getId(), s.getDepositAmount() != null ? s.getDepositAmount() : BigDecimal.ZERO);
+        }
+        return ResponseEntity.ok(result);
     }
 }

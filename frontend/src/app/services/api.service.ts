@@ -867,4 +867,26 @@ export class ApiService {
       { headers: this.adminHeaders() }
     );
   }
+
+  getDepositSettings(restaurantId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/deposit-settings/restaurant/${restaurantId}`);
+  }
+
+  saveDepositSettings(restaurantId: number, payload: {
+    requiresDeposit: boolean;
+    depositAmount: number | null;
+    minPartySizeForDeposit: number | null;
+  }): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/deposit-settings/restaurant/${restaurantId}`,
+      payload
+    );
+  }
+
+  getBatchDeposits(restaurantIds: number[]): Observable<Record<string, number>> {
+    return this.http.post<Record<string, number>>(
+      `${this.apiUrl}/deposit-settings/batch`,
+      { restaurantIds }
+    );
+  }
 }

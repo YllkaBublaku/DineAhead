@@ -1,11 +1,13 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Footer } from '../footer/footer';
 import { ApiService } from '../services/api.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
-import {Header} from '../header/header';
+import { Header } from '../header/header';
+import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
+import { environment } from '../../environments/environment';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -38,6 +40,8 @@ export interface RestaurantItem {
   timeSlots?: TimeSlot[];
   reservations?: any[];
   features?: string[];
+  requiresDeposit?: boolean;
+  depositAmount?: number;
 }
 
 @Component({
@@ -89,11 +93,18 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   bookingSlotTime: string | null = null;
   bookingSlotDate: Date | null = null;
 
+  depositMap: Record<number, number> = {};
+
   favoriteIds = new Set<number>();
   private userId: number | null = null;
 
   sortBy = 'averageRating';
   infoMessage: string = '';
+
+  private stripe: Stripe | null = null;
+  private cardElement: StripeCardElement | null = null;
+
+  @ViewChild('cardElement') cardElementRef!: ElementRef;
 
   paymentModalOpen = false;
   bookingModalOpen = false;
@@ -119,6 +130,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadStripeInstance();
     this.generateTimeSlots();
     this.loadFavoriteIds();
 
@@ -138,6 +150,10 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         this.loadAllRestaurants();
       }
     });
+  }
+
+  private async loadStripeInstance(): Promise<void> {
+    this.stripe = await loadStripe(environment.stripePublishableKey);
   }
 
   ngAfterViewInit(): void {
@@ -605,7 +621,6 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     }
 
     const slotTime = (slot.slotTime as string).substring(0, 5);
-
     this.bookingSlotTime = slotTime;
 
     if (slot.slotDate) {
@@ -635,11 +650,17 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     this.bookingDepositAmount = 0;
     this.paymentModalOpen = false;
 
+    this.cdr.detectChanges();
+
     try {
       const depositInfo = await this.api.getRestaurantDeposit(rest.id);
       if (depositInfo && depositInfo.requiresDeposit) {
         this.isPaymentRequired = true;
         this.bookingDepositAmount = depositInfo.amount || 0;
+
+        if (this.bookingForm.paymentMethod === 'card') {
+          setTimeout(() => this.mountStripeCardElement(), 200);
+        }
       }
     } catch (error) {
       console.error('Error fetching deposit info:', error);
@@ -651,6 +672,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
   }
 
   closeBookingModal(): void {
+    this.unmountStripeCardElement();
     this.bookingModalOpen = false;
     this.paymentModalOpen = false;
     this.bookingSuccess = false;
@@ -689,6 +711,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
           this.paymentModalOpen = true;
           this.bookingLoading = false;
           this.cdr.detectChanges();
+          setTimeout(() => this.mountStripeCardElement(), 100);
           return;
         }
 
@@ -787,7 +810,6 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
       const day = String(this.selectedBookingDate?.getDate() || new Date().getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
 
-      // Create reservation first
       const reservation = await this.api.createReservation({
         restaurantId: this.selectedRestaurantForBooking.id,
         date: this.selectedTimeslotForBooking.slotDate || dateStr,
@@ -798,31 +820,15 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         paymentMethod: this.bookingForm.paymentMethod.toUpperCase()
       });
 
-      console.log('Reservation created:', reservation);
-
       if (!reservation || !reservation.id) {
         throw new Error('Reservation was created but no ID was returned');
       }
 
-      const userJson = localStorage.getItem('user');
-      const user = userJson ? JSON.parse(userJson) : null;
-      const userId = user?.id || null;
-
-      const paymentIntentData = await this.api.createPaymentIntent(
-        reservation.id,
-        userId
-      );
-
-      console.log('Payment intent created:', paymentIntentData);
-
-      const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
-      console.log('Payment confirmation result:', result);
-
-      if (result.success || result.status === 'SUCCEEDED') {
+      if (this.bookingForm.paymentMethod === 'cash') {
         await this.api.updateReservation(reservation.id, {
-          depositPaid: true,
+          depositPaid: false,
           depositAmount: this.bookingDepositAmount,
-          status: 'CONFIRMED'
+          status: 'PENDING'
         });
 
         this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
@@ -831,19 +837,123 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         this.bookingLoading = false;
         this.cdr.detectChanges();
 
-        setTimeout(() => {
-          this.closeBookingModal();
-        }, 2500);
-      } else {
-        throw new Error('Payment confirmation failed');
+        setTimeout(() => this.closeBookingModal(), 2500);
+        return;
       }
 
-    } catch (error) {
+      if (!this.stripe) throw new Error('Stripe is not loaded. Please refresh the page.');
+
+      if (!this.cardElement) {
+        this.mountStripeCardElement();
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      if (!this.cardElement) throw new Error('Card form failed to load.');
+
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const intentData: any = await this.api.createPaymentIntent(reservation.id, userId);
+      const clientSecret: string = intentData.clientSecret;
+      const paymentIntentId: string = intentData.paymentIntentId;
+
+      if (!clientSecret) throw new Error('Payment intent could not be created');
+
+      const { error, paymentIntent } = await this.stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: this.cardElement,
+          billing_details: user ? {
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            email: user.email || undefined
+          } : undefined
+        }
+      });
+
+      if (error) throw new Error(error.message || 'Payment failed');
+      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+        throw new Error(`Payment not completed. Status: ${paymentIntent?.status || 'unknown'}`);
+      }
+
+      await this.api.confirmPayment(paymentIntentId);
+      await this.api.updateReservation(reservation.id, {
+        depositPaid: true,
+        depositAmount: this.bookingDepositAmount,
+        status: 'CONFIRMED'
+      });
+
+      this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
+      this.bookingSuccess = true;
+      this.paymentModalOpen = false;
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
+
+      setTimeout(() => this.closeBookingModal(), 2500);
+
+    } catch (error: any) {
       console.error('Payment failed:', error);
-      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
+      this.bookingError = error?.message || 'Payment processing failed. Please try again.';
       this.bookingLoading = false;
       this.cdr.detectChanges();
     }
+  }
+
+  private mountStripeCardElement(retries = 5): void {
+    if (!this.stripe) {
+      console.warn('[Stripe] Stripe not loaded yet');
+      return;
+    }
+
+    if (!this.cardElementRef?.nativeElement) {
+      if (retries > 0) {
+        setTimeout(() => this.mountStripeCardElement(retries - 1), 100);
+      } else {
+        console.error('[Stripe] Card element container never appeared in DOM');
+      }
+      return;
+    }
+
+    if (this.cardElement) return;
+
+    const elements = this.stripe.elements();
+    this.cardElement = elements.create('card', {
+      style: {
+        base: { fontSize: '14px', color: '#1f2937', '::placeholder': { color: '#9ca3af' } },
+        invalid: { color: '#ef4444' }
+      }
+    });
+    this.cardElement.mount(this.cardElementRef.nativeElement);
+  }
+
+  private unmountStripeCardElement(): void {
+    if (this.cardElement) {
+      this.cardElement.unmount();
+      this.cardElement = null;
+    }
+  }
+
+  loadDepositsForVisible(): void {
+    if (!this.restaurants || this.restaurants.length === 0) return;
+
+    const ids = this.restaurants.map(r => r.id);
+    if (ids.length === 0) return;
+
+    this.api.getBatchDeposits(ids).subscribe({
+      next: (map) => {
+        const parsed: Record<number, number> = {};
+        Object.keys(map || {}).forEach(k => {
+          parsed[Number(k)] = Number((map as any)[k]);
+        });
+        this.depositMap = parsed;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[similar] batch deposits failed', err);
+      }
+    });
+  }
+
+  depositAmountFor(restaurant: RestaurantItem): number {
+    return this.depositMap[restaurant.id] ?? 0;
   }
 }
 

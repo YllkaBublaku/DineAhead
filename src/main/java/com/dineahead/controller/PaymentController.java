@@ -67,7 +67,8 @@ public class PaymentController {
             Payment payment = paymentService.confirmPayment(paymentIntentId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
+            boolean succeeded = payment.getStatus() == PaymentStatus.SUCCEEDED;
+            response.put("success", succeeded);
             response.put("paymentId", payment.getId());
             response.put("status", payment.getStatus().toString());
             return ResponseEntity.ok(response);

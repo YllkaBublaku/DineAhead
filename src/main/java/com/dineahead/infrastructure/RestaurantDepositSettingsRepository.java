@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -13,4 +14,8 @@ public interface RestaurantDepositSettingsRepository extends JpaRepository<Resta
 
     @Query("SELECT ds FROM RestaurantDepositSettings ds WHERE ds.restaurant.id = :restaurantId")
     Optional<RestaurantDepositSettings> findByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT ds FROM RestaurantDepositSettings ds " +
+            "WHERE ds.restaurant.id IN :ids AND ds.requiresDeposit = true")
+    List<RestaurantDepositSettings> findRequiringDepositByRestaurantIds(@Param("ids") List<Long> ids);
 }

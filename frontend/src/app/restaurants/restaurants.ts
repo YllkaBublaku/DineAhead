@@ -7,7 +7,7 @@ import {ApiService} from '../services/api.service';
 import * as L from 'leaflet';
 import {FavoritesService} from '../services/favorites.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
 import { RoleService } from '../services/role.service';
 
@@ -97,7 +97,9 @@ export class Restaurants implements OnInit {
   availabilityLoading = false;
   timeFilterActive = false;
 
-  stripePromise: Promise<Stripe | null> = loadStripe(environment.stripePublishableKey);
+  private stripe: Stripe | null = null;
+  private cardElement: StripeCardElement | null = null;
+  @ViewChild('cardElement') cardElementRef!: ElementRef;
 
   bookingMessage: string = '';
   private searchTimeout: any;
@@ -163,6 +165,7 @@ export class Restaurants implements OnInit {
   bookingSlotDate: Date | null = null;
   bookingLoading = false;
   bookingError = '';
+  depositMap: Record<number, number> = {};
   paymentModalOpen = false;
   bookingForm = {
     specialRequests: '',
@@ -184,7 +187,7 @@ export class Restaurants implements OnInit {
     private roles: RoleService
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.checkLoginStatus();
     this.loadFavoriteIds();
 
@@ -215,6 +218,8 @@ export class Restaurants implements OnInit {
     });
 
     this.generateTimeSlots();
+
+    this.stripe = await loadStripe(environment.stripePublishableKey);
   }
 
   ngAfterViewInit(): void {
@@ -486,6 +491,7 @@ export class Restaurants implements OnInit {
     const start = (this.currentPage - 1) * this.itemsPerPage;
     const end = Math.min(start + this.itemsPerPage, this.totalElements);
     this.restaurants = this.filteredRestaurants.slice(start, end);
+    this.loadDepositsForVisible();
 
     this.cdr.detectChanges();
     setTimeout(() => this.renderMapMarkers(), 50);
@@ -534,6 +540,7 @@ export class Restaurants implements OnInit {
         const start = (this.currentPage - 1) * this.itemsPerPage;
         const end = Math.min(start + this.itemsPerPage, this.totalElements);
         this.restaurants = available.slice(start, end);
+        this.loadDepositsForVisible();
 
         this.cdr.detectChanges();
         setTimeout(() => this.renderMapMarkers(), 50);
@@ -1271,6 +1278,10 @@ export class Restaurants implements OnInit {
     }
 
     this.cdr.detectChanges();
+
+    if (this.isPaymentRequired) {
+      setTimeout(() => this.mountStripeCardElement(), 50);
+    }
   }
 
   async confirmBooking(): Promise<void> {
@@ -1290,6 +1301,14 @@ export class Restaurants implements OnInit {
         this.bookingLoading = false;
         this.paymentModalOpen = true;
         this.cdr.detectChanges();
+        return;
+      }
+
+      if (this.isPaymentRequired && this.bookingForm.paymentMethod === 'card') {
+        this.paymentModalOpen = true;
+        this.bookingLoading = false;
+        this.cdr.detectChanges();
+        setTimeout(() => this.mountStripeCardElement(), 100);
         return;
       }
 
@@ -1336,77 +1355,18 @@ export class Restaurants implements OnInit {
         paymentMethod: paymentMethodUpper
       });
 
-      console.log('Reservation created:', reservation);
-      console.log('Reservation ID:', reservation?.id);
-
       if (!reservation || !reservation.id) {
-        console.error('Reservation has no ID:', reservation);
         throw new Error('Reservation was created but no ID was returned');
       }
 
-      if (this.bookingForm.paymentMethod === 'card') {
-        const userJson = localStorage.getItem('user');
-        const user = userJson ? JSON.parse(userJson) : null;
-        const userId = user?.id || null;
-
-        const paymentIntentData = await this.api.createPaymentIntent(
-          reservation.id,
-          userId
-        );
-
-        console.log('Payment intent created:', paymentIntentData);
-
-        const result = await this.api.confirmPayment(paymentIntentData.paymentIntentId);
-        console.log('Payment confirmation result:', result);
-
-        if (result.success || result.status === 'SUCCEEDED') {
-          const updateResult = await this.api.updateReservation(reservation.id, {
-            depositPaid: true,
-            depositAmount: this.bookingDepositAmount,
-            status: 'CONFIRMED'
-          });
-
-          console.log('Update result received:', updateResult);
-
-          if (this.bookingDepositAmount > 0) {
-            this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
-          } else {
-            this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
-          }
-
-          this.bookingSuccess = true;
-          this.paymentModalOpen = false;
-          this.bookingLoading = false;
-          this.cdr.detectChanges();
-
-          setTimeout(() => {
-            this.bookingModalOpen = false;
-            this.bookingSuccess = false;
-            this.bookingMessage = '';
-            this.resetBookingState();
-            this.cdr.detectChanges();
-          }, 2500);
-        } else {
-          throw new Error('Payment confirmation failed');
-        }
-
-      } else {
-        console.log('Cash payment selected - no online payment needed');
-
-        const updateResult = await this.api.updateReservation(reservation.id, {
+      if (this.bookingForm.paymentMethod === 'cash') {
+        await this.api.updateReservation(reservation.id, {
           depositPaid: false,
           depositAmount: this.bookingDepositAmount,
           status: 'PENDING'
         });
 
-        console.log('Cash reservation updated:', updateResult);
-
-        if (this.bookingDepositAmount > 0) {
-          this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;
-        } else {
-          this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';
-        }
-
+        this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
         this.bookingLoading = false;
@@ -1419,11 +1379,76 @@ export class Restaurants implements OnInit {
           this.resetBookingState();
           this.cdr.detectChanges();
         }, 2500);
+        return;
       }
 
-    } catch (error) {
+      if (!this.stripe) {
+        throw new Error('Stripe is not loaded. Please refresh the page.');
+      }
+
+      if (!this.cardElement) {
+        this.mountStripeCardElement();
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      if (!this.cardElement) {
+        throw new Error('Card form failed to load. Please try again.');
+      }
+
+      const userJson = localStorage.getItem('user');
+      const user = userJson ? JSON.parse(userJson) : null;
+      const userId = user?.id || null;
+
+      const intentData: any = await this.api.createPaymentIntent(reservation.id, userId);
+      const clientSecret: string = intentData.clientSecret;
+      const paymentIntentId: string = intentData.paymentIntentId;
+
+      if (!clientSecret) {
+        throw new Error('Payment intent could not be created');
+      }
+
+      const { error, paymentIntent } = await this.stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: this.cardElement,
+          billing_details: user ? {
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            email: user.email || undefined
+          } : undefined
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Payment failed');
+      }
+
+      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+        throw new Error(`Payment not completed. Status: ${paymentIntent?.status || 'unknown'}`);
+      }
+
+      await this.api.confirmPayment(paymentIntentId);
+
+      await this.api.updateReservation(reservation.id, {
+        depositPaid: true,
+        depositAmount: this.bookingDepositAmount,
+        status: 'CONFIRMED'
+      });
+
+      this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
+      this.bookingSuccess = true;
+      this.paymentModalOpen = false;
+      this.bookingLoading = false;
+      this.cdr.detectChanges();
+
+      setTimeout(() => {
+        this.bookingModalOpen = false;
+        this.bookingSuccess = false;
+        this.bookingMessage = '';
+        this.resetBookingState();
+        this.cdr.detectChanges();
+      }, 2500);
+
+    } catch (error: any) {
       console.error('Payment failed:', error);
-      this.bookingError = error instanceof Error ? error.message : 'Payment processing failed. Please try again.';
+      this.bookingError = error?.message || 'Payment processing failed. Please try again.';
       this.bookingLoading = false;
       this.cdr.detectChanges();
     }
@@ -1505,6 +1530,7 @@ export class Restaurants implements OnInit {
 
 
   closeBookingModal(): void {
+    this.unmountStripeCardElement();
     this.bookingModalOpen = false;
     this.selectedTimeslot = null;
     this.bookingSlotTime = null;
@@ -1677,5 +1703,60 @@ export class Restaurants implements OnInit {
     this.currentPage = 1;
     this.applyFilters();
     this.navigateWithQuery();
+  }
+
+  loadDepositsForVisible(): void {
+    if (!this.restaurants || this.restaurants.length === 0) return;
+
+    const ids = this.restaurants.map(r => r.id);
+    if (ids.length === 0) return;
+
+    this.api.getBatchDeposits(ids).subscribe({
+      next: (map) => {
+        const parsed: Record<number, number> = {};
+        Object.keys(map || {}).forEach(k => {
+          parsed[Number(k)] = Number((map as any)[k]);
+        });
+        this.depositMap = parsed;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[restaurants] batch deposits failed', err);
+      }
+    });
+  }
+
+  depositAmountFor(restaurant: RestaurantItem): number {
+    return this.depositMap[restaurant.id] ?? 0;
+  }
+
+  private mountStripeCardElement(): void {
+    if (!this.stripe || !this.cardElementRef) return;
+
+    const elements = this.stripe.elements();
+
+    if (this.cardElement) {
+      return;
+    }
+
+    this.cardElement = elements.create('card', {
+      style: {
+        base: {
+          fontSize: '14px',
+          color: '#1f2937',
+          '::placeholder': { color: '#9ca3af' }
+        },
+        invalid: { color: '#ef4444' }
+      }
+    });
+
+    this.cardElement.mount(this.cardElementRef.nativeElement);
+  }
+
+  private unmountStripeCardElement(): void {
+    if (this.cardElement) {
+      this.cardElement.unmount();
+      this.cardElement = null;
+    }
   }
 }

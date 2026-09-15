@@ -91,6 +91,14 @@ export class RestaurantDashboard implements OnInit {
 
   profileSaving = false;
 
+  depositSettings = {
+    requiresDeposit: false,
+    depositAmount: 0,
+    minPartySizeForDeposit: 2
+  };
+  depositSettingsSaving = false;
+  depositSettingsLoaded = false;
+
   deleteRestaurantDialogOpen = false;
   deleteRestaurantConfirmText = '';
   deleteRestaurantPassword = '';
@@ -161,6 +169,7 @@ export class RestaurantDashboard implements OnInit {
         this.loadSchedule();
         this.loadOverrides();
         this.loadProfile();
+        this.loadDepositSettings();
       },
       error: (err) => {
         this.loading.set(false);
@@ -982,6 +991,61 @@ export class RestaurantDashboard implements OnInit {
         }
       });
     }
+  }
+
+  loadDepositSettings(): void {
+    if (!this.restaurantId) return;
+
+    this.api.getDepositSettings(this.restaurantId).subscribe({
+      next: (s: any) => {
+        this.depositSettings = {
+          requiresDeposit: s?.requiresDeposit === true,
+          depositAmount: s?.amount ?? s?.depositAmount ?? 0,
+          minPartySizeForDeposit: s?.minPartySizeForDeposit ?? 2
+        };
+        this.depositSettingsLoaded = true;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[Dashboard] deposit settings load failed', err);
+        this.depositSettingsLoaded = true;
+      }
+    });
+  }
+
+  saveDepositSettings(): void {
+    if (!this.restaurantId) return;
+
+    if (this.depositSettings.requiresDeposit) {
+      if (!this.depositSettings.depositAmount || this.depositSettings.depositAmount <= 0) {
+        this.showToast('Deposit amount must be greater than 0', 'error');
+        return;
+      }
+    }
+
+    this.depositSettingsSaving = true;
+
+    const payload = {
+      requiresDeposit: this.depositSettings.requiresDeposit,
+      depositAmount: this.depositSettings.requiresDeposit
+        ? this.depositSettings.depositAmount
+        : 0,
+      minPartySizeForDeposit: this.depositSettings.minPartySizeForDeposit ?? null
+    };
+
+    this.api.saveDepositSettings(this.restaurantId, payload).subscribe({
+      next: () => {
+        this.depositSettingsSaving = false;
+        this.showToast('Deposit settings saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.depositSettingsSaving = false;
+        console.error('[Dashboard] deposit settings save failed', err);
+        this.showToast(err?.error?.message || 'Could not save deposit settings', 'error');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   logout() {

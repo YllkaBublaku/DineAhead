@@ -7,6 +7,7 @@ import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -29,5 +30,11 @@ public class RestaurantDepositSettingsService {
     @Transactional(readOnly = true)
     public Optional<RestaurantDepositSettings> getDepositSettingsByRestaurant(Long restaurantId) {
         return depositSettingsRepository.findByRestaurantId(restaurantId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RestaurantDepositSettings> findRequiringDepositByRestaurantIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return depositSettingsRepository.findRequiringDepositByRestaurantIds(ids);
     }
 }

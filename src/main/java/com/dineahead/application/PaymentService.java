@@ -108,16 +108,20 @@ public class PaymentService {
         Payment payment = paymentRepository.findByStripePaymentIntentId(paymentIntentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 
-        if ("succeeded".equals(paymentIntent.getStatus())) {
-            payment.setStatus(PaymentStatus.SUCCEEDED);
-            paymentRepository.save(payment);
+        String stripeStatus = paymentIntent.getStatus();
 
+        if ("succeeded".equals(stripeStatus)) {
+            payment.setStatus(PaymentStatus.SUCCEEDED);
             Reservation reservation = payment.getReservation();
             reservation.setDepositPaid(true);
             reservation.setDepositAmount(payment.getDepositAmount());
             reservationRepository.save(reservation);
+        } else if ("requires_payment_method".equals(stripeStatus)
+                || "canceled".equals(stripeStatus)) {
+            payment.setStatus(PaymentStatus.FAILED);
         }
 
+        paymentRepository.save(payment);
         return payment;
     }
 
