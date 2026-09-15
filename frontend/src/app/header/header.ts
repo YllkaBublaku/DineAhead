@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
 import { filter, Subscription } from 'rxjs';
 import {RoleService} from '../services/role.service';
+import {SettingsService} from '../services/settings.service';
 
 @Component({
   selector: 'app-header',
@@ -26,7 +27,7 @@ export class Header implements OnInit, OnDestroy {
   isPlatformAdmin : boolean = false;
   private routerSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private api: ApiService, private roles : RoleService) {}
+  constructor(private router: Router, private api: ApiService, private roles : RoleService, private settings: SettingsService) {}
 
   ngOnInit(): void {
     this.checkLoginStatus();
@@ -143,5 +144,9 @@ export class Header implements OnInit, OnDestroy {
       return '/';
     }
     return url;
+  }
+
+  get signupEnabled(): boolean {
+    return this.settings.isEnabled('feature.signup.user', true);
   }
 }

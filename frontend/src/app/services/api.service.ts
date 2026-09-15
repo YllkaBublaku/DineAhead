@@ -730,9 +730,6 @@ export class ApiService {
     return this.http.patch<any>(`${this.apiUrl}/restaurants/${restaurantId}/activate`, {});
   }
 
-  // ============================================
-// PLATFORM ADMIN
-// ============================================
 
   private adminHeaders() {
     const token = this.getToken();
@@ -852,6 +849,21 @@ export class ApiService {
     return this.http.patch<any>(
       `${this.apiUrl}/admin/reservations/${id}/note`,
       { note },
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  getAdminSettings(): Observable<Record<string, string>> {
+    return this.http.get<Record<string, string>>(
+      `${this.apiUrl}/admin/settings`,
+      { headers: this.adminHeaders() }
+    );
+  }
+
+  updateAdminSettings(updates: Record<string, string>): Observable<Record<string, string>> {
+    return this.http.patch<Record<string, string>>(
+      `${this.apiUrl}/admin/settings`,
+      updates,
       { headers: this.adminHeaders() }
     );
   }

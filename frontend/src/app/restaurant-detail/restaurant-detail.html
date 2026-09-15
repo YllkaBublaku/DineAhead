@@ -423,7 +423,7 @@
           }
         </div>
 
-        @if (isLoggedIn && !hasUserReviewed) {
+        @if (isLoggedIn && !hasUserReviewed && reviewsEnabled) {
           <div class="mt-6 text-center">
             <button (click)="openReviewModal()"
                     class="inline-flex items-center gap-2 px-6 py-2.5 border border-[#005943] text-[#005943] hover:bg-[#005943] hover:text-white text-sm font-bold rounded-full transition">
@@ -444,6 +444,7 @@
 
       <div class="lg:col-span-5 order-first lg:order-last sticky top-24 self-start">
 
+        @if (reservationsEnabled) {
         <div class="sticky top-24 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           @if (modifyReservationId) {
             <div class="mb-4 flex items-start gap-2.5 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -677,6 +678,11 @@
             </svg>
           </div>
         </div>
+        } @else {
+          <div class="sticky top-24 bg-white border border-gray-200 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <p class="text-sm text-gray-500 italic">Reservations are temporarily unavailable.</p>
+          </div>
+        }
       </div>
 
     </div>

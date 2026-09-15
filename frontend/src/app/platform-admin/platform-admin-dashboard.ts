@@ -112,6 +112,22 @@ export class PlatformAdminDashboard implements OnInit {
   deleteCityLoading = false;
   deleteCityError = '';
 
+  settings: Record<string, string> = {};
+
+  announcementSaving = false;
+  maintenanceSaving = false;
+  contactSaving = false;
+
+  announcementMessage = '';
+  announcementType: 'off' | 'info' | 'warning' = 'off';
+
+  maintenanceEnabled = false;
+  maintenanceMessage = '';
+
+  contactEmail = '';
+  contactPhone = '';
+  contactAddress = '';
+
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   private toastTimer: any = null;
@@ -159,6 +175,7 @@ export class PlatformAdminDashboard implements OnInit {
     if (tab === 'reservations' && this.reservations.length === 0) this.loadReservations();
     if (tab === 'reviews' && this.reviews.length === 0) this.loadReviews();
     if (tab === 'cities' && this.cities.length === 0) this.loadCities();
+    if (tab === 'settings') this.loadSettings();
   }
 
   loadStats(): void {
@@ -1032,6 +1049,126 @@ export class PlatformAdminDashboard implements OnInit {
         this.deleteCityLoading = false;
         console.error('[admin] delete city failed', err);
         this.deleteCityError = err?.error?.message || 'Could not delete city.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadSettings(): void {
+    this.api.getAdminSettings().subscribe({
+      next: (s: Record<string, string>) => {
+        this.settings = s || {};
+
+        this.announcementMessage = this.settings['announcement.message'] ?? '';
+        this.announcementType = (this.settings['announcement.type'] as any) || 'off';
+
+        this.maintenanceEnabled = this.settings['maintenance.enabled'] === 'true';
+        this.maintenanceMessage = this.settings['maintenance.message'] ?? '';
+
+        this.contactEmail = this.settings['contact.email'] ?? '';
+        this.contactPhone = this.settings['contact.phone'] ?? '';
+        this.contactAddress = this.settings['contact.address'] ?? '';
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('[admin] settings failed', err);
+        this.showToast('Could not load settings', 'error');
+      }
+    });
+  }
+
+  saveAnnouncement(): void {
+    this.announcementSaving = true;
+    this.api.updateAdminSettings({
+      'announcement.message': this.announcementMessage,
+      'announcement.type': this.announcementType
+    }).subscribe({
+      next: (s) => {
+        this.announcementSaving = false;
+        this.settings = s || this.settings;
+        this.showToast('Announcement saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.announcementSaving = false;
+        console.error('[admin] save announcement failed', err);
+        this.showToast('Could not save announcement', 'error');
+      }
+    });
+  }
+
+  saveMaintenance(): void {
+    this.maintenanceSaving = true;
+    this.api.updateAdminSettings({
+      'maintenance.enabled': this.maintenanceEnabled ? 'true' : 'false',
+      'maintenance.message': this.maintenanceMessage
+    }).subscribe({
+      next: (s) => {
+        this.maintenanceSaving = false;
+        this.settings = s || this.settings;
+        this.showToast('Maintenance settings saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.maintenanceSaving = false;
+        console.error('[admin] save maintenance failed', err);
+        this.showToast('Could not save maintenance', 'error');
+      }
+    });
+  }
+
+  saveContact(): void {
+    this.contactSaving = true;
+    this.api.updateAdminSettings({
+      'contact.email': this.contactEmail,
+      'contact.phone': this.contactPhone,
+      'contact.address': this.contactAddress
+    }).subscribe({
+      next: (s) => {
+        this.contactSaving = false;
+        this.settings = s || this.settings;
+        this.showToast('Contact info saved');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.contactSaving = false;
+        console.error('[admin] save contact failed', err);
+        this.showToast('Could not save contact info', 'error');
+      }
+    });
+  }
+
+  featureFlagKeys: { key: string; label: string; description: string; defaultOn: boolean }[] = [
+    { key: 'feature.reservations',       label: 'Reservations',            description: 'Allow users to book tables',           defaultOn: true  },
+    { key: 'feature.reviews',            label: 'Reviews',                 description: 'Allow users to write reviews',         defaultOn: true  },
+    { key: 'feature.deposits',           label: 'Deposits',                description: 'Allow restaurants to require deposits', defaultOn: false },
+    { key: 'feature.favorites',          label: 'Favorites',               description: 'Allow users to save restaurants',      defaultOn: true  },
+    { key: 'feature.signup.user',        label: 'New User Signups',        description: 'Allow new diner accounts',             defaultOn: true  },
+    { key: 'feature.signup.restaurant',  label: 'New Restaurant Signups',  description: 'Allow new restaurant registrations',   defaultOn: true  }
+  ];
+
+  isFeatureOn(key: string): boolean {
+    const val = this.settings[key];
+    if (val === undefined) return false;
+    return val === 'true';
+  }
+
+  toggleFeatureFlag(flagKey: string, enabled: boolean, defaultOn: boolean): void {
+    const prev = this.settings[flagKey];
+    this.settings = { ...this.settings, [flagKey]: enabled ? 'true' : 'false' };
+    this.cdr.detectChanges();
+
+    this.api.updateAdminSettings({ [flagKey]: enabled ? 'true' : 'false' }).subscribe({
+      next: (s) => {
+        this.settings = s || this.settings;
+        this.showToast(`${flagKey} ${enabled ? 'enabled' : 'disabled'}`);
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.settings = { ...this.settings, [flagKey]: prev };
+        console.error('[admin] toggle flag failed', err);
+        this.showToast('Could not update flag', 'error');
         this.cdr.detectChanges();
       }
     });

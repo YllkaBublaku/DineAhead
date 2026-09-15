@@ -25,19 +25,22 @@ public class AdminController {
     private final ReviewRepository reviewRepository;
     private final CityRepository cityRepository;
     private final RestaurantImageService restaurantImageService;
+    private final PlatformSettingRepository platformSettingRepository;
 
     public AdminController(UserRepository userRepository,
                            RestaurantRepository restaurantRepository,
                            ReservationRepository reservationRepository,
                            ReviewRepository reviewRepository,
                            CityRepository cityRepository,
-                           RestaurantImageService restaurantImageService) {
+                           RestaurantImageService restaurantImageService,
+                           PlatformSettingRepository platformSettingRepository) {
         this.userRepository = userRepository;
         this.restaurantRepository = restaurantRepository;
         this.reservationRepository = reservationRepository;
         this.reviewRepository = reviewRepository;
         this.cityRepository = cityRepository;
         this.restaurantImageService = restaurantImageService;
+        this.platformSettingRepository = platformSettingRepository;
     }
 
     @GetMapping("/stats")
@@ -189,5 +192,29 @@ public class AdminController {
     public ResponseEntity<?> deleteCity(@PathVariable Long id) {
         cityRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", "City deleted"));
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity<Map<String, String>> getSettings() {
+        Map<String, String> result = new HashMap<>();
+        platformSettingRepository.findAll()
+                .forEach(s -> result.put(s.getKey(), s.getValue()));
+        return ResponseEntity.ok(result);
+    }
+
+    @PatchMapping("/settings")
+    public ResponseEntity<Map<String, String>> updateSettings(
+            @RequestBody Map<String, String> updates) {
+
+        updates.forEach((key, value) -> {
+            PlatformSetting s = platformSettingRepository.findById(key)
+                    .orElse(new PlatformSetting());
+            s.setKey(key);
+            s.setValue(value);
+            s.setUpdatedAt(LocalDateTime.now());
+            platformSettingRepository.save(s);
+        });
+
+        return getSettings();
     }
 }

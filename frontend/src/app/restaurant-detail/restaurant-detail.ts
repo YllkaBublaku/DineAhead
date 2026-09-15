@@ -8,6 +8,7 @@ import * as L from 'leaflet';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
+import {SettingsService} from '../services/settings.service';
 
 export interface MenuItem {
   id: number;
@@ -183,7 +184,8 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     public router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private settings: SettingsService
   ) {}
 
   ngOnInit(): void {
@@ -1608,4 +1610,11 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     return ['', 'Terrible', 'Poor', 'Average', 'Very Good', 'Excellent'][n] || '';
   }
 
+  get reviewsEnabled(): boolean {
+    return this.settings.isEnabled('feature.reviews', true);
+  }
+
+  get reservationsEnabled(): boolean {
+    return this.settings.isEnabled('feature.reservations', true);
+  }
 }

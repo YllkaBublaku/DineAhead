@@ -63,7 +63,7 @@
           <a routerLink="/help" class="hover:text-[#005943] dark:hover:text-emerald-400 transition underline-offset-2 hover:underline">Help</a>
         </div>
       } @else {
-        @if (!isLoggedIn) {
+        @if (!isLoggedIn && signupEnabled) {
           <a routerLink="/signup"
              class="hidden sm:inline-flex items-center px-4 py-2 text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 hover:text-[#005943] dark:hover:text-emerald-400 transition uppercase tracking-wider">
             Sign Up
@@ -146,7 +146,7 @@
       <a routerLink="/help-page" (click)="closeMobileMenu()" class="text-gray-800 dark:text-gray-200 py-2 hover:text-[#005943]">Help</a>
 
       <div class="pt-2 border-t border-gray-200 dark:border-gray-800 flex gap-3">
-        @if (!isLoggedIn) {
+        @if (!isLoggedIn && signupEnabled) {
           <a routerLink="/signup" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold border border-gray-300 dark:border-gray-700 rounded-md">Sign Up</a>
           <a routerLink="/login" [queryParams]="{ returnUrl: currentUrl }" (click)="closeMobileMenu()" class="flex-1 text-center py-2 text-sm font-bold bg-[#005943] text-white rounded-md">Log In</a>
         } @else {

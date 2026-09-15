@@ -1,8 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
+import { SettingsService } from '../services/settings.service';
 
 @Component({
   selector: 'app-signup',
@@ -11,7 +12,7 @@ import { ApiService } from '../services/api.service';
   templateUrl: './signup.html',
   styleUrl: './signup.css'
 })
-export class Signup {
+export class Signup implements OnInit {
   firstName = '';
   lastName = '';
   email = '';
@@ -23,13 +24,46 @@ export class Signup {
   showPassword = signal(false);
   errorMessage = signal('');
 
-  constructor(private router: Router, private api: ApiService) {}
+  settingsLoaded = signal(false);
+  userSignupEnabled = signal(true);
+  restaurantSignupEnabled = signal(true);
+
+  constructor(
+    private router: Router,
+    private api: ApiService,
+    private settings: SettingsService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.settings.load().then(() => {
+      this.userSignupEnabled.set(this.settings.isEnabled('feature.signup.user', true));
+      this.restaurantSignupEnabled.set(this.settings.isEnabled('feature.signup.restaurant', true));
+
+      if (!this.restaurantSignupEnabled() && this.accountType() === 'restaurant') {
+        this.accountType.set('user');
+      }
+
+      if (!this.userSignupEnabled() && this.restaurantSignupEnabled()) {
+        this.accountType.set('restaurant');
+      }
+
+      this.settingsLoaded.set(true);
+      this.cdr.detectChanges();
+    });
+  }
+
+  get signupFullyDisabled(): boolean {
+    return !this.userSignupEnabled() && !this.restaurantSignupEnabled();
+  }
 
   toggleShowPassword() {
     this.showPassword.update(val => !val);
   }
 
   setAccountType(type: 'user' | 'restaurant') {
+    if (type === 'user' && !this.userSignupEnabled()) return;
+    if (type === 'restaurant' && !this.restaurantSignupEnabled()) return;
     this.accountType.set(type);
   }
 
@@ -40,6 +74,15 @@ export class Signup {
 
   signUp() {
     this.errorMessage.set('');
+
+    if (this.accountType() === 'user' && !this.userSignupEnabled()) {
+      this.errorMessage.set('New diner signups are temporarily disabled.');
+      return;
+    }
+    if (this.accountType() === 'restaurant' && !this.restaurantSignupEnabled()) {
+      this.errorMessage.set('New restaurant signups are temporarily disabled.');
+      return;
+    }
 
     if (!this.firstName.trim() || !this.lastName.trim()) {
       this.errorMessage.set('Please enter both first and last name.');
@@ -95,12 +138,9 @@ export class Signup {
       this.api.registerRestaurant(userData).subscribe({
         next: (response) => {
           this.isLoading.set(false);
-
           const user: any = { ...response, restaurantName: this.restaurantName };
-
           localStorage.setItem('user', JSON.stringify(user));
           localStorage.setItem('isLoggedIn', 'true');
-
           this.router.navigate(['/']);
         },
         error: (error) => {
@@ -112,10 +152,8 @@ export class Signup {
       this.api.registerUser(userData).subscribe({
         next: (response) => {
           this.isLoading.set(false);
-
           localStorage.setItem('user', JSON.stringify(response));
           localStorage.setItem('isLoggedIn', 'true');
-
           this.router.navigate(['/']);
         },
         error: (error) => {
