@@ -9,6 +9,7 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {SettingsService} from '../services/settings.service';
+import { RoleService } from '../services/role.service';
 
 export interface MenuItem {
   id: number;
@@ -84,7 +85,7 @@ export interface ReviewItem {
   styleUrl: './restaurant-detail.css',
 })
 export class RestaurantDetail implements OnInit, OnDestroy {
-  searchCity = 'Paris';
+  searchCity = '';
   searchQuery = '';
   @Input() showSearch = false;
   @Output() search = new EventEmitter<{ city: string; query: string }>();
@@ -185,7 +186,8 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     public router: Router,
     private api: ApiService,
     private cdr: ChangeDetectorRef,
-    private settings: SettingsService
+    private settings: SettingsService,
+    private roles: RoleService
   ) {}
 
   ngOnInit(): void {
@@ -235,6 +237,10 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.checkLoginStatus();
     this.generateTimeSlots();
     this.loadFavoriteIds();
+  }
+
+  get isPlatformAdmin(): boolean {
+    return this.roles.isPlatformAdmin();
   }
 
   checkLoginStatus(): void {
@@ -1174,8 +1180,8 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
     this.router.navigate(['/restaurants'], {
       queryParams: {
-        city: restaurant.city || 'Paris',
-        q: restaurant.name,
+        city: restaurant.city?.trim() || undefined,
+        q: restaurant.name || undefined,
       },
     });
   }
@@ -1186,7 +1192,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
 
     this.router.navigate(['/restaurants'], {
       queryParams: {
-        city: this.searchCity || 'Paris',
+        city: this.searchCity || undefined,
         q: this.searchQuery || undefined,
       },
     });

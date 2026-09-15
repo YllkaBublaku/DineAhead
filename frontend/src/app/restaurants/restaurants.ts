@@ -9,6 +9,7 @@ import {FavoritesService} from '../services/favorites.service';
 import { TimeFormatPipe } from '../pipes/time-format.pipe';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
+import { RoleService } from '../services/role.service';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -69,7 +70,7 @@ export interface BookingRequest {
   styleUrl: './restaurants.css',
 })
 export class Restaurants implements OnInit {
-  searchCity = 'Paris';
+  searchCity = '';
   searchQuery = '';
   currentPage = 1;
   itemsPerPage = 10;
@@ -83,8 +84,6 @@ export class Restaurants implements OnInit {
   selectedBookingDate: Date | null = null;
   selectedBookingTime: string | null = null;
   selectedBookingGuests: number = 2;
-  modalSelectedTime: string | null = null;
-  modalSelectedDate: Date | null = null;
 
   dateModalOpen = false;
   timeModalOpen = false;
@@ -113,6 +112,13 @@ export class Restaurants implements OnInit {
     bestRated: false,
     availableNow: false
   };
+
+  private cityInputTimeout: any;
+  private queryInputTimeout: any;
+
+  citySuggestions: string[] = [];
+  showCitySuggestions = false;
+  private citySearchTimeout: any;
 
   activeQuickFilters = new Set<string>();
   selectedCuisine = 'All';
@@ -174,7 +180,8 @@ export class Restaurants implements OnInit {
     private router: Router,
     private api: ApiService,
     private cdr: ChangeDetectorRef,
-    private favoritesService: FavoritesService
+    private favoritesService: FavoritesService,
+    private roles: RoleService
   ) {}
 
   ngOnInit(): void {
@@ -212,6 +219,10 @@ export class Restaurants implements OnInit {
 
   ngAfterViewInit(): void {
     this.initializeMapWithRetry();
+  }
+
+  get isPlatformAdmin(): boolean {
+    return this.roles.isPlatformAdmin();
   }
 
   private initializeMapWithRetry(retryCount: number = 0): void {
@@ -397,13 +408,12 @@ export class Restaurants implements OnInit {
       console.log('After search query filter:', filtered.length);
     }
 
-    if (this.searchCity && this.searchCity !== 'Paris') {
+    if (this.searchCity && this.searchCity.trim()) {
       const city = this.searchCity.toLowerCase().trim();
       filtered = filtered.filter(rest =>
         rest.city?.toLowerCase().includes(city) ||
         rest.address?.toLowerCase().includes(city)
       );
-      console.log('After search city filter:', filtered.length);
     }
 
     if (this.filters.cuisine.length > 0) {
@@ -757,7 +767,7 @@ export class Restaurants implements OnInit {
     this.selectedNeighborhood = 'All';
     this.selectedSetting = '';
     this.searchQuery = '';
-    this.searchCity = 'Paris';
+    this.searchCity = '';
     this.currentPage = 1;
 
     this.timeFilterActive = false;
@@ -1022,7 +1032,7 @@ export class Restaurants implements OnInit {
 
     this.router.navigate(['/restaurants'], {
       queryParams: {
-        city: this.searchCity || 'Paris',
+        city: this.searchCity || undefined,
         q: this.searchQuery || undefined,
       },
       replaceUrl: true
@@ -1530,7 +1540,7 @@ export class Restaurants implements OnInit {
       return this.filters.neighborhood[0];
     }
 
-    if (this.searchCity && this.searchCity !== 'Paris') {
+    if (this.searchCity && this.searchCity.trim()) {
       return this.searchCity;
     }
     return 'Paris';
@@ -1543,54 +1553,129 @@ export class Restaurants implements OnInit {
   getPageTitle(): string {
     const city = this.getActiveCity();
     const searchTerm = this.getActiveSearchTerm();
+    const hasCity = !!(this.searchCity && this.searchCity.trim()) ||
+      (this.filters.neighborhood && this.filters.neighborhood.length > 0) ||
+      (this.selectedNeighborhood && this.selectedNeighborhood !== 'All');
 
     if (this.totalElements === 0) {
-      if (city && city !== 'Paris') {
-        return `No Restaurants Found in ${city}`;
+      if (searchTerm && hasCity) {
+        return `No Restaurants Matching "${searchTerm}" in ${city}`;
       }
       if (searchTerm) {
-        return `No Restaurants Found for "${searchTerm}"`;
+        return `No Restaurants Matching "${searchTerm}"`;
+      }
+      if (hasCity) {
+        return `No Restaurants in ${city}`;
       }
       return 'No Restaurants Found';
     }
 
-    if (city && city !== 'Paris') {
-      return `The Best Restaurants in ${city}`;
+    if (searchTerm && hasCity) {
+      return `Restaurants Matching "${searchTerm}" in ${city}`;
     }
 
     if (searchTerm) {
-      return `Restaurants matching "${searchTerm}"`;
+      return `Restaurants Matching "${searchTerm}"`;
     }
 
-    if (this.totalElements < 10) {
-      return `The Best Restaurants in Paris`;
+    if (hasCity) {
+      return `The Best Restaurants in ${city}`;
     }
 
-    return 'The Best Restaurants in Paris';
+    return 'All Restaurants';
   }
 
   getPageDescription(): string {
     const city = this.getActiveCity();
     const searchTerm = this.getActiveSearchTerm();
+    const hasCity = !!(this.searchCity && this.searchCity.trim()) ||
+      (this.filters.neighborhood && this.filters.neighborhood.length > 0) ||
+      (this.selectedNeighborhood && this.selectedNeighborhood !== 'All');
 
     if (this.totalElements === 0) {
-      if (city && city !== 'Paris') {
-        return `We couldn't find any restaurants in ${city}. Try searching for a different city or neighborhood, or adjust your filters.`;
+      if (searchTerm && hasCity) {
+        return `We couldn't find any restaurants matching "${searchTerm}" in ${city}. Try adjusting your search or filters.`;
       }
       if (searchTerm) {
-        return `We couldn't find any restaurants matching "${searchTerm}". Try adjusting your search terms or explore our full list of restaurants.`;
+        return `We couldn't find any restaurants matching "${searchTerm}". Try different keywords or explore our full list of restaurants.`;
+      }
+      if (hasCity) {
+        return `We couldn't find any restaurants in ${city}. Try a different city or adjust your filters.`;
       }
       return 'No restaurants found matching your criteria. Try adjusting your filters.';
     }
 
-    if (city && city !== 'Paris') {
-      return `Discover the best dining experiences in ${city}. From cozy bistros to fine dining establishments, find the perfect restaurant for any occasion with easy instant online booking.`;
+    if (searchTerm && hasCity) {
+      return `Showing ${this.totalElements} restaurant${this.totalElements > 1 ? 's' : ''} matching "${searchTerm}" in ${city}. Discover the best dining experiences with easy instant online booking.`;
     }
 
     if (searchTerm) {
-      return `Showing ${this.totalElements} restaurant${this.totalElements > 1 ? 's' : ''} that match "${searchTerm}". Discover the best dining experiences with easy instant online booking.`;
+      return `Showing ${this.totalElements} restaurant${this.totalElements > 1 ? 's' : ''} matching "${searchTerm}". Discover the best dining experiences with easy instant online booking.`;
     }
 
-    return `Discover ${this.totalElements} exceptional restaurants in Paris, where centuries-old bistros and three-Michelin-starred temples sit side by side. Stroll arrondissement by arrondissement to discover cozy wine bars, innovative neo-bistros, and unforgettable culinary heritage with easy instant online booking.`;
+    if (hasCity) {
+      return `Discover the best dining experiences in ${city}. From cozy bistros to fine dining establishments, find the perfect restaurant for any occasion with easy instant online booking.`;
+    }
+
+    return `Browse ${this.totalElements} restaurant${this.totalElements > 1 ? 's' : ''} across all cities. From cozy bistros to fine dining, find the perfect place for any occasion with easy instant online booking.`;
+  }
+
+  onCityInput(): void {
+    if (this.cityInputTimeout) clearTimeout(this.cityInputTimeout);
+    this.cityInputTimeout = setTimeout(() => {
+      this.currentPage = 1;
+      this.applyFilters();
+    }, 250);
+  }
+
+  clearCity(): void {
+    this.searchCity = '';
+    this.showCitySuggestions = false;
+    this.currentPage = 1;
+    this.applyFilters();
+    this.navigateWithQuery();
+  }
+
+  private navigateWithQuery(): void {
+    this.router.navigate(['/restaurants'], {
+      queryParams: {
+        city: this.searchCity?.trim() || undefined,
+        q: this.searchQuery?.trim() || undefined,
+      },
+      replaceUrl: true
+    });
+  }
+
+  onQueryInput(): void {
+    if (this.queryInputTimeout) clearTimeout(this.queryInputTimeout);
+    this.queryInputTimeout = setTimeout(() => {
+      this.currentPage = 1;
+      this.applyFilters();
+    }, 250);
+
+    if (this.searchTimeout) clearTimeout(this.searchTimeout);
+    this.showSuggestions = true;
+
+    this.searchTimeout = setTimeout(() => {
+      const q = this.searchQuery.trim().toLowerCase();
+      if (!q) {
+        this.searchSuggestions = [];
+        return;
+      }
+
+      this.searchSuggestions = this.allRestaurants.filter(rest =>
+        rest.name?.toLowerCase().includes(q) ||
+        rest.cuisineType?.toLowerCase().includes(q) ||
+        rest.city?.toLowerCase().includes(q)
+      ).slice(0, 5);
+    }, 250);
+  }
+
+  clearQuery(): void {
+    this.searchQuery = '';
+    this.showSuggestions = false;
+    this.currentPage = 1;
+    this.applyFilters();
+    this.navigateWithQuery();
   }
 }

@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
+import { ActivatedRoute } from '@angular/router';
 import { SettingsService } from '../services/settings.service';
 
 @Component({
@@ -32,20 +33,30 @@ export class Signup implements OnInit {
     private router: Router,
     private api: ApiService,
     private settings: SettingsService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    const requestedType = (this.route.snapshot.queryParamMap.get('type') || '').toLowerCase();
+
     this.settings.load().then(() => {
       this.userSignupEnabled.set(this.settings.isEnabled('feature.signup.user', true));
       this.restaurantSignupEnabled.set(this.settings.isEnabled('feature.signup.restaurant', true));
 
-      if (!this.restaurantSignupEnabled() && this.accountType() === 'restaurant') {
+      if (requestedType === 'restaurant' && this.restaurantSignupEnabled()) {
+        this.accountType.set('restaurant');
+      }
+      else if (requestedType === 'user' && this.userSignupEnabled()) {
         this.accountType.set('user');
       }
-
-      if (!this.userSignupEnabled() && this.restaurantSignupEnabled()) {
-        this.accountType.set('restaurant');
+      else {
+        if (!this.restaurantSignupEnabled() && this.accountType() === 'restaurant') {
+          this.accountType.set('user');
+        }
+        if (!this.userSignupEnabled() && this.restaurantSignupEnabled()) {
+          this.accountType.set('restaurant');
+        }
       }
 
       this.settingsLoaded.set(true);

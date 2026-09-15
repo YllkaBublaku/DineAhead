@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Header } from '../header/header';
 import { Footer } from '../footer/footer';
+import { ActivatedRoute } from '@angular/router';
 
 interface Faq {
   id: string;
@@ -19,7 +20,7 @@ interface Faq {
   templateUrl: './help-page.html',
   styleUrl: './help-page.css',
 })
-export class HelpPage {
+export class HelpPage implements OnInit{
   openFaq: string | null = null;
   searchQuery: string = '';
 
@@ -146,6 +147,34 @@ export class HelpPage {
     }
   ];
 
+  constructor(private route: ActivatedRoute) {}
+
+  ngOnInit(): void {
+    this.route.fragment.subscribe(fragment => {
+      if (!fragment) return;
+
+      let attempts = 0;
+      const tryScroll = () => {
+        const el = document.getElementById(fragment);
+        if (el) {
+          const headerOffset = 100;
+          const y = el.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+
+          console.log('[HelpPage] Scrolling to', fragment, 'at Y =', y);
+
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        } else if (attempts < 10) {
+          attempts++;
+          console.log('[HelpPage] Waiting for #' + fragment + '... attempt', attempts);
+          setTimeout(tryScroll, 100);
+        } else {
+          console.warn('[HelpPage] Gave up. Element not found:', fragment);
+        }
+      };
+      tryScroll();
+    });
+  }
+
   get filteredFaqs(): Faq[] {
     if (!this.searchQuery || this.searchQuery.trim() === '') {
       return this.faqs;
@@ -159,8 +188,6 @@ export class HelpPage {
   }
 
   filterFaqs(): void {
-    // This method is called on input change
-    // The filteredFaqs getter handles the filtering logic
   }
 
   toggleFaq(id: string): void {

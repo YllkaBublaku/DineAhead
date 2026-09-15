@@ -56,7 +56,7 @@ export class Home implements OnInit {
   ) {}
 
   mobileMenuOpen = false;
-  searchCity = 'Paris';
+  searchCity = '';
   searchQuery = '';
   loading = false;
 
@@ -307,7 +307,7 @@ export class Home implements OnInit {
   onSearch(): void {
     this.router.navigate(['/restaurants'], {
       queryParams: {
-        city: this.searchCity || 'Paris',
+        city: this.searchCity || undefined,
         q: this.searchQuery || undefined,
       },
     });

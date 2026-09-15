@@ -33,7 +33,7 @@
             </svg>
             <input type="text"
                    [(ngModel)]="searchCity"
-                   placeholder="Location"
+                   placeholder="City or neighborhood"
                    class="w-full font-semibold text-gray-900 dark:text-white bg-transparent text-sm sm:text-base focus:outline-none placeholder-gray-400">
           </div>
 
@@ -580,6 +580,7 @@
                   Tell us more about your restaurant and we will contact you as soon as possible.
                 </p>
                 <a routerLink="/signup"
+                   [queryParams]="{ type: 'restaurant' }"
                    class="inline-block mt-3 px-5 py-2.5 bg-[#005943] hover:bg-[#004735] text-white text-xs sm:text-sm font-bold rounded-lg transition uppercase tracking-wider shadow-sm">
                   Register now
                 </a>
