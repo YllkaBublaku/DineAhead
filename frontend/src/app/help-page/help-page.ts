@@ -131,7 +131,7 @@ export class HelpPage implements OnInit{
       id: 'contact',
       question: 'How do I contact support?',
       category: 'support',
-      answer: 'You can reach our support team 24/7 by clicking "Contact Support" below or emailing us at support@dineahead.com. We\'ll respond within 2 hours.'
+      answer: 'You can reach our support team 24/7 by clicking "Contact Support" below or emailing us at yllkabublaku@gmail.com. We\'ll respond within 2 hours.'
     },
     {
       id: 'app',

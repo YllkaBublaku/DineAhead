@@ -23,7 +23,7 @@
 
   <aside class="fixed top-0 left-0 z-40 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-300 overflow-y-auto"
          [class.-translate-x-full]="!isSidebarOpen()"
-         [class.translate-x-0]="isSidebarOpen()">
+         [class.lg:translate-x-0]="true">
 
     <div class="p-6 text-center border-b border-gray-100 dark:border-gray-800">
       <div class="w-20 h-20 mx-auto rounded-full bg-[#0f172a] text-white flex items-center justify-center text-3xl font-extrabold">
@@ -1140,7 +1140,7 @@
                 <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Support email</label>
                 <input type="email"
                        [(ngModel)]="contactEmail"
-                       placeholder="support@dineahead.com"
+                       placeholder="supportdineahead@gmail.com"
                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f172a]/30 focus:border-transparent">
               </div>
 

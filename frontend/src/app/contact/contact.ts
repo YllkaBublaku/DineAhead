@@ -39,7 +39,7 @@ export class Contact implements OnInit {
   ngOnInit(): void {
     this.settings.load().then(() => {
       const c = this.settings.contact;
-      this.contactEmail = c.email || 'support@dineahead.com';
+      this.contactEmail = c.email || 'yllkabublaku@gmail.com';
       this.contactPhone = c.phone || '';
       this.contactAddress = c.address || '';
       this.cdr.detectChanges();
@@ -64,7 +64,7 @@ export class Contact implements OnInit {
         this.contactData = { name: '', email: '', subject: '', message: '' };
       })
       .catch(() => {
-        this.errorMessage = `Failed to send your message. Please try again or email us directly at ${this.contactEmail || 'support@dineahead.com'}.`;
+        this.errorMessage = `Failed to send your message. Please try again or email us directly at ${this.contactEmail || 'yllkabublaku@gmail.com'}.`;
       })
       .finally(() => {
         this.isSubmitting = false;

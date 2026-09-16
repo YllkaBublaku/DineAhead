@@ -1,0 +1,10 @@
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control {
+  z-index: 1 !important;
+}
+
+.leaflet-container {
+  z-index: 0 !important;
+}

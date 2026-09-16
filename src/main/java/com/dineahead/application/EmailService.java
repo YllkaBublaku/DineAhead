@@ -62,7 +62,7 @@ public class EmailService {
                             "Your message:\n" + contact.getMessage() + "\n\n" +
                             "Best regards,\n" +
                             "The DineAhead Team\n" +
-                            "support@dineahead.com"
+                            "yllkabublaku@gmail.com"
             );
             mailSender.send(reply);
             System.out.println("Auto-reply sent to: " + contact.getEmail());

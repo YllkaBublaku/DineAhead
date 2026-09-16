@@ -814,7 +814,7 @@
 }
 
 @if (bookingModalOpen) {
-  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeBookingModal()">
+  <div class="fixed inset-0 z-[9999] overflow-y-auto" (click)="closeBookingModal()">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
       <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="closeBookingModal()"></div>
 
@@ -972,7 +972,7 @@
 }
 
 @if (paymentModalOpen) {
-  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="paymentModalOpen = false">
+  <div class="fixed inset-0 z-[9999] overflow-y-auto" (click)="paymentModalOpen = false">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
       <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-90 transition-opacity" (click)="paymentModalOpen = false"></div>
 
@@ -1023,7 +1023,7 @@
 }
 
 @if (reviewModalOpen) {
-  <div class="fixed inset-0 z-50 overflow-y-auto" (click)="closeReviewModal()">
+  <div class="fixed inset-0 z-[9999] overflow-y-auto" (click)="closeReviewModal()">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
       <div class="fixed inset-0 bg-black/50 transition-opacity" (click)="closeReviewModal()"></div>
 

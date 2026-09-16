@@ -262,6 +262,7 @@ export class Restaurants implements OnInit {
 
     setTimeout(() => {
       this.map.invalidateSize();
+      this.renderMapMarkers();
     }, 200);
   }
 
