@@ -24,6 +24,8 @@ export interface RestaurantItem {
   longitude?: number;
   cityImageUrl?: string;
   cuisineImageUrl?: string;
+  requiresDeposit?: boolean;
+  depositAmount?: number;
 }
 
 export interface CityItem {
@@ -67,6 +69,8 @@ export class Home implements OnInit {
   offerRestaurants: RestaurantItem[] = [];
   cities: CityItem[] = [];
   cuisines: CuisineItem[] = [];
+  depositMap: Record<number, number> = {};
+
   favoriteIds = new Set<number>();
   private userId: number | null = null;
 
@@ -197,7 +201,9 @@ export class Home implements OnInit {
       latitude: data.latitude,
       longitude: data.longitude,
       cityImageUrl: data.cityImageUrl || null,
-      cuisineImageUrl: data.cuisineImageUrl || null
+      cuisineImageUrl: data.cuisineImageUrl || null,
+      requiresDeposit: data.requiresDeposit === true,
+      depositAmount: Number(data.depositAmount ?? 0)
     };
   }
 
@@ -323,5 +329,11 @@ export class Home implements OnInit {
 
   closeMobileMenu(): void {
     this.mobileMenuOpen = false;
+  }
+
+  depositAmountFor(restaurant: RestaurantItem): number {
+    if (restaurant.requiresDeposit !== true) return 0;
+    return Number(restaurant.depositAmount ?? 0);
+    return this.depositMap[restaurant.id] ?? 0;
   }
 }

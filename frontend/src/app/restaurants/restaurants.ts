@@ -10,6 +10,7 @@ import { TimeFormatPipe } from '../pipes/time-format.pipe';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
 import {environment} from '../../environments/environment';
 import { RoleService } from '../services/role.service';
+import { SettingsService } from '../services/settings.service';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -184,7 +185,8 @@ export class Restaurants implements OnInit {
     private api: ApiService,
     private cdr: ChangeDetectorRef,
     private favoritesService: FavoritesService,
-    private roles: RoleService
+    private roles: RoleService,
+    private settings: SettingsService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -224,6 +226,10 @@ export class Restaurants implements OnInit {
 
   ngAfterViewInit(): void {
     this.initializeMapWithRetry();
+  }
+
+  get reservationsEnabled(): boolean {
+    return this.settings.isEnabled('feature.reservations', true);
   }
 
   get isPlatformAdmin(): boolean {

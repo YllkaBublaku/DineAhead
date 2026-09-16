@@ -299,6 +299,7 @@
                 </div>
 
                 <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800">
+                  @if (reservationsEnabled) {
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Select a time:
@@ -330,6 +331,14 @@
                       }
                     }
                   </div>
+                  } @else {
+                    <p class="text-[11px] text-gray-400 italic mb-2">Reservations are temporarily unavailable.</p>
+                  }
+
+                  <a [routerLink]="['/restaurant', rest.id]"
+                     class="inline-block px-4 py-2 bg-[#005943] hover:bg-[#004735] text-white text-xs font-bold rounded-lg transition active:scale-95 mt-3">
+                    {{ reservationsEnabled ? 'View Full Menu & Book' : 'View Menu' }}
+                  </a>
                 </div>
               </div>
             </div>

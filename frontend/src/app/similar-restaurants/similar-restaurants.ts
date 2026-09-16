@@ -8,6 +8,7 @@ import { TimeFormatPipe } from '../pipes/time-format.pipe';
 import { Header } from '../header/header';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { environment } from '../../environments/environment';
+import { SettingsService } from '../services/settings.service';
 
 export interface TimeSlot {
   slotTime?: string;
@@ -126,7 +127,8 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
     private route: ActivatedRoute,
     private router: Router,
     private api: ApiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private settings: SettingsService
   ) {}
 
   ngOnInit(): void {
@@ -150,6 +152,10 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         this.loadAllRestaurants();
       }
     });
+  }
+
+  get reservationsEnabled(): boolean {
+    return this.settings.isEnabled('feature.reservations', true);
   }
 
   private async loadStripeInstance(): Promise<void> {
