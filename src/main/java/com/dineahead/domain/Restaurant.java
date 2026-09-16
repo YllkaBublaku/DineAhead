@@ -37,7 +37,7 @@ public class Restaurant {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String slug;
 
     @Column(nullable = true)

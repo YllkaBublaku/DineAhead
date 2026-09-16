@@ -147,29 +147,46 @@ export class Signup implements OnInit {
     if (this.accountType() === 'restaurant') {
       userData.restaurantName = this.restaurantName;
       this.api.registerRestaurant(userData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.isLoading.set(false);
-          const user: any = { ...response, restaurantName: this.restaurantName };
-          localStorage.setItem('user', JSON.stringify(user));
+
+          const id = response?.id ?? response?.userId ?? response?.user?.id;
+          if (!id) {
+            this.errorMessage.set(response?.message || 'Registration failed.');
+            return;
+          }
+
+          localStorage.setItem('user', JSON.stringify({ ...response, id, restaurantName: this.restaurantName }));
           localStorage.setItem('isLoggedIn', 'true');
           this.router.navigate(['/']);
         },
         error: (error) => {
           this.isLoading.set(false);
-          this.errorMessage.set(error.error?.message || 'Registration failed. Please try again.');
+          this.errorMessage.set(
+            error?.error?.message || error?.message || 'Registration failed. Please try again.'
+          );
         }
       });
     } else {
       this.api.registerUser(userData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.isLoading.set(false);
+
+          const id = response?.id ?? response?.userId ?? response?.user?.id;
+          if (!id) {
+            this.errorMessage.set(response?.message || 'Registration failed.');
+            return;
+          }
+
           localStorage.setItem('user', JSON.stringify(response));
           localStorage.setItem('isLoggedIn', 'true');
           this.router.navigate(['/']);
         },
         error: (error) => {
           this.isLoading.set(false);
-          this.errorMessage.set(error.error?.message || 'Registration failed. Please try again.');
+          this.errorMessage.set(
+            error?.error?.message || error?.message || 'Registration failed. Please try again.'
+          );
         }
       });
     }

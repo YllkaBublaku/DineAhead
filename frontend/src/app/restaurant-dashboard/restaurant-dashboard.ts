@@ -24,6 +24,19 @@ export class RestaurantDashboard implements OnInit {
     avatar: '',
     profilePicture: ''
   };
+
+  restaurants: any[] = [];
+  newRestaurantModalOpen = false;
+  newRestaurantForm = {
+    name: '',
+    address: '',
+    cityName: '',
+    cuisineType: '',
+    phone: ''
+  };
+  newRestaurantSaving = false;
+  newRestaurantError = '';
+
   allReservations: any[] = [];
   reservations: any[] = [];
 
@@ -142,39 +155,109 @@ export class RestaurantDashboard implements OnInit {
     this.api.getRestaurantsByOwner(ownerId).subscribe({
       next: (restaurants: any[]) => {
         this.loading.set(false);
-        const r = restaurants && restaurants.length ? restaurants[0] : null;
-        if (!r) { this.error.set('No restaurant found for this account.'); return; }
 
-        this.restaurantId = r.id;
+        if (!restaurants || restaurants.length === 0) {
+          this.error.set('No restaurant found for this account.');
+          return;
+        }
 
-        const joinedYear = r.createdAt
-          ? new Date(r.createdAt).getFullYear().toString()
-          : '';
+        this.restaurants = restaurants;
 
-        this.restaurant = {
-          name: r.name || '',
-          first: user.firstName || '',
-          last: user.lastName || '',
-          joined: joinedYear,
-          avatar: this.getRestaurantInitials(r.name || ''),
-          profilePicture: r.coverPhotoUrl || ''
-        };
-        this.restaurantIsActive = r.isActive !== false;
+        const storedId = localStorage.getItem('selectedRestaurantId');
+        const preferred = storedId
+          ? restaurants.find(r => String(r.id) === storedId)
+          : null;
+        const active = preferred || restaurants[0];
 
-        this.cdr.detectChanges();
-
-        this.loadReservations();
-        this.loadReviews();
-        this.loadTables();
-        this.loadSchedule();
-        this.loadOverrides();
-        this.loadProfile();
-        this.loadDepositSettings();
+        this.selectRestaurant(active);
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set('Could not load restaurant: ' + (err?.error?.message || err.message));
+        this.error.set('Could not load restaurants: ' + (err?.error?.message || err.message));
         console.error('[Dashboard] load error:', err);
+      }
+    });
+  }
+
+  selectRestaurant(r: any): void {
+    this.restaurantId = r.id;
+    localStorage.setItem('selectedRestaurantId', String(r.id));
+
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const joinedYear = r.createdAt
+      ? new Date(r.createdAt).getFullYear().toString()
+      : '';
+
+    this.restaurant = {
+      name: r.name || '',
+      first: storedUser.firstName || '',
+      last: storedUser.lastName || '',
+      joined: joinedYear,
+      avatar: this.getRestaurantInitials(r.name || ''),
+      profilePicture: r.coverPhotoUrl || ''
+    };
+    this.restaurantIsActive = r.isActive !== false;
+
+    this.cdr.detectChanges();
+
+    this.loadReservations();
+    this.loadReviews();
+    this.loadTables();
+    this.loadSchedule();
+    this.loadOverrides();
+    this.loadProfile();
+    this.loadDepositSettings();
+  }
+
+  onRestaurantSwitch(newId: number): void {
+    const r = this.restaurants.find(x => x.id === newId);
+    if (r) this.selectRestaurant(r);
+  }
+
+  openNewRestaurantModal(): void {
+    this.newRestaurantForm = { name: '', address: '', cityName: '', cuisineType: '', phone: '' };
+    this.newRestaurantError = '';
+    this.newRestaurantSaving = false;
+    this.newRestaurantModalOpen = true;
+  }
+
+  closeNewRestaurantModal(): void {
+    this.newRestaurantModalOpen = false;
+    this.newRestaurantError = '';
+  }
+
+  saveNewRestaurant(): void {
+    this.newRestaurantError = '';
+
+    if (!this.newRestaurantForm.name?.trim()) {
+      this.newRestaurantError = 'Restaurant name is required.';
+      return;
+    }
+
+    const stored = localStorage.getItem('user');
+    if (!stored) { this.newRestaurantError = 'Not logged in.'; return; }
+
+    const user = JSON.parse(stored);
+    const ownerId = user.id ?? user.userId;
+    if (!ownerId) { this.newRestaurantError = 'No user id found.'; return; }
+
+    this.newRestaurantSaving = true;
+
+    this.api.createRestaurantForOwner(ownerId, this.newRestaurantForm).subscribe({
+      next: (created: any) => {
+        this.newRestaurantSaving = false;
+        this.closeNewRestaurantModal();
+
+        this.restaurants.push(created);
+        this.selectRestaurant(created);
+
+        this.showToast('Restaurant created');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.newRestaurantSaving = false;
+        this.newRestaurantError = err?.error?.message || 'Could not create restaurant.';
+        console.error('[Dashboard] create restaurant failed', err);
       }
     });
   }
@@ -185,7 +268,6 @@ export class RestaurantDashboard implements OnInit {
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   }
-
 
   loadReservations(): void {
     if (!this.restaurantId) return;
@@ -939,12 +1021,25 @@ export class RestaurantDashboard implements OnInit {
     this.deleteRestaurantLoading = true;
     this.deleteRestaurantError = '';
 
-    this.api.deleteRestaurant(this.restaurantId, this.deleteRestaurantPassword).subscribe({
+    const deletedId = this.restaurantId;
+
+    this.api.deleteRestaurant(deletedId, this.deleteRestaurantPassword).subscribe({
       next: () => {
         this.deleteRestaurantLoading = false;
         this.deleteRestaurantDialogOpen = false;
-        this.showToast('Restaurant deleted');
-        setTimeout(() => this.logout(), 1200);
+
+        this.restaurants = this.restaurants.filter(r => r.id !== deletedId);
+
+        if (this.restaurants.length === 0) {
+          this.showToast('Restaurant deleted');
+          setTimeout(() => this.logout(), 1200);
+        } else {
+          // Pick the first remaining and switch to it
+          this.selectRestaurant(this.restaurants[0]);
+          this.showToast('Restaurant deleted');
+        }
+
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.deleteRestaurantLoading = false;
@@ -959,17 +1054,31 @@ export class RestaurantDashboard implements OnInit {
 
     if (this.restaurantIsActive) {
       const ok = confirm(
-        'Deactivate your restaurant?\n\n' +
-        'It will be hidden from search and no new reservations can be made. ' +
-        'You will be logged out.'
+        'Deactivate this restaurant?\n\n' +
+        'It will be hidden from search and no new reservations can be made.'
       );
       if (!ok) return;
 
-      this.api.deactivateRestaurant(this.restaurantId).subscribe({
+      const deactivatedId = this.restaurantId;
+
+      this.api.deactivateRestaurant(deactivatedId).subscribe({
         next: () => {
           this.restaurantIsActive = false;
-          this.showToast('Restaurant deactivated');
-          setTimeout(() => this.logout(), 1200);
+
+          const entry = this.restaurants.find(r => r.id === deactivatedId);
+          if (entry) entry.isActive = false;
+
+          const activeRestaurants = this.restaurants.filter(r => r.isActive);
+
+          if (activeRestaurants.length === 0) {
+            this.showToast('Restaurant deactivated. Logging you out…');
+            setTimeout(() => this.logout(), 1200);
+          } else {
+            this.selectRestaurant(activeRestaurants[0]);
+            this.showToast('Restaurant deactivated. Switched to another.');
+          }
+
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('[Dashboard] deactivate failed', err);
@@ -977,13 +1086,20 @@ export class RestaurantDashboard implements OnInit {
         }
       });
     } else {
-      const ok = confirm('Activate your restaurant again? It will become visible and accept reservations.');
+      const ok = confirm('Activate this restaurant again? It will become visible and accept reservations.');
       if (!ok) return;
 
-      this.api.activateRestaurant(this.restaurantId).subscribe({
+      const activatedId = this.restaurantId;
+
+      this.api.activateRestaurant(activatedId).subscribe({
         next: () => {
           this.restaurantIsActive = true;
+
+          const entry = this.restaurants.find(r => r.id === activatedId);
+          if (entry) entry.isActive = true;
+
           this.showToast('Restaurant activated');
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('[Dashboard] activate failed', err);

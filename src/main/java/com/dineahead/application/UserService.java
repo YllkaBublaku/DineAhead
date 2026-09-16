@@ -42,26 +42,49 @@ public class UserService {
 
     @Transactional
     public User registerRestaurant(Map<String, Object> payload) {
+        String firstName = (String) payload.get("firstName");
+        String lastName  = (String) payload.get("lastName");
+        String email     = (String) payload.get("email");
+        String password  = (String) payload.get("passwordHash");
+        String restaurantName = (String) payload.get("restaurantName");
+
+        if (firstName == null || firstName.isBlank()
+                || lastName == null || lastName.isBlank()) {
+            throw new RuntimeException("First and last name are required.");
+        }
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email is required.");
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeException("An account with this email already exists.");
+        }
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters.");
+        }
+        if (restaurantName == null || restaurantName.isBlank()) {
+            throw new RuntimeException("Restaurant name is required.");
+        }
+
         User user = new User();
-        user.setFirstName((String) payload.get("firstName"));
-        user.setLastName((String) payload.get("lastName"));
-        user.setEmail((String) payload.get("email"));
-        user.setPasswordHash((String) payload.get("passwordHash"));
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setEmail(email);
+        user.setPasswordHash(password);
         user.setRole(Role.RESTAURANT_OWNER);
         user.setCreatedAt(LocalDateTime.now());
 
         User savedUser = registerUser(user);
 
         Restaurant restaurant = new Restaurant();
-        String restaurantName = (String) payload.get("restaurantName");
         restaurant.setName(restaurantName);
-        restaurant.setSlug(restaurantName.toLowerCase().replace(" ", "-"));
+        restaurant.setSlug(restaurantService.makeSlug(restaurantName, savedUser.getId()));
         restaurant.setOwner(savedUser);
         restaurant.setCreatedAt(LocalDateTime.now());
         restaurant.setAverageRating(BigDecimal.ZERO);
         restaurant.setReviewCount(0);
 
         restaurantService.createRestaurant(restaurant);
+
         return savedUser;
     }
 

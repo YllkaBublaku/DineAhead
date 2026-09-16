@@ -895,4 +895,11 @@ export class ApiService {
       withCredentials: true
     });
   }
+
+  createRestaurantForOwner(
+    ownerId: number,
+    payload: { name: string; address?: string; cityName?: string; cuisineType?: string; phone?: string; }
+  ): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/restaurants/owner/${ownerId}`, payload);
+  }
 }

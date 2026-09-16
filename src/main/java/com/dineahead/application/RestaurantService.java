@@ -2,15 +2,13 @@ package com.dineahead.application;
 
 import com.dineahead.domain.*;
 import com.dineahead.domain.enums.ReservationStatus;
-import com.dineahead.infrastructure.MenuItemRepository;
-import com.dineahead.infrastructure.ReservationRepository;
-import com.dineahead.infrastructure.RestaurantRepository;
-import com.dineahead.infrastructure.TimeSlotRepository;
+import com.dineahead.infrastructure.*;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -27,13 +25,20 @@ public class RestaurantService {
     private final TimeSlotRepository timeSlotRepository;
     private final CityService cityService;
     private final ReservationRepository reservationRepository;
+    private final UserRepository userRepository;
 
-    public RestaurantService(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository, TimeSlotRepository timeSlotRepository, CityService cityService, ReservationRepository reservationRepository) {
+    public RestaurantService(RestaurantRepository restaurantRepository,
+                             MenuItemRepository menuItemRepository,
+                             TimeSlotRepository timeSlotRepository,
+                             CityService cityService,
+                             ReservationRepository reservationRepository,
+                             UserRepository userRepository) {
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.cityService = cityService;
         this.reservationRepository = reservationRepository;
+        this.userRepository = userRepository;
     }
 
     public Restaurant createRestaurant(Restaurant restaurant) {
@@ -158,5 +163,51 @@ public class RestaurantService {
         r.setOwner(null);
         restaurantRepository.save(r);
         restaurantRepository.delete(r);
+    }
+
+    public String makeSlug(String name, Long ownerId) {
+        String base = name == null ? "" : name.toLowerCase()
+                                          .replaceAll("[^a-z0-9\\s-]", "")
+                                          .trim()
+                                          .replaceAll("\\s+", "-");
+        if (base.isEmpty()) base = "restaurant";
+
+        String candidate = base;
+        int i = 2;
+        while (restaurantRepository.existsByOwnerIdAndSlug(ownerId, candidate)) {
+            candidate = base + "-" + i++;
+        }
+        return candidate;
+    }
+
+    @Transactional
+    public Restaurant createForOwner(Long ownerId, String name, String address, String cityName, String cuisineType, String phone) {
+        User owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        if (name == null || name.isBlank()) {
+            throw new RuntimeException("Restaurant name is required.");
+        }
+
+        Restaurant r = new Restaurant();
+        r.setOwner(owner);
+        r.setName(name.trim());
+        r.setSlug(makeSlug(name, ownerId));
+        r.setAddress(address);
+        r.setCityName(cityName);
+        r.setCuisineType(cuisineType);
+        r.setPhone(phone);
+        r.setCreatedAt(LocalDateTime.now());
+        r.setAverageRating(BigDecimal.ZERO);
+        r.setReviewCount(0);
+        r.setIsActive(true);
+
+        Restaurant saved = restaurantRepository.save(r);
+        try {
+            cityService.updateCityRestaurantCounts();
+        } catch (Exception e) {
+            log.warn("City count update failed after restaurant {} creation", saved.getId(), e);
+        }
+        return saved;
     }
 }

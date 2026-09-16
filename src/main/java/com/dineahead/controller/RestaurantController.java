@@ -195,4 +195,19 @@ public class RestaurantController {
                     .body(Map.of("message", "Could not delete: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/owner/{ownerId}")
+    public ResponseEntity<RestaurantResponseDTO> createForOwner(
+            @PathVariable Long ownerId,
+            @RequestBody Map<String, String> body) {
+        Restaurant created = restaurantService.createForOwner(
+                ownerId,
+                body.get("name"),
+                body.get("address"),
+                body.get("cityName"),
+                body.get("cuisineType"),
+                body.get("phone")
+        );
+        return ResponseEntity.ok(new RestaurantResponseDTO(created));
+    }
 }

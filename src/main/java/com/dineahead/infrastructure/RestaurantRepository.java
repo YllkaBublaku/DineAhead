@@ -59,4 +59,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
             "LEFT JOIN FETCH r.owner " +
             "LEFT JOIN FETCH r.city")
     List<Restaurant> findAllWithOwnerAndCity();
+
+    boolean existsByOwnerIdAndSlug(Long ownerId, String slug);
+    List<Restaurant> findByOwnerIdOrderByCreatedAtAsc(Long ownerId);
 }

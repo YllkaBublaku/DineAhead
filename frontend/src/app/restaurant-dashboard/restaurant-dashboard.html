@@ -48,6 +48,44 @@
       <p class="text-xs text-gray-500 dark:text-gray-400">Managed by {{ restaurant.first }} {{ restaurant.last }} • Since {{ restaurant.joined }}</p>
     </div>
 
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+          Active restaurant
+        </span>
+        <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+          {{ restaurants.length }} {{ restaurants.length === 1 ? 'location' : 'locations' }}
+        </span>
+      </div>
+
+      @if (restaurants.length > 1) {
+        <div class="relative mb-3">
+          <select
+            [ngModel]="restaurantId"
+            (ngModelChange)="onRestaurantSwitch($event)"
+            class="w-full appearance-none text-sm font-bold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-10 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#005943] focus:border-transparent transition cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-750">
+            @for (r of restaurants; track r.id) {
+              <option [ngValue]="r.id">{{ r.name }}</option>
+            }
+          </select>
+          <svg class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+      }
+
+      <button (click)="openNewRestaurantModal()"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-[#005943]/40 dark:border-emerald-500/40 text-[#005943] dark:text-emerald-400 text-xs font-extrabold uppercase tracking-wider hover:bg-[#005943]/5 dark:hover:bg-emerald-500/10 hover:border-[#005943] dark:hover:border-emerald-500 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add new restaurant
+      </button>
+
+    </div>
+
     <nav class="mt-4 px-3 space-y-1">
       <button (click)="setTab('overview')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition" [class.bg-[#005943]]="activeTab() === 'overview'" [class.text-white]="activeTab() === 'overview'" [class.text-gray-700]="activeTab() !== 'overview'" [class.hover:bg-gray-50]="activeTab() !== 'overview'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> Overview</button>
       <button (click)="setTab('reservations')" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition" [class.bg-[#005943]]="activeTab() === 'reservations'" [class.text-white]="activeTab() === 'reservations'" [class.text-gray-700]="activeTab() !== 'reservations'" [class.hover:bg-gray-50]="activeTab() !== 'reservations'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Reservations</button>
@@ -888,6 +926,79 @@
                     [disabled]="deleteRestaurantLoading || deleteRestaurantConfirmText.trim().toUpperCase() !== 'DELETE' || !deleteRestaurantPassword"
                     class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
               {{ deleteRestaurantLoading ? 'Deleting...' : 'Delete restaurant' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (newRestaurantModalOpen) {
+    <div class="fixed inset-0 z-[100] overflow-y-auto" (click)="closeNewRestaurantModal()">
+      <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <div class="fixed inset-0 bg-black/60" (click)="closeNewRestaurantModal()"></div>
+
+        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
+             (click)="$event.stopPropagation()">
+
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Add new restaurant</h3>
+            <button (click)="closeNewRestaurantModal()"
+                    class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          @if (newRestaurantError) {
+            <div class="mb-4 p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs rounded-lg">
+              {{ newRestaurantError }}
+            </div>
+          }
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Restaurant name *</label>
+              <input type="text" [(ngModel)]="newRestaurantForm.name"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Address</label>
+              <input type="text" [(ngModel)]="newRestaurantForm.address"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">City</label>
+                <input type="text" [(ngModel)]="newRestaurantForm.cityName"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Cuisine</label>
+                <input type="text" [(ngModel)]="newRestaurantForm.cuisineType"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <input type="text" [(ngModel)]="newRestaurantForm.phone"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#005943] focus:border-transparent">
+            </div>
+          </div>
+
+          <div class="mt-6 flex items-center gap-3">
+            <button (click)="closeNewRestaurantModal()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 transition">
+              Cancel
+            </button>
+            <button (click)="saveNewRestaurant()"
+                    [disabled]="newRestaurantSaving || !newRestaurantForm.name.trim()"
+                    class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#005943] hover:bg-[#004735] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ newRestaurantSaving ? 'Creating…' : 'Create' }}
             </button>
           </div>
         </div>
