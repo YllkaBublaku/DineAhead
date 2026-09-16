@@ -195,15 +195,8 @@ export class Login implements OnInit {
   signInWithGoogle() {
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
-
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const eqPos = cookie.indexOf('=');
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-    }
-
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google?prompt=select_account';
+    window.location.href =
+      'http://localhost:8080/oauth2/authorization/google?prompt=select_account';
   }
 
 }

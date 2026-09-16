@@ -24,7 +24,7 @@ export class OauthRedirectComponent implements OnInit {
 
   ngOnInit() {
     setTimeout(() => {
-      this.api.getCurrentUser().subscribe({
+      this.api.fetchCurrentUserFromApi().subscribe({
         next: (user: any) => {
           console.log('OAuth redirect - user received:', user);
 
@@ -32,7 +32,14 @@ export class OauthRedirectComponent implements OnInit {
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('isLoggedIn', 'true');
 
-            this.router.navigate(['/']);
+            const role = String(user.role || '').toUpperCase().replace(/^ROLE_/, '');
+            if (role === 'PLATFORM_ADMIN') {
+              this.router.navigate(['/platform-admin']);
+            } else if (role === 'RESTAURANT_OWNER') {
+              this.router.navigate(['/restaurant-dashboard']);
+            } else {
+              this.router.navigate(['/']);
+            }
           } else {
             console.warn('OAuth redirect - no user found');
             this.error = 'No user data received. Please try again.';

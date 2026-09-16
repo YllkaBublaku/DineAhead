@@ -56,7 +56,38 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/**", "/login/**", "/oauth2/**", "/logout", "/error").permitAll()
+                        .requestMatchers(
+                                "/api/users/**",
+                                "/api/users/login",
+                                "/api/users/register",
+                                "/api/users/register/restaurant",
+                                "/api/users/forgot-password",
+                                "/api/users/reset-password",
+                                "/api/restaurants/**",
+                                "/api/home/**",
+                                "/api/admin/**",
+                                "/api/cities/**",
+                                "/api/contacts/**",
+                                "/api/favorites/**",
+                                "/api/reviews/**",
+                                "/api/payments/**",
+                                "/api/settings/**",
+                                "/api/reservations/**",
+                                "/api/reservation-logs/**",
+                                "/api/restaurant-hours/**",
+                                "/api/restaurant-images/**",
+                                "/api/restaurant-overrides/**",
+                                "/api/restaurant-tables/**",
+                                "/api/time-slots/**",
+                                "/api/deposit-settings/**",
+                                "/api/notifications/**",
+                                "/login/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/logout",
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers("/api/users/me").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

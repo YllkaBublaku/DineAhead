@@ -889,4 +889,10 @@ export class ApiService {
       { restaurantIds }
     );
   }
+
+  fetchCurrentUserFromApi(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/users/me`, {
+      withCredentials: true
+    });
+  }
 }
