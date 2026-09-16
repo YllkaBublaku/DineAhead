@@ -9,6 +9,7 @@ import com.dineahead.infrastructure.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,13 +23,16 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final PasswordEncoder passwordEncoder;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
-                          FileStorageService fileStorageService) {
+                          FileStorageService fileStorageService,
+                          PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private UserResponseDTO mapToDTO(User user) {
@@ -154,5 +158,10 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/dev/hash")
+    public ResponseEntity<Map<String, String>> devHash(@RequestParam String raw) {
+        return ResponseEntity.ok(Map.of("hash", passwordEncoder.encode(raw)));
     }
 }

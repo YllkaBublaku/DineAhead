@@ -756,7 +756,6 @@ export class Restaurants implements OnInit {
 
   closeFiltersModal(): void {
     this.allFiltersModalOpen = false;
-    this.clearAllFilters();
   }
 
   clearAllFilters(): void {
@@ -786,7 +785,6 @@ export class Restaurants implements OnInit {
     this.selectedTime = '19:00';
     this.selectedGuests = 2;
     this.applyFilters();
-    this.closeFiltersModal();
   }
 
   toggleCuisineFilter(cuisine: string): void {

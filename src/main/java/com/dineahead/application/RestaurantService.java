@@ -98,7 +98,7 @@ public class RestaurantService {
     }
 
     public List<Restaurant> getRestaurantsByOwner(Long ownerId) {
-        return restaurantRepository.findByOwnerId(ownerId);
+        return restaurantRepository.findByOwnerIdWithDetails(ownerId);
     }
 
     @Transactional

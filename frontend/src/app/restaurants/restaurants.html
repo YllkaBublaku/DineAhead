@@ -404,7 +404,7 @@
           </svg>
         </div>
 
-        <button (click)="clearAllFilters()"
+        <button (click)="clearAllFilters(); closeFiltersModal()"
                 class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1.5 shrink-0 transition"
                 [class.text-red-600]="getActiveFilterCount() > 0"
                 [class.text-gray-400]="getActiveFilterCount() === 0"
