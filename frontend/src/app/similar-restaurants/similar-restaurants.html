@@ -281,16 +281,16 @@
 
                 <div class="mt-3 mb-3 flex flex-wrap items-center gap-1.5 min-h-[28px]">
                   @if (rest.specialOffer && rest.specialOffer.trim() !== '') {
-                    <span class="inline-flex items-center gap-1 bg-[#dcfce7] dark:bg-emerald-950/80 text-[#15803d] dark:text-emerald-300 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-200 dark:border-emerald-800 whitespace-nowrap">
-                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="restaurant-badge badge-offer">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                       </svg>
-                      <span class="truncate max-w-[120px]">{{ rest.specialOffer }}</span>
+                      <span class="truncate">{{ rest.specialOffer }}</span>
                     </span>
                   }
                   @if (rest.requiresDeposit) {
-                    <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-200 whitespace-nowrap">
-                      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="restaurant-badge badge-deposit">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                       </svg>
                       Deposit €{{ rest.depositAmount }}
@@ -319,9 +319,8 @@
                     } @else {
                       @for (slot of availableSlots; track $index) {
                         @if ($index < 4) {
-                          <button
-                            (click)="openBookingModal(rest, slot, $event)"
-                            class="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-300 hover:border-[#005943] transition whitespace-nowrap">
+                          <button (click)="openBookingModal(rest, slot, $event)"
+                                  class="time-slot-btn">
                             {{ slot.slotTime | timeFormat }}
                           </button>
                         }

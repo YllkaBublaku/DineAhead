@@ -117,3 +117,10 @@ html {
   display: none !important;
 }
 
+html.dark body {
+  background-color: #030712;
+}
+html body {
+  background-color: #ffffff;
+}
+
