@@ -137,7 +137,7 @@ public class Restaurant {
     private List<RestaurantFeature> restaurantFeatures = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MenuItem> menuItems = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.EAGER)

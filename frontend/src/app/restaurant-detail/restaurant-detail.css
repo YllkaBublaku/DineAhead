@@ -38,3 +38,13 @@
 .helpful-btn.active svg {
   fill: #005943;
 }
+
+.leaflet-container {
+  z-index: 0 !important;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}

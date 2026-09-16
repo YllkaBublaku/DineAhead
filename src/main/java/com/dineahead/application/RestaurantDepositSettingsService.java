@@ -37,7 +37,7 @@ public class RestaurantDepositSettingsService {
                 .orElse(null);
 
         if (existing == null) {
-            Restaurant restaurant = restaurantService.getRestaurantById(restaurantId);
+            Restaurant restaurant = restaurantService.getRestaurantEntity(restaurantId);
             existing = RestaurantDepositSettings.builder()
                     .restaurant(restaurant)
                     .build();

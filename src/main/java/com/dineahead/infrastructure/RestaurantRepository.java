@@ -62,8 +62,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     boolean existsByOwnerIdAndSlug(Long ownerId, String slug);
 
-    List<Restaurant> findByOwnerIdOrderByCreatedAtAsc(Long ownerId);
-
     @Query("SELECT DISTINCT r FROM Restaurant r " +
             "LEFT JOIN FETCH r.city " +
             "LEFT JOIN FETCH r.owner " +
@@ -72,4 +70,19 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
             "LEFT JOIN FETCH r.depositSettings " +
             "WHERE r.owner.id = :ownerId")
     List<Restaurant> findByOwnerIdWithDetails(@Param("ownerId") Long ownerId);
+
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.menuItems " +
+            "LEFT JOIN FETCH r.depositSettings " +
+            "LEFT JOIN FETCH r.city " +
+            "LEFT JOIN FETCH r.owner")
+    List<Restaurant> findAllWithMenuItems();
+
+    @Query("SELECT DISTINCT r FROM Restaurant r " +
+            "LEFT JOIN FETCH r.menuItems " +
+            "LEFT JOIN FETCH r.depositSettings " +
+            "LEFT JOIN FETCH r.city " +
+            "LEFT JOIN FETCH r.owner " +
+            "WHERE r.id = :id")
+    Optional<Restaurant> findByIdWithMenuItems(@Param("id") Long id);
 }

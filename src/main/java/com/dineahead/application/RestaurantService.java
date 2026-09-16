@@ -54,47 +54,29 @@ public class RestaurantService {
         return saved;
     }
 
-    @Transactional(readOnly = true)
-    public List<Restaurant> getAllRestaurants() {
-        List<Restaurant> restaurants = restaurantRepository.findAllWithFeatures();
-
-        restaurants.forEach(restaurant -> {
-            if (restaurant.getGallery() != null) {
-                restaurant.getGallery().size();
-            }
-            if (restaurant.getRestaurantFeatures() != null) {
-                restaurant.getRestaurantFeatures().size();
-            }
-
-            List<TimeSlot> timeSlots = timeSlotRepository.findByRestaurantIdAndIsActiveTrue(restaurant.getId());
-            restaurant.setTimeSlots(timeSlots);
-
-            List<MenuItem> menuItems = menuItemRepository.findByRestaurantId(restaurant.getId());
-            restaurant.setMenuItems(menuItems);
-        });
-
-        return restaurants;
-    }
 
     public List<Restaurant> getRestaurantsByCity(String city) {
         return restaurantRepository.findByCity(city);
     }
 
     @Transactional(readOnly = true)
-    public Restaurant getRestaurantById(Long id) {
-        Restaurant restaurant = restaurantRepository.findByIdWithFeaturesAndDeposit(id)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + id));
+    public List<RestaurantResponseDTO> getAllRestaurants() {
+        return restaurantRepository.findAllWithMenuItems().stream()
+                .map(RestaurantResponseDTO::new)
+                .toList();
+    }
 
-        List<String> gallery = restaurantRepository.findGalleryByRestaurantId(id);
-        restaurant.setGallery(gallery);
+    @Transactional(readOnly = true)
+    public Restaurant getRestaurantEntity(Long id) {
+        return restaurantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found: " + id));
+    }
 
-        List<TimeSlot> timeSlots = timeSlotRepository.findByRestaurantIdAndIsActiveTrue(id);
-        restaurant.setTimeSlots(timeSlots);
-
-        List<MenuItem> menuItems = menuItemRepository.findByRestaurantId(id);
-        restaurant.setMenuItems(menuItems);
-
-        return restaurant;
+    @Transactional(readOnly = true)
+    public RestaurantResponseDTO getRestaurantById(Long id) {
+        return restaurantRepository.findByIdWithMenuItems(id)
+                .map(RestaurantResponseDTO::new)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
     }
 
     public List<Restaurant> getRestaurantsByOwner(Long ownerId) {

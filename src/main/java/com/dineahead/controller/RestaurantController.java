@@ -46,16 +46,11 @@ public class RestaurantController {
 
     @GetMapping
     public ResponseEntity<List<RestaurantResponseDTO>> getAllRestaurants() {
-        List<Restaurant> restaurants = restaurantImageService.getAllRestaurantsWithImages();
-
-        restaurants = restaurants.stream()
-                .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+        List<RestaurantResponseDTO> all = restaurantService.getAllRestaurants();
+        List<RestaurantResponseDTO> active = all.stream()
+                .filter(dto -> Boolean.TRUE.equals(dto.getIsActive()))
                 .collect(Collectors.toList());
-
-        List<RestaurantResponseDTO> dtos = restaurants.stream()
-                .map(RestaurantResponseDTO::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(active);
     }
 
     @GetMapping("/city/{city}")
@@ -82,8 +77,7 @@ public class RestaurantController {
 
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantResponseDTO> getRestaurantById(@PathVariable Long id) {
-        Restaurant restaurant = restaurantImageService.getRestaurantWithImages(id);
-        return ResponseEntity.ok(new RestaurantResponseDTO(restaurant));
+        return ResponseEntity.ok(restaurantService.getRestaurantById(id));
     }
 
     @GetMapping("/owner/{ownerId}")
