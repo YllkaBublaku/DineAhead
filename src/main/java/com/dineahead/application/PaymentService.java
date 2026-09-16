@@ -28,15 +28,18 @@ public class PaymentService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final RestaurantDepositSettingsRepository depositSettingsRepository;
+    private final BookingEmailService bookingEmailService;
 
     public PaymentService(PaymentRepository paymentRepository,
                           ReservationRepository reservationRepository,
                           UserRepository userRepository,
-                          RestaurantDepositSettingsRepository depositSettingsRepository) {
+                          RestaurantDepositSettingsRepository depositSettingsRepository,
+                          BookingEmailService bookingEmailService) {
         this.paymentRepository = paymentRepository;
         this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
         this.depositSettingsRepository = depositSettingsRepository;
+        this.bookingEmailService = bookingEmailService;
     }
 
     @Transactional
@@ -116,6 +119,7 @@ public class PaymentService {
             reservation.setDepositPaid(true);
             reservation.setDepositAmount(payment.getDepositAmount());
             reservationRepository.save(reservation);
+
         } else if ("requires_payment_method".equals(stripeStatus)
                 || "canceled".equals(stripeStatus)) {
             payment.setStatus(PaymentStatus.FAILED);

@@ -26,15 +26,18 @@ public class ReservationService {
     private final RestaurantDepositSettingsRepository depositSettingsRepository;
     private final UserRepository userRepository;
     private final ReservationLogService reservationLogService;
+    private final BookingEmailService bookingEmailService;
 
     public ReservationService(ReservationRepository reservationRepository,
                               RestaurantDepositSettingsRepository depositSettingsRepository,
                               UserRepository userRepository,
-                              ReservationLogService reservationLogService) {
+                              ReservationLogService reservationLogService,
+                              BookingEmailService bookingEmailService) {
         this.reservationRepository = reservationRepository;
         this.depositSettingsRepository = depositSettingsRepository;
         this.userRepository = userRepository;
         this.reservationLogService = reservationLogService;
+        this.bookingEmailService = bookingEmailService;
     }
 
     @Transactional
@@ -69,6 +72,14 @@ public class ReservationService {
 
         Reservation saved = reservationRepository.save(reservation);
         log.info("Reservation created with ID: {}", saved.getId());
+
+        if (saved.getStatus() == ReservationStatus.CONFIRMED) {
+            try {
+                bookingEmailService.sendBookingConfirmation(saved, null);
+            } catch (Exception e) {
+                System.err.println("[ReservationService] Email send failed: " + e.getMessage());
+            }
+        }
 
         if (saved.getUser() != null) {
             log.info("Reservation user email: {}", saved.getUser().getEmail());

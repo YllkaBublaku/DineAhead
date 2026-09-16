@@ -877,7 +877,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         await this.api.updateReservation(reservation.id, {
           depositPaid: false,
           depositAmount: this.bookingDepositAmount,
-          status: 'PENDING'
+          status: 'CONFIRMED'
         });
 
         this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;

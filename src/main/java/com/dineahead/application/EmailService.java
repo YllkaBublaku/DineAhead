@@ -1,9 +1,11 @@
 package com.dineahead.application;
 
 import com.dineahead.domain.Contact;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,9 @@ public class EmailService {
 
     @Value("${app.contact.notification-email:yllkabublaku@gmail.com}")
     private String notificationEmail;
+
+    @Value("${spring.mail.username:noreply@dineahead.com}")
+    private String fromEmail;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -39,9 +44,9 @@ public class EmailService {
                             "Received: " + contact.getCreatedAt()
             );
             mailSender.send(message);
-            System.out.println(" Notification sent to support: " + notificationEmail);
+            System.out.println("Notification sent to support: " + notificationEmail);
         } catch (Exception e) {
-            System.err.println(" Failed to send support notification: " + e.getMessage());
+            System.err.println("Failed to send support notification: " + e.getMessage());
         }
     }
 
@@ -60,9 +65,28 @@ public class EmailService {
                             "support@dineahead.com"
             );
             mailSender.send(reply);
-            System.out.println(" Auto-reply sent to: " + contact.getEmail());
+            System.out.println("Auto-reply sent to: " + contact.getEmail());
         } catch (Exception e) {
-            System.err.println(" Failed to send auto-reply: " + e.getMessage());
+            System.err.println("Failed to send auto-reply: " + e.getMessage());
+        }
+    }
+
+    public void sendHtml(String to, String subject, String htmlBody) {
+        if (to == null || to.isBlank()) {
+            System.out.println("[EmailService] Skipping email — no recipient");
+            return;
+        }
+        try {
+            MimeMessage mime = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);   // true = HTML
+            mailSender.send(mime);
+            System.out.println("[EmailService] HTML email sent to " + to + " — " + subject);
+        } catch (Exception e) {
+            System.err.println("[EmailService] Failed to send HTML to " + to + ": " + e.getMessage());
         }
     }
 }

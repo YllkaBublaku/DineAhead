@@ -828,7 +828,7 @@ export class SimilarRestaurants implements OnInit, AfterViewInit {
         await this.api.updateReservation(reservation.id, {
           depositPaid: false,
           depositAmount: this.bookingDepositAmount,
-          status: 'PENDING'
+          status: 'CONFIRMED'
         });
 
         this.bookingMessage = 'Your reservation has been confirmed. Check your email for details.';

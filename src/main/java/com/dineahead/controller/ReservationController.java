@@ -1,9 +1,12 @@
 package com.dineahead.controller;
 
+import com.dineahead.application.BookingEmailService;
 import com.dineahead.application.ReservationService;
+import com.dineahead.domain.Payment;
 import com.dineahead.domain.Reservation;
 import com.dineahead.domain.ReservationDTO;
 import com.dineahead.domain.enums.ReservationStatus;
+import com.dineahead.infrastructure.PaymentRepository;
 import com.dineahead.infrastructure.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,9 +30,13 @@ public class ReservationController {
     private static final Logger log = LoggerFactory.getLogger(ReservationController.class);
 
     private final ReservationService reservationService;
+    private final BookingEmailService bookingEmailService;
+    private final PaymentRepository paymentRepository;
 
-    public ReservationController(ReservationService reservationService) {
+    public ReservationController(ReservationService reservationService, BookingEmailService bookingEmailService, PaymentRepository paymentRepository) {
         this.reservationService = reservationService;
+        this.bookingEmailService = bookingEmailService;
+        this.paymentRepository = paymentRepository;
     }
 
     @PostMapping
@@ -106,8 +113,6 @@ public class ReservationController {
     @PatchMapping("/{id}")
     @Transactional
     public ResponseEntity<ReservationDTO> updateReservation(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
-        log.info("Updating reservation with id: {}", id);
-        log.info("Updates: {}", updates);
 
         Reservation reservation = reservationService.getReservationById(id);
 
@@ -116,7 +121,7 @@ public class ReservationController {
             return ResponseEntity.notFound().build();
         }
 
-        log.info("Found reservation: {}", reservation.getId());
+        ReservationStatus previousStatus = reservation.getStatus();
 
         if (updates.containsKey("depositPaid")) {
             Boolean depositPaid = (Boolean) updates.get("depositPaid");
@@ -146,8 +151,21 @@ public class ReservationController {
         }
 
         ReservationDTO dto = reservationService.updateReservation(reservation);
-        log.info("Updated reservation: {}", dto.getId());
-        log.info("DTO created: {}", dto);
+
+        boolean justConfirmed = previousStatus != ReservationStatus.CONFIRMED
+                && reservation.getStatus() == ReservationStatus.CONFIRMED;
+
+        if (justConfirmed) {
+            Payment payment = paymentRepository
+                    .findByReservationId(reservation.getId())
+                    .orElse(null);
+
+            try {
+                bookingEmailService.sendBookingConfirmation(reservation, payment);
+            } catch (Exception e) {
+                System.err.println("[ReservationController] Email send failed: " + e.getMessage());
+            }
+        }
 
         return ResponseEntity.ok(dto);
     }
