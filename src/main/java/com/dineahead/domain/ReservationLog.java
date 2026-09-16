@@ -32,7 +32,7 @@ public class ReservationLog {
     @Column(nullable = false)
     private ReservationAction action;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "changed_by", nullable = false)
     private User changedBy;
 

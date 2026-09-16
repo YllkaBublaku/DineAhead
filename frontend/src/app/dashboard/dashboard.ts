@@ -122,6 +122,8 @@ export class Dashboard implements OnInit {
               status: this.formatStatus(r.status),
               rawStatus: (r.status || '').toUpperCase(),
               specialRequests: r.specialRequests || '',
+              depositPaid: r.depositPaid === true,
+              depositAmount: Number(r.depositAmount ?? 0),
               when
             };
           })
@@ -388,7 +390,9 @@ export class Dashboard implements OnInit {
         modifyReservationId: booking.id,
         date: booking.date,
         time: booking.time,
-        guests: booking.guests
+        guests: booking.guests,
+        depositPaid: booking.depositPaid ?? false,
+        depositAmount: booking.depositAmount ?? 0
       }
     });
   }

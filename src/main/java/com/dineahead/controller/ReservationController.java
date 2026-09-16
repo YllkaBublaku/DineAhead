@@ -32,11 +32,16 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final BookingEmailService bookingEmailService;
     private final PaymentRepository paymentRepository;
+    private final ReservationRepository reservationRepository;
 
-    public ReservationController(ReservationService reservationService, BookingEmailService bookingEmailService, PaymentRepository paymentRepository) {
+    public ReservationController(ReservationService reservationService,
+                                 BookingEmailService bookingEmailService,
+                                 PaymentRepository paymentRepository,
+                                 ReservationRepository reservationRepository) {
         this.reservationService = reservationService;
         this.bookingEmailService = bookingEmailService;
         this.paymentRepository = paymentRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     @PostMapping
@@ -53,7 +58,14 @@ public class ReservationController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ReservationDTO>> getReservationsByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(reservationService.getReservationsByUser(userId));
+        List<Reservation> reservations =
+                reservationRepository.findByUserIdWithRestaurantAndUser(userId);
+
+        List<ReservationDTO> dtos = reservations.stream()
+                .map(ReservationDTO::fromEntity)
+                .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/restaurant/{restaurantId}")

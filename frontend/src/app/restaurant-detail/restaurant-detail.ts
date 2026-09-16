@@ -178,6 +178,9 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   private mapInitAttempts = 0;
   private maxMapRetries = 5;
 
+  modifyDepositPaid = false;
+  modifyDepositAmount = 0;
+
   weeklyHours: { dayOfWeek: number, isClosed: boolean }[] = [];
   overrides: { date: string, isClosed: boolean }[] = [];
 
@@ -211,10 +214,14 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       const dateParam = params['date'];
       const timeParam = params['time'];
       const guestsParam = params['guests'];
+      const depositPaidParam = params['depositPaid'];
+      const depositAmountParam = params['depositAmount'];
 
       if (!modId) return;
 
       this.modifyReservationId = Number(modId);
+      this.modifyDepositPaid = depositPaidParam === 'true' || depositPaidParam === true;
+      this.modifyDepositAmount = Number(depositAmountParam) || 0;
 
       if (dateParam) {
         const parts = String(dateParam).split('-');
@@ -326,30 +333,23 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.loading = true;
     this.error = false;
     this.mapInitialized = false;
+    this.weeklyHours = [];
+    this.overrides = [];
 
     this.api.getRestaurantById(id)
       .then((data) => {
-        console.log('=== Restaurant Data ===');
-        console.log('Full data:', data);
-
-        console.log('TimeSlots in response:', data.timeSlots);
-        console.log('TimeSlots type:', typeof data.timeSlots);
-        console.log('TimeSlots is array?', Array.isArray(data.timeSlots));
-        this.initializeMapWithRetry();
-
         if (data) {
           this.restaurant = this.mapToRestaurantItem(data);
 
-          this.generateCalendar();
+          this.loadWeeklyHoursAndOverrides();
+
           this.loadReviews(id);
           this.loadSimilarRestaurants();
           this.generateTags();
           this.loading = false;
           this.cdr.detectChanges();
 
-          setTimeout(() => {
-            this.initMap();
-          }, 200);
+          setTimeout(() => this.initMap(), 200);
         } else {
           this.error = true;
           this.loading = false;
@@ -364,7 +364,7 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       });
 
     this.checkIfUserReviewed();
-    this.loadAllRestaurants()
+    this.loadAllRestaurants();
   }
 
   private initializeMapWithRetry(): void {
@@ -559,20 +559,35 @@ export class RestaurantDetail implements OnInit, OnDestroy {
   generateCalendar(): void {
     const today = new Date();
     const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
+    const firstOfMonth = new Date(this.currentYear, this.currentMonth, 1);
+
+    let leadingBlanks = firstOfMonth.getDay() - 1;
+    if (leadingBlanks < 0) leadingBlanks = 6;
+
     this.calendarDays = [];
+
+    for (let i = 0; i < leadingBlanks; i++) {
+      this.calendarDays.push({
+        day: 0,
+        isPast: true,
+        hasSlots: false
+      });
+    }
+
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(this.currentYear, this.currentMonth, i);
-      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const isPast = date < todayDate;
       const hasSlots = this.hasAvailableSlotsForDate(i);
 
       this.calendarDays.push({
         day: i,
-        isPast: isPast,
-        hasSlots: hasSlots
+        isPast,
+        hasSlots
       });
     }
+
     this.cdr.detectChanges();
   }
 
@@ -614,24 +629,39 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     if (!this.restaurant) return;
 
     const id = this.restaurant.id;
+    console.log('[detail] Loading hours & overrides for restaurant', id);
 
-    Promise.all([
-      firstValueFrom(this.api.getHoursByRestaurant(id)).catch(() => []),
-      firstValueFrom(this.api.getOverridesByRestaurant(id)).catch(() => [])
-    ]).then(([hours, overrides]) => {
-      this.weeklyHours = (hours || []).map((h: any) => ({
-        dayOfWeek: h.dayOfWeek,
-        isClosed: h.isClosed === true
-      }));
+    firstValueFrom(this.api.getHoursByRestaurant(id))
+      .then(hours => {
+        console.log('[detail] Hours response:', hours);
+        this.weeklyHours = (hours || []).map((h: any) => ({
+          dayOfWeek: h.dayOfWeek,
+          isClosed: h.isClosed === true
+        }));
+        console.log('[detail] Mapped weeklyHours:', this.weeklyHours);
+      })
+      .catch(err => {
+        console.error('[detail] getHoursByRestaurant FAILED:', err);
+        this.weeklyHours = [];
+      });
 
-      this.overrides = (overrides || []).map((o: any) => ({
-        date: o.overrideDate,
-        isClosed: o.isClosed === true
-      }));
-
-      this.generateCalendar();
-      this.cdr.detectChanges();
-    });
+    firstValueFrom(this.api.getOverridesByRestaurant(id))
+      .then(overrides => {
+        console.log('[detail] Overrides response:', overrides);
+        this.overrides = (overrides || []).map((o: any) => ({
+          date: o.overrideDate,
+          isClosed: o.isClosed === true
+        }));
+        console.log('[detail] Mapped overrides:', this.overrides);
+      })
+      .catch(err => {
+        console.error('[detail] getOverridesByRestaurant FAILED:', err);
+        this.overrides = [];
+      })
+      .finally(() => {
+        this.generateCalendar();
+        this.cdr.detectChanges();
+      });
   }
 
   generateTags(): void {
@@ -713,6 +743,14 @@ export class RestaurantDetail implements OnInit, OnDestroy {
     this.bookingForm.paymentMethod = 'card';
     this.bookingForm.specialRequests = '';
     this.paymentModalOpen = false;
+
+    if (this.modifyReservationId && this.modifyDepositPaid) {
+      this.isPaymentRequired = false;
+      this.bookingDepositAmount = this.modifyDepositAmount;
+      this.bookingModalOpen = true;
+      this.cdr.detectChanges();
+      return;
+    }
 
     if (this.restaurant) {
       this.api.getRestaurantDeposit(this.restaurant.id)
@@ -806,9 +844,11 @@ export class RestaurantDetail implements OnInit, OnDestroy {
         throw new Error('Reservation was created but no ID was returned');
       }
 
+      const isModifyingPaid = this.modifyReservationId != null && this.modifyDepositPaid;
+
       await this.api.updateReservation(reservation.id, {
-        depositPaid: false,
-        depositAmount: this.bookingDepositAmount,
+        depositPaid: isModifyingPaid,
+        depositAmount: isModifyingPaid ? this.modifyDepositAmount : this.bookingDepositAmount,
         status: this.isPaymentRequired && this.bookingForm.paymentMethod === 'cash' ? 'PENDING' : 'CONFIRMED'
       });
 
@@ -832,7 +872,13 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       setTimeout(() => {
         this.closeBookingModal();
         if (wasModifying) {
-          this.router.navigate(['/dashboard'], { queryParams: { tab: 'bookings' } });
+          this.router.navigate(['/dashboard'], {
+            queryParams: { tab: 'bookings', refresh: Date.now() }
+          });
+        } else {
+          this.router.navigate(['/dashboard'], {
+            queryParams: { tab: 'bookings', refresh: Date.now() }
+          });
         }
       }, 3500);
 
@@ -880,6 +926,15 @@ export class RestaurantDetail implements OnInit, OnDestroy {
           status: 'CONFIRMED'
         });
 
+        if (this.modifyReservationId) {
+          try {
+            await firstValueFrom(this.api.cancelReservation(this.modifyReservationId));
+          } catch (err) {
+            console.warn('[detail] Could not cancel old reservation during modify', err);
+          }
+          this.modifyReservationId = null;
+        }
+
         this.bookingMessage = `Your reservation is confirmed! Please pay the deposit of €${this.bookingDepositAmount} when you arrive at the restaurant.`;
         this.bookingSuccess = true;
         this.paymentModalOpen = false;
@@ -924,11 +979,22 @@ export class RestaurantDetail implements OnInit, OnDestroy {
       }
 
       await this.api.confirmPayment(paymentIntentId);
+      const isModifyingPaid = this.modifyReservationId != null && this.modifyDepositPaid;
+
       await this.api.updateReservation(reservation.id, {
         depositPaid: true,
         depositAmount: this.bookingDepositAmount,
         status: 'CONFIRMED'
       });
+
+      if (this.modifyReservationId) {
+        try {
+          await firstValueFrom(this.api.cancelReservation(this.modifyReservationId));
+        } catch (err) {
+          console.warn('[detail] Could not cancel old reservation during modify', err);
+        }
+        this.modifyReservationId = null;
+      }
 
       this.bookingMessage = `Your reservation is confirmed! A deposit of €${this.bookingDepositAmount} has been charged.`;
       this.bookingSuccess = true;

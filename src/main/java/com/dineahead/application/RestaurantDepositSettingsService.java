@@ -7,6 +7,7 @@ import com.dineahead.infrastructure.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,17 +15,45 @@ import java.util.Optional;
 public class RestaurantDepositSettingsService {
     private final RestaurantDepositSettingsRepository depositSettingsRepository;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantService restaurantService;
 
-    public RestaurantDepositSettingsService(RestaurantDepositSettingsRepository depositSettingsRepository, RestaurantRepository restaurantRepository) {
+    public RestaurantDepositSettingsService(RestaurantDepositSettingsRepository depositSettingsRepository, RestaurantRepository restaurantRepository, RestaurantService restaurantService) {
         this.depositSettingsRepository = depositSettingsRepository;
         this.restaurantRepository = restaurantRepository;
+        this.restaurantService = restaurantService;
     }
 
     @Transactional
-    public RestaurantDepositSettings addOrUpdateDepositSettings(Long restaurantId, RestaurantDepositSettings settings) {
-        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        settings.setRestaurant(restaurant);
-        return depositSettingsRepository.save(settings);
+    public RestaurantDepositSettings addOrUpdateDepositSettings(
+            Long restaurantId,
+            RestaurantDepositSettings incoming) {
+
+        System.out.println("[deposit-save] incoming requiresDeposit=" + incoming.isRequiresDeposit()
+                + ", amount=" + incoming.getDepositAmount()
+                + ", minParty=" + incoming.getMinPartySizeForDeposit());
+
+        RestaurantDepositSettings existing = depositSettingsRepository
+                .findByRestaurantId(restaurantId)
+                .orElse(null);
+
+        if (existing == null) {
+            Restaurant restaurant = restaurantService.getRestaurantById(restaurantId);
+            existing = RestaurantDepositSettings.builder()
+                    .restaurant(restaurant)
+                    .build();
+        }
+
+        existing.setRequiresDeposit(incoming.isRequiresDeposit());
+
+        if (incoming.isRequiresDeposit() && incoming.getDepositAmount() != null) {
+            existing.setDepositAmount(incoming.getDepositAmount());
+        } else {
+            existing.setDepositAmount(BigDecimal.ZERO);
+        }
+
+        existing.setMinPartySizeForDeposit(incoming.getMinPartySizeForDeposit());
+
+        return depositSettingsRepository.save(existing);
     }
 
     @Transactional(readOnly = true)

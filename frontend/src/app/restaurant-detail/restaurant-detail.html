@@ -494,6 +494,24 @@
             </div>
           }
 
+          @if (modifyReservationId && modifyDepositPaid && modifyDepositAmount > 0) {
+            <div class="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div>
+                  <p class="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    Deposit already paid: €{{ modifyDepositAmount }}
+                  </p>
+                  <p class="text-xs text-emerald-600 dark:text-emerald-300">
+                    Your deposit will carry over to the new reservation. No additional charge.
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+
           <div class="flex items-center justify-between mb-5">
             <div>
               <h3 class="text-2xl font-extrabold text-gray-900">Book a table</h3>
@@ -557,29 +575,33 @@
                 <div class="text-[10px] font-bold text-gray-500 uppercase mb-2">Sat</div>
                 <div class="text-[10px] font-bold text-gray-500 uppercase mb-2">Sun</div>
 
-                @for (day of calendarDays; track day.day) {
-                  @let isSelected = selectedDate
-                    && selectedDate.getDate() === day.day
-                    && selectedDate.getMonth() === currentMonth
-                    && selectedDate.getFullYear() === currentYear
-                    && !day.isPast;
+                @for (day of calendarDays; track $index) {
+                  @if (day.day === 0) {
+                    <div></div>
+                  } @else {
+                    @let isSelected = selectedDate
+                      && selectedDate.getDate() === day.day
+                      && selectedDate.getMonth() === currentMonth
+                      && selectedDate.getFullYear() === currentYear
+                      && !day.isPast;
 
-                  <button (click)="!day.isPast && day.hasSlots && selectDate(day.day)"
-                          [disabled]="day.isPast || !day.hasSlots"
-                          class="flex flex-col items-center justify-center h-10 rounded-lg border transition text-sm font-medium"
-                          [class.bg-[#005943]]="isSelected"
-                          [class.text-white]="isSelected"
-                          [class.border-[#005943]]="isSelected"
-                          [class.bg-white]="!isSelected && !day.isPast && day.hasSlots"
-                          [class.text-gray-700]="!isSelected && !day.isPast && day.hasSlots"
-                          [class.border-transparent]="!isSelected && !day.isPast && day.hasSlots"
-                          [class.hover:border-gray-200]="!isSelected && !day.isPast && day.hasSlots"
-                          [class.hover:bg-gray-50]="!isSelected && !day.isPast && day.hasSlots"
-                          [class.bg-gray-100]="day.isPast || !day.hasSlots"
-                          [class.text-gray-400]="!isSelected && (day.isPast || !day.hasSlots)"
-                          [class.cursor-not-allowed]="day.isPast || !day.hasSlots">
-                    <span>{{ day.day }}</span>
-                  </button>
+                    <button (click)="!day.isPast && day.hasSlots && selectDate(day.day)"
+                            [disabled]="day.isPast || !day.hasSlots"
+                            class="flex flex-col items-center justify-center h-10 rounded-lg border transition text-sm font-medium"
+                            [class.bg-[#005943]]="isSelected"
+                            [class.text-white]="isSelected"
+                            [class.border-[#005943]]="isSelected"
+                            [class.bg-white]="!isSelected && !day.isPast && day.hasSlots"
+                            [class.text-gray-700]="!isSelected && !day.isPast && day.hasSlots"
+                            [class.border-transparent]="!isSelected && !day.isPast && day.hasSlots"
+                            [class.hover:border-gray-200]="!isSelected && !day.isPast && day.hasSlots"
+                            [class.hover:bg-gray-50]="!isSelected && !day.isPast && day.hasSlots"
+                            [class.bg-gray-100]="day.isPast || !day.hasSlots"
+                            [class.text-gray-400]="!isSelected && (day.isPast || !day.hasSlots)"
+                            [class.cursor-not-allowed]="day.isPast || !day.hasSlots">
+                      <span>{{ day.day }}</span>
+                    </button>
+                  }
                 }
               </div>
 

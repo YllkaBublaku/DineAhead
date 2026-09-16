@@ -275,7 +275,7 @@ export class ApiService {
         partySize: reservationData.guests,
         specialRequests: reservationData.specialRequests || '',
         status: 'PENDING',
-        paymentMethod: reservationData.paymentMethod || 'card'
+        paymentMethod: (reservationData.paymentMethod || 'CARD').toUpperCase()
       };
 
       if (userId) {

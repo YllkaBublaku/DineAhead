@@ -1463,7 +1463,8 @@ export class Restaurants implements OnInit {
         time: this.bookingSlotTime + ':00',
         guests: this.selectedBookingGuests,
         specialRequests: this.bookingForm.specialRequests || '',
-        status: 'confirmed',
+        status: 'CONFIRMED',
+        paymentMethod: (this.bookingForm.paymentMethod || 'card').toUpperCase(),
         depositPaid: this.isPaymentRequired,
         depositAmount: this.bookingDepositAmount
       });

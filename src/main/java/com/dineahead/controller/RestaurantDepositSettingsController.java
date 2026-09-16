@@ -25,10 +25,18 @@ public class RestaurantDepositSettingsController {
     }
 
     @PostMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<RestaurantDepositSettings> addOrUpdateDepositSettings(
+    public ResponseEntity<DepositSettingsResponseDTO> addOrUpdateDepositSettings(
             @PathVariable Long restaurantId,
             @RequestBody RestaurantDepositSettings settings) {
-        return ResponseEntity.ok(depositSettingsService.addOrUpdateDepositSettings(restaurantId, settings));
+
+        RestaurantDepositSettings saved =
+                depositSettingsService.addOrUpdateDepositSettings(restaurantId, settings);
+
+        return ResponseEntity.ok(new DepositSettingsResponseDTO(
+                restaurantId,
+                saved.isRequiresDeposit(),
+                saved.getDepositAmount() != null ? saved.getDepositAmount() : BigDecimal.ZERO
+        ));
     }
 
     @GetMapping("/restaurant/{restaurantId}")

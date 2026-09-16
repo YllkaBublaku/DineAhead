@@ -183,6 +183,8 @@ export class RestaurantDashboard implements OnInit {
     this.restaurantId = r.id;
     localStorage.setItem('selectedRestaurantId', String(r.id));
 
+    this.activeTab.set('overview');
+
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     const joinedYear = r.createdAt
       ? new Date(r.createdAt).getFullYear().toString()
@@ -1153,6 +1155,7 @@ export class RestaurantDashboard implements OnInit {
       next: () => {
         this.depositSettingsSaving = false;
         this.showToast('Deposit settings saved');
+        this.loadDepositSettings();
         this.cdr.detectChanges();
       },
       error: (err) => {
